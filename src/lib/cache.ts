@@ -1,31 +1,32 @@
 // src/lib/cache.ts
 
 import { CACHE_TTL_MS } from "./constants";
+import type { DashboardSnapshot } from "./types";
 
-type CacheEntry<T> = {
-  data: T;
+type CacheEntry = {
+  data: DashboardSnapshot;
   timestamp: number;
 };
 
-let entry: CacheEntry<unknown> | null = null;
-let refreshPromise: Promise<unknown> | null = null;
+let entry: CacheEntry | null = null;
+let refreshPromise: Promise<void> | null = null;
 
 /**
- * Stale-while-revalidate cache.
+ * Stale-while-revalidate cache for the dashboard snapshot.
  *
  * - If cache is fresh (< TTL), return cached data.
  * - If cache is stale (>= TTL), return stale data AND trigger a background refresh.
  * - If cache is empty, await the fetch and populate.
- *
- * @param fetcher - async function that produces fresh data
- * @returns the cached or freshly fetched data
+ * - Concurrent cold-start requests are coalesced into a single fetch.
  */
-export async function getOrRefresh<T>(fetcher: () => Promise<T>): Promise<T> {
+export async function getOrRefresh(
+  fetcher: () => Promise<DashboardSnapshot>,
+): Promise<DashboardSnapshot> {
   const now = Date.now();
 
   // Cache hit: fresh
   if (entry && now - entry.timestamp < CACHE_TTL_MS) {
-    return entry.data as T;
+    return entry.data;
   }
 
   // Cache hit: stale — return stale, refresh in background
@@ -36,17 +37,29 @@ export async function getOrRefresh<T>(fetcher: () => Promise<T>): Promise<T> {
           entry = { data, timestamp: Date.now() };
         })
         .catch((err) => {
-          console.error("[cache] background refresh failed:", err);
+          const staleAge = Date.now() - (entry?.timestamp ?? 0);
+          console.error(
+            `[cache] background refresh failed (stale for ${staleAge}ms):`,
+            err,
+          );
         })
         .finally(() => {
           refreshPromise = null;
         });
     }
-    return entry.data as T;
+    return entry.data;
   }
 
-  // Cache miss: await fresh data
-  const data = await fetcher();
-  entry = { data, timestamp: Date.now() };
-  return data;
+  // Cache miss: coalesce concurrent cold-start requests
+  if (!refreshPromise) {
+    refreshPromise = fetcher()
+      .then((data) => {
+        entry = { data, timestamp: Date.now() };
+      })
+      .finally(() => {
+        refreshPromise = null;
+      });
+  }
+  await refreshPromise;
+  return entry!.data;
 }

@@ -20,29 +20,40 @@ import type {
 } from "./types";
 
 async function fetchJson<T>(path: string): Promise<T> {
-  const res = await fetch(`${BON_API_BASE}${path}`, { cache: "no-store" });
+  const res = await fetch(`${BON_API_BASE}${path}`, {
+    cache: "no-store",
+    signal: AbortSignal.timeout(10_000),
+  });
   if (!res.ok) throw new Error(`BoN API error: ${res.status} ${path}`);
   return res.json() as Promise<T>;
 }
 
 async function fetchNumber(path: string): Promise<number> {
-  const res = await fetch(`${BON_API_BASE}${path}`, { cache: "no-store" });
+  const res = await fetch(`${BON_API_BASE}${path}`, {
+    cache: "no-store",
+    signal: AbortSignal.timeout(10_000),
+  });
   if (!res.ok) throw new Error(`BoN API error: ${res.status} ${path}`);
   const text = await res.text();
-  return Number(text);
+  const n = Number(text);
+  if (!Number.isFinite(n)) {
+    throw new Error(`BoN API returned non-numeric value for ${path}: "${text}"`);
+  }
+  return n;
 }
 
 async function fetchAllNodes(): Promise<BonNode[]> {
   const allNodes: BonNode[] = [];
   let from = 0;
   const size = 500;
+  const maxPages = 100;
 
-  while (true) {
-    const page = await fetchJson<BonNode[]>(
-      `/nodes?size=${size}&from=${from}&fields=name,shard,type,status,online,nonce,owner,identity,provider`
+  for (let page = 0; page < maxPages; page++) {
+    const batch = await fetchJson<BonNode[]>(
+      `/nodes?size=${size}&from=${from}&fields=name,shard,type,status,online,nonce,owner,identity,provider`,
     );
-    allNodes.push(...page);
-    if (page.length < size) break;
+    allNodes.push(...batch);
+    if (batch.length < size) break;
     from += size;
   }
 
@@ -75,26 +86,37 @@ function isOfficialInfra(node: BonNode): boolean {
   );
 }
 
+// Accumulator for completed epoch block counts (immutable once complete)
+let accumulatedBlocks = BON_LAUNCH_PARTIAL_BLOCKS_E2033;
+let lastAccumulatedEpoch = BON_LAUNCH_EPOCH;
+
 async function computeBlocksSinceLaunch(
-  currentEpoch: number
+  currentEpoch: number,
 ): Promise<number> {
-  let total = BON_LAUNCH_PARTIAL_BLOCKS_E2033;
+  // Only fetch epochs we haven't cached yet (completed epochs are immutable)
+  const startEpoch = lastAccumulatedEpoch + 1;
+  const completedEpoch = currentEpoch - 1;
 
-  // Fetch block counts for each epoch since launch in parallel
-  const epochs: number[] = [];
-  for (let e = BON_LAUNCH_EPOCH + 1; e <= currentEpoch; e++) {
-    epochs.push(e);
+  const newEpochs: number[] = [];
+  for (let e = startEpoch; e <= completedEpoch; e++) {
+    newEpochs.push(e);
   }
 
-  const counts = await Promise.all(
-    epochs.map((e) => fetchNumber(`/blocks/count?epoch=${e}`))
+  if (newEpochs.length > 0) {
+    const counts = await Promise.all(
+      newEpochs.map((e) => fetchNumber(`/blocks/count?epoch=${e}`)),
+    );
+    for (const count of counts) {
+      accumulatedBlocks += count;
+    }
+    lastAccumulatedEpoch = completedEpoch;
+  }
+
+  // Current (in-progress) epoch — always fetch fresh
+  const currentEpochBlocks = await fetchNumber(
+    `/blocks/count?epoch=${currentEpoch}`,
   );
-
-  for (const count of counts) {
-    total += count;
-  }
-
-  return total;
+  return accumulatedBlocks + currentEpochBlocks;
 }
 
 export async function buildSnapshot(): Promise<DashboardSnapshot> {

@@ -3,13 +3,12 @@
 import { NextResponse } from "next/server";
 import { getOrRefresh } from "@/lib/cache";
 import { buildSnapshot } from "@/lib/aggregator";
-import type { DashboardSnapshot } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
 export async function GET() {
   try {
-    const snapshot = await getOrRefresh<DashboardSnapshot>(buildSnapshot);
+    const snapshot = await getOrRefresh(buildSnapshot);
     return NextResponse.json(snapshot, {
       headers: {
         "Cache-Control": "public, s-maxage=10, stale-while-revalidate=30",
