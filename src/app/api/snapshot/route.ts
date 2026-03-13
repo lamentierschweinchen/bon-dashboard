@@ -11,7 +11,7 @@ export async function GET() {
     const snapshot = await getOrRefresh(buildSnapshot);
     return NextResponse.json(snapshot, {
       headers: {
-        "Cache-Control": "public, s-maxage=10, stale-while-revalidate=30",
+        "Cache-Control": "public, s-maxage=30, stale-while-revalidate=259200",
       },
     });
   } catch (err) {
