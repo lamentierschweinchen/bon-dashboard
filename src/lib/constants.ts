@@ -1,0 +1,43 @@
+// src/lib/constants.ts
+
+/** BoN API base URL. */
+export const BON_API_BASE = "https://api.battleofnodes.com";
+
+/** Official Battle of Nodes launch moment (Unix timestamp). 2026-03-11 13:00:00 UTC. */
+export const BON_LAUNCH_TS = 1773234000;
+
+/** Launch happened inside this epoch. */
+export const BON_LAUNCH_EPOCH = 2033;
+
+/**
+ * Exact network-wide count of blocks with timestamp >= BON_LAUNCH_TS inside epoch 2033.
+ * Derived via descending-order binary search on /blocks?epoch=2033.
+ */
+export const BON_LAUNCH_PARTIAL_BLOCKS_E2033 = 9456;
+
+/** Public API replication can lag slightly. Avoid exact-zero sync comparisons. */
+export const SYNC_TOLERANCE_BLOCKS = 2;
+
+/** Backup naming convention used by the validator track. */
+export const BACKUP_NAME_REGEX = /-backup-BoN-/i;
+
+/** Editorial classification: identities considered official infrastructure. */
+export const OFFICIAL_INFRA_IDENTITIES = new Set(["multiversx"]);
+
+/** Editorial classification: name patterns considered official infrastructure. */
+export const OFFICIAL_INFRA_NAME_PATTERNS = [/^DO-SHADOWFORK-BON-ID-/i];
+
+/** Editorial classification: owner addresses considered official infrastructure. */
+export const OFFICIAL_INFRA_OWNERS = new Set<string>([]);
+
+/** Editorial classification: provider addresses considered official infrastructure. */
+export const OFFICIAL_INFRA_PROVIDERS = new Set<string>([]);
+
+/** Client polling interval in milliseconds. */
+export const SNAPSHOT_POLL_MS = 15_000;
+
+/** Server-side cache TTL in milliseconds. */
+export const CACHE_TTL_MS = 15_000;
+
+/** Stale data threshold in milliseconds. If snapshot is older than this, show stale indicator. */
+export const STALE_THRESHOLD_MS = 60_000;
