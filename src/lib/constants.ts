@@ -44,5 +44,8 @@ export const SNAPSHOT_POLL_MS = 15_000;
 /** Server-side cache TTL in milliseconds. */
 export const CACHE_TTL_MS = 15_000;
 
-/** Stale data threshold in milliseconds. If snapshot is older than this, show stale indicator. */
-export const STALE_THRESHOLD_MS = 60_000;
+/** Stale data threshold in milliseconds. If snapshot is older than this, show stale indicator.
+ *  Set to 5 minutes — with CDN stale-while-revalidate=3 days, normal refresh cycles
+ *  complete within 30-60s and should never trigger this. Only fires when something is
+ *  genuinely broken (BoN API down, Vercel errors, etc.). */
+export const STALE_THRESHOLD_MS = 300_000;

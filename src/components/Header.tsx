@@ -12,7 +12,7 @@ export function Header({ stale }: Props) {
       <div className="flex items-center gap-2">
         <LiveIndicator stale={stale} />
         <div className="hidden font-mono text-[11px] tracking-[2px] text-white/40 sm:block">
-          LIVE TELEMETRY
+          TELEMETRY
         </div>
       </div>
       <a
