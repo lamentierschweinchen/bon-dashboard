@@ -38,22 +38,22 @@ export function Dashboard() {
       {/* Primary Stat Grid 2x2 */}
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <StatCard
-          label="Fully Synced"
+          label="Battle Ready"
           value={s?.nodesSynced ?? null}
           subtitle={
-            s ? `${((s.nodesSynced / s.nodesOnline) * 100).toFixed(0)}% of online` : undefined
+            s ? `${((s.nodesSynced / s.nodesOnline) * 100).toFixed(0)}% fully synced` : undefined
           }
           accentColor="#23f0c7"
         />
         <StatCard
-          label="Community Nodes"
+          label="Community Powered"
           value={s?.communityRunNodesOnline ?? null}
           subtitle="independent operators"
           accentColor="#00b4d8"
           tooltip="Excludes known official MultiversX infrastructure nodes. Counts online nodes not matching official identity patterns."
         />
         <StatCard
-          label="Backup Coverage"
+          label="Backup Shield"
           value={s?.backupCoveragePct ?? null}
           subtitle={
             s
@@ -64,9 +64,9 @@ export function Dashboard() {
           percentage
         />
         <StatCard
-          label="Active Operators"
+          label="Commanders"
           value={s?.distinctActiveOperators ?? null}
-          subtitle="distinct owners"
+          subtitle="unique node operators"
           accentColor="#ff8c42"
         />
       </div>
@@ -75,9 +75,9 @@ export function Dashboard() {
       <div className="mt-3">
         <TransactionRow
           stats={[
-            { label: "TX Since Launch", value: s?.transactionsSinceLaunch ?? null },
-            { label: "Successful TX 24h", value: s?.successfulTxLast24h ?? null },
-            { label: "SC Calls 24h", value: s?.scCallsLast24h ?? null },
+            { label: "Total Transactions", value: s?.transactionsSinceLaunch ?? null },
+            { label: "24h Throughput", value: s?.successfulTxLast24h ?? null },
+            { label: "Contract Calls", value: s?.scCallsLast24h ?? null },
           ]}
         />
       </div>
@@ -89,10 +89,10 @@ export function Dashboard() {
 
       {/* Blocks Since Launch */}
       <div className="mt-3 text-center">
-        <span className="text-[10px] font-medium uppercase tracking-[2px] text-white/30">
-          Blocks Since Launch
+        <span className="font-mono text-[10px] font-medium uppercase tracking-[2px] text-white/35">
+          Blocks Since Ignition
         </span>
-        <span className="ml-2 text-sm font-bold text-white/70">
+        <span className="ml-2 font-mono text-sm font-bold text-white/70">
           {s ? (
             <AnimatedNumber value={s.blocksSinceLaunch} />
           ) : (

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import Image from "next/image";
 import { STALE_THRESHOLD_MS } from "@/lib/constants";
 
 type Props = {
@@ -38,21 +39,48 @@ export function Footer({ generatedAt }: Props) {
         : `Updated ${secondsAgo}s ago`;
 
   return (
-    <footer className="mt-8 border-t border-white/[0.06] pt-4 text-center text-[11px] text-white/30">
-      <div className="flex flex-col items-center gap-2 sm:flex-row sm:justify-between">
-        <span>
-          Powered by{" "}
-          <span className="text-white/50">MultiversX</span>
+    <footer className="mt-8 border-t border-white/[0.08] pt-6 pb-4">
+      {/* MultiversX logo + Built with love */}
+      <div className="mb-4 flex flex-col items-center gap-3">
+        <a
+          href="https://multiversx.com"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="opacity-40 transition-opacity hover:opacity-60"
+        >
+          <Image
+            src="/multiversx-logo.svg"
+            alt="MultiversX"
+            width={140}
+            height={23}
+            className="h-5 w-auto"
+          />
+        </a>
+        <span className="text-[11px] text-white/35">
+          Built with ❤️ on{" "}
+          <span className="text-white/60">MultiversX</span>
         </span>
+      </div>
+
+      {/* Links and freshness */}
+      <div className="flex flex-col items-center gap-2 text-[11px] text-white/35 sm:flex-row sm:justify-between">
+        <a
+          href="https://bon.multiversx.com"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="font-mono underline decoration-white/20 hover:text-white/50"
+        >
+          bon.multiversx.com
+        </a>
         <a
           href="https://api.battleofnodes.com/docs"
           target="_blank"
           rel="noopener noreferrer"
-          className="underline decoration-white/20 hover:text-white/50"
+          className="font-mono underline decoration-white/20 hover:text-white/50"
         >
           BoN API Docs
         </a>
-        <span className={isStale ? "text-amber-400/70" : ""}>
+        <span className={`font-mono ${isStale ? "text-amber-400/70" : ""}`}>
           {freshnessText}
           {isStale && " · Data may be stale"}
         </span>

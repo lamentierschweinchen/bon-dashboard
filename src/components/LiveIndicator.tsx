@@ -22,7 +22,7 @@ export function LiveIndicator({ stale }: Props) {
           style={{ backgroundColor: color, boxShadow: `0 0 8px ${color}` }}
         />
       </span>
-      <span className="text-xs" style={{ color: "rgba(255,255,255,0.35)" }}>
+      <span className="font-mono text-xs" style={{ color: "rgba(255,255,255,0.35)" }}>
         {stale ? "STALE" : "LIVE"}
       </span>
     </span>

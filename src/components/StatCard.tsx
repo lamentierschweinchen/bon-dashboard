@@ -21,10 +21,22 @@ export function StatCard({
 }: Props) {
   return (
     <div
-      className="rounded-2xl border p-5 backdrop-blur-md transition-colors hover:border-opacity-50"
+      className="rounded-2xl border p-5 backdrop-blur-lg hover:-translate-y-0.5"
       style={{
-        background: `${accentColor}0a`,
-        borderColor: `${accentColor}3d`,
+        background: `${accentColor}12`,
+        borderColor: `${accentColor}40`,
+        boxShadow: `inset 0 1px 1px rgba(255,255,255,0.04), 0 0 20px ${accentColor}0d`,
+        transition: "all 0.3s ease",
+      }}
+      onMouseEnter={(e) => {
+        const el = e.currentTarget;
+        el.style.borderColor = `${accentColor}6a`;
+        el.style.boxShadow = `inset 0 1px 2px rgba(255,255,255,0.06), 0 0 30px ${accentColor}1a, 0 4px 20px rgba(0,0,0,0.3)`;
+      }}
+      onMouseLeave={(e) => {
+        const el = e.currentTarget;
+        el.style.borderColor = `${accentColor}40`;
+        el.style.boxShadow = `inset 0 1px 1px rgba(255,255,255,0.04), 0 0 20px ${accentColor}0d`;
       }}
     >
       <div className="flex items-center gap-1.5">
@@ -43,7 +55,7 @@ export function StatCard({
           </span>
         )}
       </div>
-      <div className="mt-1.5 text-3xl font-extrabold text-white">
+      <div className="mt-1.5 font-mono text-3xl font-extrabold text-white">
         {value !== null ? (
           <AnimatedNumber value={value} percentage={percentage} />
         ) : (
@@ -51,7 +63,7 @@ export function StatCard({
         )}
       </div>
       {subtitle && (
-        <div className="mt-1 text-[11px] text-white/35">{subtitle}</div>
+        <div className="mt-1 text-[11px] text-white/40">{subtitle}</div>
       )}
     </div>
   );

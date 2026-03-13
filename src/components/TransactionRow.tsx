@@ -17,12 +17,17 @@ export function TransactionRow({ stats }: Props) {
       {stats.map((stat) => (
         <div
           key={stat.label}
-          className="rounded-2xl border border-white/10 bg-white/[0.02] p-4 text-center"
+          className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 text-center
+                     backdrop-blur-sm transition-all duration-300
+                     hover:-translate-y-0.5 hover:border-white/20"
+          style={{
+            boxShadow: "inset 0 1px 1px rgba(255,255,255,0.03)",
+          }}
         >
-          <div className="text-[9px] font-medium uppercase tracking-[2px] text-white/45">
+          <div className="font-mono text-[10px] font-medium uppercase tracking-[2px] text-white/50">
             {stat.label}
           </div>
-          <div className="mt-1.5 text-[22px] font-extrabold text-white">
+          <div className="mt-1.5 font-mono text-[22px] font-extrabold text-white">
             {stat.value !== null ? (
               <AnimatedNumber value={stat.value} />
             ) : (
