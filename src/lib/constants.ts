@@ -15,8 +15,13 @@ export const BON_LAUNCH_EPOCH = 2033;
  */
 export const BON_LAUNCH_PARTIAL_BLOCKS_E2033 = 9456;
 
-/** Public API replication can lag slightly. Avoid exact-zero sync comparisons. */
-export const SYNC_TOLERANCE_BLOCKS = 2;
+/**
+ * Public API replication lag tolerance for sync detection.
+ * The /nodes endpoint nonces lag ~25-60 blocks behind /network/status nonces
+ * due to API indexer refresh intervals. 100 blocks accommodates this lag
+ * while still catching genuinely out-of-sync nodes.
+ */
+export const SYNC_TOLERANCE_BLOCKS = 100;
 
 /** Backup naming convention used by the validator track. */
 export const BACKUP_NAME_REGEX = /-backup-BoN-/i;
