@@ -22,7 +22,7 @@ import type {
 async function fetchJson<T>(path: string): Promise<T> {
   const res = await fetch(`${BON_API_BASE}${path}`, {
     cache: "no-store",
-    signal: AbortSignal.timeout(10_000),
+    signal: AbortSignal.timeout(15_000),
   });
   if (!res.ok) throw new Error(`BoN API error: ${res.status} ${path}`);
   return res.json() as Promise<T>;
@@ -31,7 +31,7 @@ async function fetchJson<T>(path: string): Promise<T> {
 async function fetchNumber(path: string): Promise<number> {
   const res = await fetch(`${BON_API_BASE}${path}`, {
     cache: "no-store",
-    signal: AbortSignal.timeout(10_000),
+    signal: AbortSignal.timeout(15_000),
   });
   if (!res.ok) throw new Error(`BoN API error: ${res.status} ${path}`);
   const text = await res.text();
@@ -42,22 +42,23 @@ async function fetchNumber(path: string): Promise<number> {
   return n;
 }
 
+const NODE_FIELDS = "name,shard,type,status,online,nonce,owner,identity,provider";
+const PAGE_SIZE = 500;
+
 async function fetchAllNodes(): Promise<BonNode[]> {
-  const allNodes: BonNode[] = [];
-  let from = 0;
-  const size = 500;
-  const maxPages = 100;
+  // First get total count, then fetch all pages in parallel
+  const total = await fetchNumber("/nodes/count");
+  const pageCount = Math.ceil(total / PAGE_SIZE);
 
-  for (let page = 0; page < maxPages; page++) {
-    const batch = await fetchJson<BonNode[]>(
-      `/nodes?size=${size}&from=${from}&fields=name,shard,type,status,online,nonce,owner,identity,provider`,
-    );
-    allNodes.push(...batch);
-    if (batch.length < size) break;
-    from += size;
-  }
+  const pages = await Promise.all(
+    Array.from({ length: pageCount }, (_, i) =>
+      fetchJson<BonNode[]>(
+        `/nodes?size=${PAGE_SIZE}&from=${i * PAGE_SIZE}&fields=${NODE_FIELDS}`,
+      )
+    ),
+  );
 
-  return allNodes;
+  return pages.flat();
 }
 
 function isSynced(
