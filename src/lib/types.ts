@@ -25,6 +25,20 @@ export type DashboardSnapshot = {
   };
 };
 
+export type TransactionHistoryPoint = {
+  timestamp: string;
+  cumulativeTransactions: number;
+};
+
+export type TransactionHistory = {
+  generatedAt: string;
+  from: string;
+  to: string;
+  bucketSeconds: number;
+  bucketLabel: string;
+  points: TransactionHistoryPoint[];
+};
+
 /** Shape of a node object from the BoN /nodes API. Only the fields we use. */
 export type BonNode = {
   name?: string;

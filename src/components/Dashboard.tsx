@@ -10,6 +10,7 @@ import { TransactionRow } from "./TransactionRow";
 import { EpochProgress } from "./EpochProgress";
 import { AnimatedNumber } from "./AnimatedNumber";
 import { Footer } from "./Footer";
+import { TransactionHistoryChart } from "./TransactionHistoryChart";
 
 export function Dashboard() {
   const { snapshot } = useSnapshot();
@@ -80,6 +81,10 @@ export function Dashboard() {
             { label: "Contract Calls", value: s?.scCallsLast24h ?? null },
           ]}
         />
+      </div>
+
+      <div className="mt-3">
+        <TransactionHistoryChart />
       </div>
 
       {/* Epoch Progress */}
