@@ -350,14 +350,23 @@ export function TransactionHistoryChart() {
 
               {activePoint && (
                 <>
+                  {/* Glowing vertical cursor — extends past baseline to connect to readout bar */}
                   <line
                     x1={activePoint.x}
                     y1={PAD_TOP}
                     x2={activePoint.x}
-                    y2={HEIGHT - PAD_BOTTOM}
+                    y2={HEIGHT}
                     stroke={isAfterSupernova ? "rgba(255,140,66,0.35)" : "rgba(143,255,240,0.35)"}
-                    strokeDasharray="5 7"
                     strokeWidth="1.5"
+                  />
+                  {/* Glow bloom on cursor line */}
+                  <line
+                    x1={activePoint.x}
+                    y1={activePoint.y}
+                    x2={activePoint.x}
+                    y2={HEIGHT}
+                    stroke={isAfterSupernova ? "rgba(255,140,66,0.12)" : "rgba(143,255,240,0.12)"}
+                    strokeWidth="8"
                   />
                   <circle
                     cx={activePoint.x}
@@ -407,33 +416,36 @@ export function TransactionHistoryChart() {
               </text>
             </svg>
 
-            {activePoint && (
+            {/* Readout bar below chart */}
+            <div
+              className="mt-2 flex items-center justify-between rounded-lg border px-3 py-2"
+              style={{
+                borderColor: isAfterSupernova
+                  ? "rgba(232,96,28,0.20)"
+                  : "rgba(35,240,199,0.15)",
+                background: isAfterSupernova
+                  ? "rgba(232,96,28,0.06)"
+                  : "rgba(35,240,199,0.04)",
+                boxShadow: activePoint
+                  ? isAfterSupernova
+                    ? "0 0 12px rgba(232,96,28,0.08)"
+                    : "0 0 12px rgba(35,240,199,0.06)"
+                  : "none",
+              }}
+            >
               <div
-                className="pointer-events-none absolute top-3 rounded-lg border bg-[#0a1628ee] px-2 py-1.5 text-left backdrop-blur-md sm:rounded-xl sm:px-3 sm:py-2"
-                style={{
-                  left: `${Math.min(
-                    Math.max((activePoint.x / WIDTH) * 100, 14),
-                    84,
-                  )}%`,
-                  transform: "translateX(-50%)",
-                  borderColor: isAfterSupernova ? "rgba(232,96,28,0.25)" : "rgba(35,240,199,0.25)",
-                  boxShadow: isAfterSupernova
-                    ? "0 0 20px rgba(232,96,28,0.10)"
-                    : "0 0 20px rgba(35,240,199,0.10)",
-                }}
+                className="font-mono text-[10px] uppercase tracking-[1.5px] sm:text-[11px] sm:tracking-[2px]"
+                style={{ color: isAfterSupernova ? "#ff8c42" : "#8ffff0" }}
               >
-                <div
-                  className="font-mono text-[8px] uppercase tracking-[1.5px] sm:text-[10px] sm:tracking-[2px]"
-                  style={{ color: isAfterSupernova ? "#ff8c42" : "#8ffff0" }}
-                >
-                  {formatMoment(activePoint.timestamp)}
-                </div>
-                <div className="font-mono text-sm font-bold text-white sm:mt-1 sm:text-base">
-                  {formatFull(activePoint.value)}
-                </div>
-                <div className="text-[9px] text-white/45 sm:text-[11px]">cumulative tx</div>
+                {activePoint ? formatMoment(activePoint.timestamp) : "\u00A0"}
               </div>
-            )}
+              <div className="flex items-baseline gap-1.5">
+                <div className="font-mono text-sm font-bold text-white sm:text-base">
+                  {activePoint ? formatFull(activePoint.value) : "\u00A0"}
+                </div>
+                <div className="text-[9px] text-white/40 sm:text-[10px]">tx</div>
+              </div>
+            </div>
           </>
         )}
       </div>
