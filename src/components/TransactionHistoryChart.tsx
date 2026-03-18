@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { PointerEvent as ReactPointerEvent } from "react";
 import { useTransactionHistory } from "@/hooks/useTransactionHistory";
+import { SUPERNOVA_ACTIVATION_TS } from "@/lib/constants";
 
 const WIDTH = 960;
 const HEIGHT = 280;
@@ -63,6 +64,7 @@ export function TransactionHistoryChart() {
     const maxValue = Math.max(...values, 1);
     const plotWidth = WIDTH - PAD_X * 2;
     const plotHeight = HEIGHT - PAD_TOP - PAD_BOTTOM - PAD_Y;
+    const baseline = HEIGHT - PAD_BOTTOM;
 
     const points: ChartPoint[] = history.points.map((point, index) => {
       const x = PAD_X + (index / Math.max(history.points.length - 1, 1)) * plotWidth;
@@ -77,17 +79,72 @@ export function TransactionHistoryChart() {
       };
     });
 
-    const linePath = points
-      .map((point, index) => `${index === 0 ? "M" : "L"} ${point.x} ${point.y}`)
-      .join(" ");
+    // Find supernova split — index of the first point at or after activation
+    const supernovaMs = SUPERNOVA_ACTIVATION_TS * 1000;
+    let splitIndex = points.findIndex(
+      (p) => new Date(p.timestamp).getTime() >= supernovaMs,
+    );
 
-    const areaPath = `${linePath} L ${PAD_X + plotWidth} ${HEIGHT - PAD_BOTTOM} L ${PAD_X} ${HEIGHT - PAD_BOTTOM} Z`;
+    // Interpolate an exact split point on the line
+    let splitPoint: { x: number; y: number } | null = null;
+    if (splitIndex > 0) {
+      const prev = points[splitIndex - 1];
+      const curr = points[splitIndex];
+      const prevMs = new Date(prev.timestamp).getTime();
+      const currMs = new Date(curr.timestamp).getTime();
+      const t = (supernovaMs - prevMs) / (currMs - prevMs);
+      splitPoint = {
+        x: prev.x + t * (curr.x - prev.x),
+        y: prev.y + t * (curr.y - prev.y),
+      };
+    } else if (splitIndex === 0) {
+      splitPoint = { x: points[0].x, y: points[0].y };
+    }
+    // If splitIndex is -1, supernova hasn't happened in the data yet
+
+    // Build before/after paths
+    let beforeLinePath = "";
+    let beforeAreaPath = "";
+    let afterLinePath = "";
+    let afterAreaPath = "";
+
+    if (splitIndex === -1 || !splitPoint) {
+      // All points are before supernova
+      beforeLinePath = points
+        .map((p, i) => `${i === 0 ? "M" : "L"} ${p.x} ${p.y}`)
+        .join(" ");
+      const last = points[points.length - 1];
+      beforeAreaPath = `${beforeLinePath} L ${last.x} ${baseline} L ${points[0].x} ${baseline} Z`;
+    } else {
+      // Before segment: up to and including the interpolated split point
+      const beforePoints = points.slice(0, splitIndex);
+      if (beforePoints.length > 0) {
+        beforeLinePath = beforePoints
+          .map((p, i) => `${i === 0 ? "M" : "L"} ${p.x} ${p.y}`)
+          .join(" ");
+        beforeLinePath += ` L ${splitPoint.x} ${splitPoint.y}`;
+        beforeAreaPath = `${beforeLinePath} L ${splitPoint.x} ${baseline} L ${beforePoints[0].x} ${baseline} Z`;
+      }
+
+      // After segment: from split point through remaining points
+      const afterPoints = points.slice(splitIndex);
+      afterLinePath = `M ${splitPoint.x} ${splitPoint.y}`;
+      afterLinePath += afterPoints
+        .map((p) => ` L ${p.x} ${p.y}`)
+        .join("");
+      const last = afterPoints[afterPoints.length - 1];
+      afterAreaPath = `${afterLinePath} L ${last.x} ${baseline} L ${splitPoint.x} ${baseline} Z`;
+    }
 
     return {
       maxValue,
       points,
-      linePath,
-      areaPath,
+      splitPoint,
+      splitIndex,
+      beforeLinePath,
+      beforeAreaPath,
+      afterLinePath,
+      afterAreaPath,
     };
   }, [history]);
 
@@ -95,6 +152,10 @@ export function TransactionHistoryChart() {
     hoveredIndex ?? (chart ? Math.max(chart.points.length - 1, 0) : null);
   const activePoint =
     activeIndex !== null && chart ? chart.points[activeIndex] : null;
+  const isAfterSupernova =
+    activeIndex !== null && chart && chart.splitIndex !== -1
+      ? activeIndex >= chart.splitIndex
+      : false;
 
   function updateHoveredIndex(clientX: number) {
     if (!chart || !containerRef.current || chartWidth <= 0) return;
@@ -161,13 +222,23 @@ export function TransactionHistoryChart() {
           <>
             <svg viewBox={`0 0 ${WIDTH} ${HEIGHT}`} className="h-auto w-full overflow-visible">
               <defs>
-                <linearGradient id="tx-area" x1="0%" y1="0%" x2="0%" y2="100%">
-                  <stop offset="0%" stopColor="rgba(35,240,199,0.34)" />
+                {/* Before supernova — cool cyan */}
+                <linearGradient id="tx-area-before" x1="0%" y1="0%" x2="0%" y2="100%">
+                  <stop offset="0%" stopColor="rgba(35,240,199,0.24)" />
                   <stop offset="100%" stopColor="rgba(35,240,199,0)" />
                 </linearGradient>
-                <linearGradient id="tx-line" x1="0%" y1="0%" x2="100%" y2="0%">
+                <linearGradient id="tx-line-before" x1="0%" y1="0%" x2="100%" y2="0%">
                   <stop offset="0%" stopColor="#23f0c7" />
                   <stop offset="100%" stopColor="#8ffff0" />
+                </linearGradient>
+                {/* After supernova — warm orange */}
+                <linearGradient id="tx-area-after" x1="0%" y1="0%" x2="0%" y2="100%">
+                  <stop offset="0%" stopColor="rgba(232,96,28,0.30)" />
+                  <stop offset="100%" stopColor="rgba(232,96,28,0)" />
+                </linearGradient>
+                <linearGradient id="tx-line-after" x1="0%" y1="0%" x2="100%" y2="0%">
+                  <stop offset="0%" stopColor="#e8601c" />
+                  <stop offset="100%" stopColor="#ff8c42" />
                 </linearGradient>
                 <filter id="tx-glow" x="-20%" y="-80%" width="140%" height="260%">
                   <feGaussianBlur stdDeviation="6" result="blur" />
@@ -211,16 +282,71 @@ export function TransactionHistoryChart() {
                 );
               })}
 
-              <path d={chart.areaPath} fill="url(#tx-area)" />
-              <path
-                d={chart.linePath}
-                fill="none"
-                stroke="url(#tx-line)"
-                strokeWidth="3"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                filter="url(#tx-glow)"
-              />
+              {/* Before supernova */}
+              {chart.beforeAreaPath && (
+                <>
+                  <path d={chart.beforeAreaPath} fill="url(#tx-area-before)" />
+                  <path
+                    d={chart.beforeLinePath}
+                    fill="none"
+                    stroke="url(#tx-line-before)"
+                    strokeWidth="3"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    filter="url(#tx-glow)"
+                  />
+                </>
+              )}
+
+              {/* After supernova */}
+              {chart.afterAreaPath && (
+                <>
+                  <path d={chart.afterAreaPath} fill="url(#tx-area-after)" />
+                  <path
+                    d={chart.afterLinePath}
+                    fill="none"
+                    stroke="url(#tx-line-after)"
+                    strokeWidth="3"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    filter="url(#tx-glow)"
+                  />
+                </>
+              )}
+
+              {/* Supernova activation marker */}
+              {chart.splitPoint && (
+                <>
+                  <line
+                    x1={chart.splitPoint.x}
+                    y1={PAD_TOP}
+                    x2={chart.splitPoint.x}
+                    y2={HEIGHT - PAD_BOTTOM}
+                    stroke="rgba(232,96,28,0.5)"
+                    strokeDasharray="4 6"
+                    strokeWidth="1.5"
+                  />
+                  <circle
+                    cx={chart.splitPoint.x}
+                    cy={chart.splitPoint.y}
+                    r="4"
+                    fill="#e8601c"
+                    opacity="0.6"
+                  />
+                  <text
+                    x={chart.splitPoint.x}
+                    y={PAD_TOP - 4}
+                    textAnchor="middle"
+                    fill="#ff8c42"
+                    fontSize="10"
+                    fontFamily="var(--font-mono)"
+                    fontWeight="600"
+                    letterSpacing="1.5"
+                  >
+                    SUPERNOVA
+                  </text>
+                </>
+              )}
 
               {activePoint && (
                 <>
@@ -229,7 +355,7 @@ export function TransactionHistoryChart() {
                     y1={PAD_TOP}
                     x2={activePoint.x}
                     y2={HEIGHT - PAD_BOTTOM}
-                    stroke="rgba(143,255,240,0.35)"
+                    stroke={isAfterSupernova ? "rgba(255,140,66,0.35)" : "rgba(143,255,240,0.35)"}
                     strokeDasharray="5 7"
                     strokeWidth="1.5"
                   />
@@ -237,15 +363,15 @@ export function TransactionHistoryChart() {
                     cx={activePoint.x}
                     cy={activePoint.y}
                     r="6"
-                    fill="#8ffff0"
+                    fill={isAfterSupernova ? "#ff8c42" : "#8ffff0"}
                     opacity="0.22"
                   />
                   <circle
                     cx={activePoint.x}
                     cy={activePoint.y}
                     r="3.5"
-                    fill="#dffffa"
-                    stroke="#23f0c7"
+                    fill={isAfterSupernova ? "#ffd4b0" : "#dffffa"}
+                    stroke={isAfterSupernova ? "#e8601c" : "#23f0c7"}
                     strokeWidth="1.5"
                   />
                 </>
@@ -283,17 +409,23 @@ export function TransactionHistoryChart() {
 
             {activePoint && (
               <div
-                className="pointer-events-none absolute top-3 rounded-xl border border-[#23f0c740] bg-[#0a1628ee] px-3 py-2 text-left backdrop-blur-md"
+                className="pointer-events-none absolute top-3 rounded-xl border bg-[#0a1628ee] px-3 py-2 text-left backdrop-blur-md"
                 style={{
                   left: `${Math.min(
                     Math.max((activePoint.x / WIDTH) * 100, 14),
                     84,
                   )}%`,
                   transform: "translateX(-50%)",
-                  boxShadow: "0 0 20px rgba(35,240,199,0.10)",
+                  borderColor: isAfterSupernova ? "rgba(232,96,28,0.25)" : "rgba(35,240,199,0.25)",
+                  boxShadow: isAfterSupernova
+                    ? "0 0 20px rgba(232,96,28,0.10)"
+                    : "0 0 20px rgba(35,240,199,0.10)",
                 }}
               >
-                <div className="font-mono text-[10px] uppercase tracking-[2px] text-[#8ffff0]">
+                <div
+                  className="font-mono text-[10px] uppercase tracking-[2px]"
+                  style={{ color: isAfterSupernova ? "#ff8c42" : "#8ffff0" }}
+                >
                   {formatMoment(activePoint.timestamp)}
                 </div>
                 <div className="mt-1 font-mono text-lg font-bold text-white">

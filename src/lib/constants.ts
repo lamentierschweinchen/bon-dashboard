@@ -6,6 +6,9 @@ export const BON_API_BASE = "https://api.battleofnodes.com";
 /** Official Battle of Nodes launch moment (Unix timestamp). 2026-03-11 13:00:00 UTC. */
 export const BON_LAUNCH_TS = 1773234000;
 
+/** Supernova activation moment (Unix timestamp). 2026-03-16 09:00:00 UTC. */
+export const SUPERNOVA_ACTIVATION_TS = 1773651600;
+
 /** Launch happened inside this epoch. */
 export const BON_LAUNCH_EPOCH = 2033;
 
