@@ -409,7 +409,7 @@ export function TransactionHistoryChart() {
 
             {activePoint && (
               <div
-                className="pointer-events-none absolute top-3 rounded-xl border bg-[#0a1628ee] px-3 py-2 text-left backdrop-blur-md"
+                className="pointer-events-none absolute top-3 rounded-lg border bg-[#0a1628ee] px-2 py-1.5 text-left backdrop-blur-md sm:rounded-xl sm:px-3 sm:py-2"
                 style={{
                   left: `${Math.min(
                     Math.max((activePoint.x / WIDTH) * 100, 14),
@@ -423,15 +423,15 @@ export function TransactionHistoryChart() {
                 }}
               >
                 <div
-                  className="font-mono text-[10px] uppercase tracking-[2px]"
+                  className="font-mono text-[8px] uppercase tracking-[1.5px] sm:text-[10px] sm:tracking-[2px]"
                   style={{ color: isAfterSupernova ? "#ff8c42" : "#8ffff0" }}
                 >
                   {formatMoment(activePoint.timestamp)}
                 </div>
-                <div className="mt-1 font-mono text-lg font-bold text-white">
+                <div className="font-mono text-sm font-bold text-white sm:mt-1 sm:text-base">
                   {formatFull(activePoint.value)}
                 </div>
-                <div className="text-[11px] text-white/45">cumulative transactions</div>
+                <div className="text-[9px] text-white/45 sm:text-[11px]">cumulative tx</div>
               </div>
             )}
           </>
