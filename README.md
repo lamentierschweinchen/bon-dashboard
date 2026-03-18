@@ -1,36 +1,64 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# BoN Dashboard
 
-## Getting Started
+This repo now has two surfaces:
 
-First, run the development server:
+- `/` is the general chain monitor.
+- `/control-room` is the Battle of Nodes competition dashboard.
+
+The control room is challenge-aware and reads local Battle of Nodes artifacts for:
+
+- Challenge 1 validator setup
+- Challenge 2 on-chain operations
+- Challenge 3 backup, restart, and log proofing
+- Challenge 4 official stress windows
+- Challenge 5 million-transaction sprint
+
+## Local Setup
+
+Install dependencies and start the app:
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000) for the chain monitor or [http://localhost:3000/control-room](http://localhost:3000/control-room) for the competition dashboard.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Workspace Configuration
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+The control room reads artifacts from a local MultiversX workspace. By default it assumes this repo lives inside a larger workspace and resolves Battle of Nodes folders from the parent directory.
 
-## Learn More
+If your artifact workspace lives somewhere else, set:
 
-To learn more about Next.js, take a look at the following resources:
+```bash
+BON_WORKSPACE_ROOT=/path/to/your/MultiversX-workspace
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+You can copy the shape from [`.env.example`](./.env.example).
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Review And Deploy Safety
 
-## Deploy on Vercel
+The repo is set up so it can be handed to a private review/publish flow without bundling live competition artifacts:
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+- Control-room paths shown in the UI are workspace-relative, not personal absolute filesystem paths.
+- The app reads explicit proof files, logs, manifests, and run artifacts only.
+- Wallet keystores, PEM files, and local tool state are ignored and not committed.
+- If the Battle of Nodes workspace is absent in a review or Vercel environment, the control room degrades into missing-artifact states instead of crashing.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Verification
+
+Use:
+
+```bash
+npm run lint
+npm run build
+```
+
+## Deploying To Vercel
+
+The app can be deployed as-is. For the public chain monitor, no extra setup is needed beyond the usual project env vars you already use.
+
+For `/control-room`:
+
+- local artifact-backed pages work best when `BON_WORKSPACE_ROOT` points at a mounted workspace with the Battle of Nodes directories present
+- if that workspace is not mounted in Vercel, the routes still render and show missing local evidence rather than failing the deployment

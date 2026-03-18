@@ -1,16 +1,37 @@
 import type { Metadata } from "next";
-import { Inter, JetBrains_Mono } from "next/font/google";
+import localFont from "next/font/local";
 import "./globals.css";
 
-const inter = Inter({
-  subsets: ["latin"],
-  variable: "--font-inter",
-});
-
-const jetbrainsMono = JetBrains_Mono({
-  subsets: ["latin"],
-  variable: "--font-jetbrains",
-  weight: ["400", "700", "800"],
+const roobert = localFont({
+  src: [
+    {
+      path: "../fonts/RoobertPRO-Regular.otf",
+      weight: "400",
+      style: "normal",
+    },
+    {
+      path: "../fonts/RoobertPRO-Medium.otf",
+      weight: "500",
+      style: "normal",
+    },
+    {
+      path: "../fonts/RoobertPRO-SemiBold.otf",
+      weight: "600",
+      style: "normal",
+    },
+    {
+      path: "../fonts/RoobertPRO-Bold.otf",
+      weight: "700",
+      style: "normal",
+    },
+    {
+      path: "../fonts/RoobertPRO-Heavy.otf",
+      weight: "800",
+      style: "normal",
+    },
+  ],
+  variable: "--font-roobert",
+  display: "swap",
 });
 
 export const metadata: Metadata = {
@@ -32,7 +53,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={`${inter.variable} ${jetbrainsMono.variable}`}>
+    <html lang="en" className={roobert.variable}>
       <body className="font-sans antialiased">{children}</body>
     </html>
   );

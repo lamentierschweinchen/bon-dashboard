@@ -81,7 +81,7 @@ export function TransactionHistoryChart() {
 
     // Find supernova split — index of the first point at or after activation
     const supernovaMs = SUPERNOVA_ACTIVATION_TS * 1000;
-    let splitIndex = points.findIndex(
+    const splitIndex = points.findIndex(
       (p) => new Date(p.timestamp).getTime() >= supernovaMs,
     );
 

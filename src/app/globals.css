@@ -1,8 +1,9 @@
 @import "tailwindcss";
 
-/* Map JetBrains Mono to Tailwind's font-mono utility */
+/* Map local workspace fonts to Tailwind utilities */
 @theme {
-  --font-mono: var(--font-jetbrains), ui-monospace, monospace;
+  --font-sans: var(--font-roobert), "Avenir Next", "Segoe UI", sans-serif;
+  --font-mono: ui-monospace, "SFMono-Regular", Menlo, Monaco, Consolas, monospace;
 }
 
 /* Supernova theme custom properties */
