@@ -1161,8 +1161,8 @@ body {
    ═══════════════════════════════════════════ */
 const CONFIG = {
   LIVE_MODE: true,
-  POLL_INTERVAL_MS: 60000,        // 60s for scoring data
-  SIGNAL_POLL_INTERVAL_MS: 8000,  // 8s for signal/command updates (near real-time)
+  POLL_INTERVAL_MS: 30000,        // 30s for scoring data (activity diff detection)
+  SIGNAL_POLL_INTERVAL_MS: 4000,  // 4s for signal/command updates (near real-time)
   DEMO_POLL_INTERVAL_MS: 3000,    // 3s for demo mode
   DEMO_COMMAND_INTERVAL_MS: 8000,
   SPRITE_SIZE: 24,
