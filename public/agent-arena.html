@@ -2193,25 +2193,37 @@ function detectRound() {
   else if (mins >= 1020 && mins < 1050) roundInfo = { round: 2, endMs: getUTCSlotEnd(now, 17, 30) };
   else roundInfo = { round: 0, endMs: null, label: 'WAITING' };
 
-  // ─ Snapshot R1 scores when transitioning out of round 1 ─
-  if (STATE.lastDetectedRound === 1 && roundInfo.round !== 1 && !STATE.r1Snapshotted) {
+  // ─ Snapshot R1 scores 5 min into break (buffer for API lag) ─
+  if (roundInfo.label === 'BREAK' && !STATE.r1Snapshotted && mins >= 995) {
     STATE.agents.forEach(a => STATE.r1ScoreSnapshot.set(a.id, a.score));
     STATE.r1Snapshotted = true;
     console.log('[Agent Arena] R1 scores snapshotted for', STATE.r1ScoreSnapshot.size, 'agents');
   }
 
-  // ─ Ring girl triggers on round transitions ─
-  if (roundInfo.round !== STATE.lastDetectedRound && typeof showRingGirl === 'function') {
-    if (STATE.lastDetectedRound === 1 && roundInfo.round === 0) {
-      // R1 ended → break
-      showRingGirl('BREAK');
-      setTimeout(() => showRingGirl('ROUND 2'), 8000);
-    } else if (STATE.lastDetectedRound === 0 && roundInfo.round === 2) {
-      // Break ended → R2 starting
-      showRingGirl('ROUND 2');
-    } else if (STATE.lastDetectedRound === 0 && roundInfo.round === 1) {
-      // Event starting
-      showRingGirl('ROUND 1');
+  // ─ Ring girl triggers ─
+  if (typeof showRingGirl === 'function') {
+    // Transition: R1 → break
+    if (roundInfo.round !== STATE.lastDetectedRound) {
+      if (STATE.lastDetectedRound === 1 && roundInfo.round === 0) {
+        showRingGirl('BREAK');
+      } else if (STATE.lastDetectedRound === 0 && roundInfo.round === 2) {
+        showRingGirl('ROUND 2');
+      } else if (STATE.lastDetectedRound === 0 && roundInfo.round === 1) {
+        showRingGirl('ROUND 1');
+      }
+    }
+    // During break: countdown appearances at 15m, 10m, 5m, 1m before R2
+    if (roundInfo.label === 'BREAK' && roundInfo.endMs) {
+      const secsToR2 = Math.floor((roundInfo.endMs - Date.now()) / 1000);
+      const breakCountdowns = [900, 600, 300, 60]; // 15m, 10m, 5m, 1m
+      breakCountdowns.forEach(threshold => {
+        const key = 'break_countdown_' + threshold;
+        if (secsToR2 <= threshold && secsToR2 > threshold - 12 && !STATE[key]) {
+          STATE[key] = true;
+          const label = threshold >= 60 ? Math.floor(threshold / 60) + ' MIN' : threshold + 'S';
+          showRingGirl(label);
+        }
+      });
     }
   }
   STATE.lastDetectedRound = roundInfo.round;
