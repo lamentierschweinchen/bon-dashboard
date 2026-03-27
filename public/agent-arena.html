@@ -554,6 +554,20 @@ body {
 .tooltip-score.positive { color: var(--neon-green); }
 .tooltip-score.negative { color: var(--neon-red); }
 
+.tooltip-rounds {
+  margin-top: 4px;
+  font-size: 9px;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+.tooltip-rounds span { color: var(--text-primary); font-weight: 600; }
+
+.tooltip-txs {
+  margin-top: 3px;
+  font-size: 8px;
+  color: var(--text-dim);
+}
+
 /* ═══════════════════════════════════════════
    SCOREBOARD
    ═══════════════════════════════════════════ */
@@ -1012,6 +1026,8 @@ body {
   <div class="tooltip-name" id="tooltip-name"></div>
   <div class="tooltip-guild" id="tooltip-guild"></div>
   <div class="tooltip-score" id="tooltip-score"></div>
+  <div class="tooltip-rounds" id="tooltip-rounds"></div>
+  <div class="tooltip-txs" id="tooltip-txs"></div>
 </div>
 
 <!-- ═══ HEADER ═══ -->
@@ -1128,9 +1144,8 @@ const CONFIG = {
   TARGET_ADDRESS: 'erd1s0hzpn90yje34n4vth6vl0vlzd4uz7xz5y49mlak3dwacnkcfkwsl5nnhq',
 
   // ── Round schedule (UTC) ──
-  // Round 1: 16:00 - 16:30, Round 2: 17:00 - 17:30
-  // Set EVENT_DATE to the day of the event (YYYY-MM-DD)
-  EVENT_DATE: null,  // e.g. '2026-04-02' — null = auto-detect from API timestamps
+  // Round 1: 16:00–16:30, Round 2: 17:00–17:30
+  EVENT_DATE: '2026-03-27',
 };
 
 /*
@@ -1218,6 +1233,10 @@ const STATE = {
   leaders: [],         // Leader addresses fetched on init
   leadersLoaded: false,
   signalTimeWindow: { startMs: null, endMs: null }, // From scoring API timestamps
+  // Round score tracking (for R1/R2 breakdown in tooltip)
+  r1ScoreSnapshot: new Map(),   // agent id → score at end of R1
+  r1Snapshotted: false,
+  lastDetectedRound: 0,        // For ring girl triggers
 };
 
 /* ═══════════════════════════════════════════
@@ -1833,8 +1852,29 @@ function triggerArenaFlash(state) {
     $('#tooltip-name').textContent = d.name || truncateAddr(d.id);
     $('#tooltip-guild').textContent = d.guild;
     const scoreEl = $('#tooltip-score');
-    scoreEl.textContent = (d.score >= 0 ? '+' : '') + d.score.toLocaleString();
+    scoreEl.textContent = 'Score: ' + (d.score >= 0 ? '+' : '') + d.score.toLocaleString();
     scoreEl.className = 'tooltip-score ' + (d.score >= 0 ? 'positive' : 'negative');
+
+    // Round breakdown
+    const roundsEl = $('#tooltip-rounds');
+    const r1Score = STATE.r1ScoreSnapshot.get(d.id);
+    if (r1Score !== undefined) {
+      const r2Score = d.score - r1Score;
+      roundsEl.innerHTML = `R1: <span>${r1Score >= 0 ? '+' : ''}${r1Score.toLocaleString()}</span> · R2: <span>${r2Score >= 0 ? '+' : ''}${r2Score.toLocaleString()}</span>`;
+    } else if (STATE.round >= 1) {
+      roundsEl.innerHTML = `R1: <span>${(d.score >= 0 ? '+' : '') + d.score.toLocaleString()}</span>`;
+    } else {
+      roundsEl.textContent = '';
+    }
+
+    // TX stats
+    const txsEl = $('#tooltip-txs');
+    if (d.totalPermittedTxs || d.totalUnpermittedTxs) {
+      txsEl.textContent = `✓${d.totalPermittedTxs || 0} · ✗${d.totalUnpermittedTxs || 0} · Σ${d.totalTxs || 0}`;
+    } else {
+      txsEl.textContent = d.totalTxs ? `Σ${d.totalTxs}` : '';
+    }
+
     tooltip.style.left = (e.clientX + 14) + 'px';
     tooltip.style.top = (e.clientY - 10) + 'px';
     tooltip.classList.add('visible');
@@ -2147,10 +2187,36 @@ function detectRound() {
   const mm = now.getUTCMinutes();
   const mins = hh * 60 + mm;
   // Round 1: 16:00–16:30 UTC (960–990), Round 2: 17:00–17:30 UTC (1020–1050)
-  if (mins >= 960 && mins < 990) return { round: 1, endMs: getUTCSlotEnd(now, 16, 30) };
-  if (mins >= 990 && mins < 1020) return { round: 0, endMs: getUTCSlotEnd(now, 17, 0), label: 'BREAK' }; // break
-  if (mins >= 1020 && mins < 1050) return { round: 2, endMs: getUTCSlotEnd(now, 17, 30) };
-  return { round: 0, endMs: null, label: 'WAITING' };
+  let roundInfo;
+  if (mins >= 960 && mins < 990) roundInfo = { round: 1, endMs: getUTCSlotEnd(now, 16, 30) };
+  else if (mins >= 990 && mins < 1020) roundInfo = { round: 0, endMs: getUTCSlotEnd(now, 17, 0), label: 'BREAK' };
+  else if (mins >= 1020 && mins < 1050) roundInfo = { round: 2, endMs: getUTCSlotEnd(now, 17, 30) };
+  else roundInfo = { round: 0, endMs: null, label: 'WAITING' };
+
+  // ─ Snapshot R1 scores when transitioning out of round 1 ─
+  if (STATE.lastDetectedRound === 1 && roundInfo.round !== 1 && !STATE.r1Snapshotted) {
+    STATE.agents.forEach(a => STATE.r1ScoreSnapshot.set(a.id, a.score));
+    STATE.r1Snapshotted = true;
+    console.log('[Agent Arena] R1 scores snapshotted for', STATE.r1ScoreSnapshot.size, 'agents');
+  }
+
+  // ─ Ring girl triggers on round transitions ─
+  if (roundInfo.round !== STATE.lastDetectedRound && typeof showRingGirl === 'function') {
+    if (STATE.lastDetectedRound === 1 && roundInfo.round === 0) {
+      // R1 ended → break
+      showRingGirl('BREAK');
+      setTimeout(() => showRingGirl('ROUND 2'), 8000);
+    } else if (STATE.lastDetectedRound === 0 && roundInfo.round === 2) {
+      // Break ended → R2 starting
+      showRingGirl('ROUND 2');
+    } else if (STATE.lastDetectedRound === 0 && roundInfo.round === 1) {
+      // Event starting
+      showRingGirl('ROUND 1');
+    }
+  }
+  STATE.lastDetectedRound = roundInfo.round;
+
+  return roundInfo;
 }
 
 function getUTCSlotEnd(now, endHour, endMin) {
