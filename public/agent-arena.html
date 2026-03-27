@@ -2340,21 +2340,23 @@ function getUTCSlotEnd(now, endHour, endMin) {
 
 // Full live data fetch cycle (scoring only — signals polled separately)
 async function fetchLiveData() {
-  const leaders = await fetchLeaders();
-  if (leaders.length === 0) throw new Error('No leaders');
-
-  // Scoring + activity derivation (totalTxs diff)
-  const agents = await fetchAllScoring(leaders);
-  if (agents.length === 0) throw new Error('No agents');
-
-  // Round detection
+  // Round detection always works (clock-based, no API needed)
   const roundInfo = detectRound();
   const round = roundInfo.round || STATE.round;
-
-  // Time remaining
   let timeRemaining = null;
   if (roundInfo.endMs) {
     timeRemaining = Math.max(0, Math.floor((roundInfo.endMs - Date.now()) / 1000));
+  }
+
+  let agents = [];
+  let leaders = [];
+  try {
+    leaders = await fetchLeaders();
+    if (leaders.length > 0) {
+      agents = await fetchAllScoring(leaders);
+    }
+  } catch (err) {
+    console.warn('[Agent Arena] Data fetch error:', err.message);
   }
 
   return {
@@ -2471,19 +2473,16 @@ function initMockData() {
         id: addr,
         name: 'Bot-' + String(agentIndex + 1).padStart(3, '0'),
         guild: guild,
-        score: Math.floor(rng() * 4000 + 200),
+        score: 0,
         sending: false,
-        velocity: rng() * 0.8 + 0.2,
+        velocity: 0,
         _baseVelocity: rng() * 150 + 30,
       });
       agentIndex++;
     }
   });
 
-  MOCK.agents[0].score = 4950;
-  MOCK.agents[3].score = 5120;
-  MOCK.agents[7].score = 4880;
-  MOCK.agents[12].score = 5300;
+  // Scores start at 0 — earned during rounds only
 }
 
 function mockTick() {
@@ -2639,12 +2638,14 @@ async function poll() {
     }
   } catch (err) {
     console.warn('[Agent Arena] Poll failed:', err.message);
-    // Fall back to demo mode on failure
     if (CONFIG.LIVE_MODE) {
-      console.log('[Agent Arena] Falling back to demo mode');
-      const data = mockTick();
-      applyState(data);
-      $('#mode-label').textContent = 'OFFLINE';
+      // Still update timer from clock even if API is down
+      const roundInfo = detectRound();
+      if (roundInfo.endMs) {
+        STATE.timeRemaining = Math.max(0, Math.floor((roundInfo.endMs - Date.now()) / 1000));
+        updateTimerDisplay();
+      }
+      $('#mode-label').textContent = 'LIVE';
       $('#mode-label').style.color = 'var(--neon-red)';
     }
   }
