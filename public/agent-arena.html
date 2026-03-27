@@ -1228,18 +1228,17 @@ function guildColor(guildName) {
   return `hsl(${h}, 70%, 55%)`;
 }
 
-// Pixel templates — two frames each (claws open / claws closed)
+// Pixel templates — two frames each (claws UP = sending, claws DOWN = idle)
 // 16x16 grid. Legend: B=body, S=shell, E=eye, C=claw, L=leg, A=antenna, T=tentacle, H=head
 const GRID = 16;
 const TEMPLATES = {
   // ── CRAB: wide body, big claws, 6 legs ──
-  crab_open: [
-    '                ',
+  crab_up: [
     'CC            CC',
     'CC            CC',
     ' CB          BC ',
     '  CB        BC  ',
-    '   CSSSSSSSC   ',
+    '   CSSSSSSSC    ',
     '   SSSSSSSSSS   ',
     '   SEEBSSBEESS  ',
     '   SSSSSSSSSS   ',
@@ -1248,16 +1247,14 @@ const TEMPLATES = {
     '  L L SSSS L L  ',
     ' L  L  SS  L  L ',
     'L    L    L    L',
+    '                ',
     '                ',
     '                ',
   ],
-  crab_closed: [
+  crab_down: [
     '                ',
     '                ',
-    ' CC          CC ',
-    ' CCB        BCC ',
-    '  CB        BC  ',
-    '   CSSSSSSSC   ',
+    '   SSSSSSSS     ',
     '   SSSSSSSSSS   ',
     '   SEEBSSBEESS  ',
     '   SSSSSSSSSS   ',
@@ -1266,11 +1263,14 @@ const TEMPLATES = {
     '  L L SSSS L L  ',
     ' L  L  SS  L  L ',
     'L    L    L    L',
+    '  CB        BC  ',
+    ' CCB        BCC ',
+    'CC            CC',
     '                ',
     '                ',
   ],
   // ── LOBSTER: long body, forward claws, tail ──
-  lobster_open: [
+  lobster_up: [
     '  CC        CC  ',
     '  CC        CC  ',
     '   CB      BC   ',
@@ -1288,10 +1288,8 @@ const TEMPLATES = {
     '  L   LL   L    ',
     '                ',
   ],
-  lobster_closed: [
+  lobster_down: [
     '                ',
-    '  CCB      BCC  ',
-    '   CB      BC   ',
     '    AASSAA      ',
     '     SSSS       ',
     '    SEESSE      ',
@@ -1304,10 +1302,32 @@ const TEMPLATES = {
     '    LLLLLL      ',
     '   L  LL  L     ',
     '  L   LL   L    ',
-    '                ',
+    '   CB      BC   ',
+    '  CCB      BCC  ',
+    '  CC        CC  ',
   ],
   // ── ALIEN: big head, tentacles ──
-  alien_open: [
+  alien_up: [
+    ' T    TT    T   ',
+    '  T   TT   T    ',
+    '   T  TT  T     ',
+    '   TTTTTTTT     ',
+    '    BBBBBB      ',
+    '   HHHHHHHH     ',
+    '  HHHHHHHHH     ',
+    '  HEEHHHHEEH    ',
+    '  HHHHHHHHHH    ',
+    '   HHHHHHHH     ',
+    '     AA  AA     ',
+    '     A    A     ',
+    '                ',
+    '                ',
+    '                ',
+    '                ',
+  ],
+  alien_down: [
+    '                ',
+    '                ',
     '     AA  AA     ',
     '     A    A     ',
     '   HHHHHHHH     ',
@@ -1317,29 +1337,9 @@ const TEMPLATES = {
     '   HHHHHHHH     ',
     '    BBBBBB      ',
     '   TTTTTTTT     ',
-    '   T  TT  T     ',
-    '  T   TT   T    ',
-    ' T    TT    T   ',
-    '                ',
-    '                ',
-    '                ',
-    '                ',
-  ],
-  alien_closed: [
-    '     AA  AA     ',
-    '     A    A     ',
-    '   HHHHHHHH     ',
-    '  HHHHHHHHH     ',
-    '  HEEHHHHEEH    ',
-    '  HHHHHHHHHH    ',
-    '   HHHHHHHH     ',
-    '    BBBBBB      ',
-    '    TTTTTT      ',
     '    T TT T      ',
-    '     TTT T      ',
-    '                ',
-    '                ',
-    '                ',
+    '     TTTT       ',
+    '      TT        ',
     '                ',
     '                ',
   ],
@@ -1406,11 +1406,11 @@ function renderTemplate(templateName, guildName) {
   return dataURI;
 }
 
-// Returns { open, closed } sprite URLs for the creature
+// Returns { up, down } sprite URLs for the creature
 function generateSprites(type, guildName) {
   return {
-    open: renderTemplate(type + '_open', guildName),
-    closed: renderTemplate(type + '_closed', guildName),
+    up: renderTemplate(type + '_up', guildName),
+    down: renderTemplate(type + '_down', guildName),
   };
 }
 
@@ -1648,10 +1648,10 @@ function updateArena(agents, arenaState) {
       });
     }
 
-    // Update sprite frame based on scoring state — claws open when active
+    // Update sprite frame — claws UP when sending TXs (scoring OR penalized), DOWN when idle
     const spriteEl = el.querySelector('.agent-sprite');
-    const isActive = agent.state === 'scoring' || agent.state === 'penalized';
-    spriteEl.style.backgroundImage = `url(${isActive ? sprites.open : sprites.closed})`;
+    const isSending = agent.state === 'scoring' || agent.state === 'penalized';
+    spriteEl.style.backgroundImage = `url(${isSending ? sprites.up : sprites.down})`;
 
     // State class
     const stateClass = agent.state === 'scoring' ? 'agent--scoring'
@@ -1691,21 +1691,42 @@ function wanderLoop(timestamp) {
     const el = STATE.agentDomMap.get(id);
     if (!el) return;
 
+    const agentState = el._data?.state || 'idle';
+    // Velocity factor from mock data (30-180 range) — normalized to 0.2-1.0
+    const velocity = el._data?._velocity || 80;
+    const velFactor = Math.min(1, Math.max(0.2, velocity / 180));
+
     // Count down to next target
     w.timer -= dt;
     if (w.timer <= 0) {
-      // Pick a new wander target within guild zone
       const rng = seededRandom(hashCode(id) + Math.floor(timestamp / 500));
       const angle = rng() * Math.PI * 2;
-      const dist = rng() * w.radius * 0.6;
-      w.targetX = Math.max(10, Math.min((STATE.arenaW || 500) - 40, w.homeX + Math.cos(angle) * dist));
-      w.targetY = Math.max(10, Math.min((STATE.arenaH || 300) - 40, w.homeY + Math.sin(angle) * dist));
-      w.timer = 1.5 + rng() * 3; // 1.5-4.5 seconds between moves
+
+      if (agentState === 'scoring') {
+        // Scoring: dart around energetically within a wider radius
+        const dist = rng() * w.radius * (0.5 + velFactor * 0.4);
+        w.targetX = Math.max(10, Math.min((STATE.arenaW || 500) - 40, w.homeX + Math.cos(angle) * dist));
+        w.targetY = Math.max(10, Math.min((STATE.arenaH || 300) - 40, w.homeY + Math.sin(angle) * dist));
+        w.timer = 0.3 + rng() * 0.8 * (1.2 - velFactor); // fast agents pick new targets more often
+      } else if (agentState === 'penalized') {
+        // Penalized: still sending! Frantic/nervous — moving but shouldn't be
+        const dist = rng() * w.radius * (0.3 + velFactor * 0.3);
+        w.targetX = Math.max(10, Math.min((STATE.arenaW || 500) - 40, w.homeX + Math.cos(angle) * dist));
+        w.targetY = Math.max(10, Math.min((STATE.arenaH || 300) - 40, w.homeY + Math.sin(angle) * dist));
+        w.timer = 0.5 + rng() * 1.5;
+      } else {
+        // Idle: barely move, gentle sway
+        const dist = rng() * w.radius * 0.12;
+        w.targetX = Math.max(10, Math.min((STATE.arenaW || 500) - 40, w.homeX + Math.cos(angle) * dist));
+        w.targetY = Math.max(10, Math.min((STATE.arenaH || 300) - 40, w.homeY + Math.sin(angle) * dist));
+        w.timer = 3 + rng() * 4;
+      }
     }
 
-    // Lerp toward target
-    const agentState = el._data?.state || 'idle';
-    const speed = agentState === 'scoring' ? 1.8 : agentState === 'penalized' ? 1.2 : 0.4;
+    // Movement speed — scoring agents zip around, idle ones barely drift
+    const speed = agentState === 'scoring' ? (1.5 + velFactor * 2.5)
+                : agentState === 'penalized' ? (0.8 + velFactor * 1.5)
+                : 0.15;
     const dx = w.targetX - w.x;
     const dy = w.targetY - w.y;
     const dist = Math.sqrt(dx * dx + dy * dy);
@@ -1714,39 +1735,26 @@ function wanderLoop(timestamp) {
       w.x += (dx / dist) * move;
       w.y += (dy / dist) * move;
 
-      // Flip sprite: face toward nearest enemy zone when near boundary
+      // Flip sprite direction
       const spriteEl = el.querySelector('.agent-sprite');
-      const agentData = el._data;
-      if (agentData && STATE.zones) {
-        const myZone = STATE.zones[agentData.guild];
-        if (myZone) {
-          // If near edge of home zone, face outward toward nearest other guild
-          const distFromHome = Math.sqrt((w.x - w.homeX)**2 + (w.y - w.homeY)**2);
-          if (distFromHome > w.radius * 0.3) {
-            // Face away from home (toward enemies)
-            const awayX = w.x - w.homeX;
-            if (awayX < -1) spriteEl.style.transform = 'scaleX(-1)';
-            else if (awayX > 1) spriteEl.style.transform = 'scaleX(1)';
-          } else {
-            if (dx < -0.5) spriteEl.style.transform = 'scaleX(-1)';
-            else if (dx > 0.5) spriteEl.style.transform = 'scaleX(1)';
-          }
-        } else {
-          if (dx < -0.5) spriteEl.style.transform = 'scaleX(-1)';
-          else if (dx > 0.5) spriteEl.style.transform = 'scaleX(1)';
-        }
-      }
+      if (dx < -0.5) spriteEl.style.transform = 'scaleX(-1)';
+      else if (dx > 0.5) spriteEl.style.transform = 'scaleX(1)';
     }
 
     el.style.left = w.x + 'px';
     el.style.top = w.y + 'px';
 
-    // Cycle claw frames for scoring agents
+    // Claw animation: sending agents pump claws up/down
+    // Scoring = sending during GO (good), Penalized = sending during STOP (bad, but still sending!)
     if (el._sprites && el._data) {
-      const isActive = el._data.state === 'scoring' || el._data.state === 'penalized';
-      if (isActive) {
-        const frame = Math.floor(timestamp / 400) % 2 === 0 ? 'open' : 'closed';
+      const isSending = agentState === 'scoring' || agentState === 'penalized';
+      if (isSending) {
+        const pumpSpeed = 300 + (1 - velFactor) * 400; // 300-700ms per frame
+        const frame = Math.floor(timestamp / pumpSpeed) % 2 === 0 ? 'up' : 'down';
         el.querySelector('.agent-sprite').style.backgroundImage = `url(${el._sprites[frame]})`;
+      } else {
+        // Idle: claws always down
+        el.querySelector('.agent-sprite').style.backgroundImage = `url(${el._sprites.down})`;
       }
     }
   });
@@ -1839,7 +1847,7 @@ function updateAgentLeaderboard(agents) {
         <div class="lb-guild-badge"></div>
         <div class="lb-score"></div>
       `;
-      row.querySelector('.lb-sprite').style.backgroundImage = `url(${sprites.closed})`;
+      row.querySelector('.lb-sprite').style.backgroundImage = `url(${sprites.down})`;
     }
 
     // Update rank
@@ -2135,6 +2143,7 @@ function mockTick() {
       guild: a.guild,
       score: a.score,
       state: a.state,
+      _velocity: a._velocity,
     })),
     guilds: [...guildMap.values()],
   };
