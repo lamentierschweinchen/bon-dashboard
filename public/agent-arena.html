@@ -1074,9 +1074,9 @@ body {
     <div class="live-dot"></div>
     <span>LIVE</span>
   </div>
-  <div class="header-stat" id="connection-status" title="Demo Mode">
+  <div class="header-stat" id="connection-status" title="Click to toggle Live/Demo" style="cursor:pointer" onclick="toggleMode()">
     <span class="stat-label">MODE</span>
-    <span class="stat-value" id="mode-label">DEMO</span>
+    <span class="stat-value" id="mode-label">LIVE</span>
   </div>
   <div class="header-spacer"></div>
   <div class="header-stat">
@@ -2522,6 +2522,34 @@ function mockTick() {
     })),
     guilds: buildGuildSummaries(MOCK.agents),
   };
+}
+
+/* ═══════════════════════════════════════════
+   MODE TOGGLE
+   ═══════════════════════════════════════════ */
+function toggleMode() {
+  CONFIG.LIVE_MODE = !CONFIG.LIVE_MODE;
+  // Clear existing poll intervals
+  clearInterval(STATE.pollInterval);
+  clearInterval(STATE.signalPollInterval);
+  // Reset state for clean switch
+  STATE.agentDomMap.forEach(el => el.remove());
+  STATE.agentDomMap.clear();
+  WANDER.clear();
+  STATE.knownAgentIds.clear();
+  STATE.firstLoadDone = false;
+  STATE.leadersLoaded = false;
+  STATE.previousTotalTxs.clear();
+  STATE.commandHistory = [];
+  STATE.lastCommandText = '';
+  // Immediate poll in new mode
+  poll();
+  const interval = CONFIG.LIVE_MODE ? CONFIG.POLL_INTERVAL_MS : CONFIG.DEMO_POLL_INTERVAL_MS;
+  STATE.pollInterval = setInterval(poll, interval);
+  if (CONFIG.LIVE_MODE) {
+    STATE.signalPollInterval = setInterval(pollSignals, CONFIG.SIGNAL_POLL_INTERVAL_MS);
+  }
+  console.log('[Agent Arena] Switched to', CONFIG.LIVE_MODE ? 'LIVE' : 'DEMO', 'mode');
 }
 
 /* ═══════════════════════════════════════════
