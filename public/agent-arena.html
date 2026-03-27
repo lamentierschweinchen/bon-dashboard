@@ -495,26 +495,13 @@ body {
   opacity: 0;
 }
 
-.agent--scoring {
+.agent--sending {
   opacity: 1;
 }
 
-.agent--scoring .agent-glow {
+.agent--sending .agent-glow {
   opacity: 1;
   box-shadow: 0 0 10px var(--neon-green-glow), 0 0 20px rgba(57,255,20,0.08);
-}
-
-.agent--penalized {
-  opacity: 0.8;
-}
-
-.agent--penalized .agent-sprite {
-  animation: penalized-pulse 1.5s ease-in-out infinite;
-}
-
-.agent--penalized .agent-glow {
-  opacity: 1;
-  box-shadow: 0 0 10px var(--neon-red-glow), 0 0 20px rgba(255,23,68,0.08);
 }
 
 .agent--idle {
@@ -1116,29 +1103,100 @@ body {
 <script>
 /* ═══════════════════════════════════════════
    API CONFIGURATION
-   Set POLL_URL to your endpoint when ready.
-   When null, runs in demo mode with mock data.
+   LIVE_MODE: true = fetch from real APIs
+              false = demo mode with mock data
    ═══════════════════════════════════════════ */
 const CONFIG = {
-  POLL_URL: null,
-  POLL_INTERVAL_MS: 3000,
+  LIVE_MODE: true,
+  POLL_INTERVAL_MS: 60000,       // 60s for live API
+  DEMO_POLL_INTERVAL_MS: 3000,   // 3s for demo mode
   DEMO_COMMAND_INTERVAL_MS: 8000,
   SPRITE_SIZE: 24,
   SPRITE_DISPLAY: 36,
   MILESTONE_SCORE: 5000,
   MAX_LOG_ENTRIES: 50,
   MOBILE_AGENT_CAP: 30,
+
+  // ── Live API endpoints ──
+  LEADERS_URL: 'https://mvx-portal-api-8vpmr.ondigitalocean.app/api/v1/guilds/all-leaders',
+  SCORING_URL: 'https://bon-challenges-api.multiversx.com/challenges/guild-wars/red-light-green-light',
+  SIGNALS_URL: 'https://api.battleofnodes.com/transfers',
+  ACTIVITY_URL: 'https://api.battleofnodes.com/accounts',
+
+  // ── Signal addresses (may change before challenge) ──
+  ADMIN_ADDRESS: 'erd1upr0j7q6j5ux984ne63p53373dsfp6aa0ut6jqmexqt99zu8hygs3sy0qs',
+  TARGET_ADDRESS: 'erd1z32fx8l6wk9tx4j555sxk28fm0clhr0cl88dpyam9zr7kw0hu7hsx2j524',
+
+  // ── Round config (manual, set before event) ──
+  ROUND: 1,
+  ROUND_END_MS: null, // Set to epoch ms for countdown, null = no timer
+
+  // ── Concurrent API request limit ──
+  ACTIVITY_BATCH_SIZE: 10,
+  ACTIVITY_BATCH_DELAY_MS: 50,
+  ACTIVITY_WINDOW_MS: 60000,  // "recent" = last 60s
 };
 
 /*
- * Expected API Response Schema:
+ * Leader address → Guild name mapping
+ * Source: Guilds __ Leaders spreadsheet (2026-03)
+ */
+const LEADER_TO_GUILD = {
+  'erd1ev05hd5jwzvlc7t9ul874jpde42ht00udz6yr63wtt47apl640nshcaxjp': 'Elrond Angels',
+  'erd1hlu9d70frrvmd8s6jur723jl9p58tvsfl4hjtey7lzc7rgnnjwpssj2jlv': 'CYBER KNIGHTS',
+  'erd1pkrn8u7f94hgew26dndfk2a5q0hdz82m76eyctkh5w0remh5wdqse3s3pa': 'afkLazyOps',
+  'erd19d99sgcgvdrt5md8etum268z0ekxuxxre76qtplwe4hm08a6ndnqdajxcs': 'Wizardswars',
+  'erd10mcwua04j5r9ujny9y3pza32kmeeq9vqs8eq2je26r27yh28ynfqhxmahk': 'Superrarebears',
+  'erd1wjl8hyq6m4g4mhe52dl68065qqqu9q8fs0fkydcfcdffl0c25jcsct7gmk': 'Xportal Village',
+  'erd1t6dm4p559f8tcph8rardarveh93wu2q47m740drh95ut8mxdtwyq08qnse': 'Last Resort',
+  'erd1u68hfj9gyugv96x8gl79563mh5qlfa36smhxld22wnnpqycsq52q5cm594': 'Booga Land',
+  'erd10l4mrdt58hc4kd939k93aau37mtmqj3y00wq7574krchmwzllc2swcuqul': 'DUREX',
+  'erd1z6e40aw9fvll27hp4y7djprv5en6qd8yuh2zvw2yqutss5hha6nqqfz5af': 'Wavenode',
+  'erd1zcuwhagaa7agay9dvq32kcw9qvft5pdjzwg47scsgrus7m2hwpaq2fndaa': 'Santa_crew',
+  'erd1hkdhaqa6a7sfmrc2mmzajrp895tfrcm7usufspwpye644z5tjh4svstj6r': 'Lone Wolf Protocol',
+  'erd1zvpnjujtnj0v6846ecg7phgmpfqea50tq89qh0ak2m6fq90qqnxsykclqd': 'Akiteam',
+  'erd158rt37truyh2yl5s0fp83nw9u2llmsxhr8g298eugt9x0w03d23qc8n9ng': 'OpenHeart',
+  'erd1n2fa4vdxf6gtfzacsyxfuh6zquxrshe7zecwjlrc703jjhlzts8qjtcuug': 'Pegasus',
+  'erd1k95h05a57tdxn9j4tktqefz0ntafngyf9r9ev78l6t56wfn8vetq7rj0sy': 'Disruptive Dots',
+  'erd1f4c7msf8t9g8f2j75md7fedsqe6es0apnlwg4j33uax74fy7fxpsm09023': 'Alpha boys',
+  'erd1f8mjys2dmw6sravrev3f6kx9v4n4u972ntup5e4fqrgecpwdpjds9lr2pv': 'SomeOtherGuild',
+  'erd10crv3eqxayl0n34sl5mtkj8wrlhvggw5a5lfrss7dgjjgtqkg9sq577ej6': "Razvan's Guild",
+  'erd1kkwdfljj5666h6udu3p72s3h6zk7u9k7tym9t8hwf3f2427tk5esf68k97': 'SomeGuild',
+  'erd1vmys90ptc5fk6p39askj37nqw9u48f5d8gqvndm9rqv3yxvq45sqn3k3mv': 'HeroOrZero',
+  'erd1nr7jg0jplcrk5ferhgf7eda6sd48t92mlnsfjcclhhxax8e9cagq5a8ahg': 'dvz',
+  'erd1mgntar7uuagj3d3hdmrfs4vrk9rpd4yywwx6zhy42ehnqfzt5f6qf94f98': 'dvz II',
+  'erd1qlqlvap0gd3p2esjc0zjehewgqfktcymfyc23dls837tc5xk7m9q3rut2f': 'GuardianX',
+  'erd1uaauymt0ltf960uddzhewz2zqghpas30y6chh8jh385ma5dlvzss898rva': 'Emorya',
+  'erd1yu9sprgy5znvphpwcqcnu3khnkkkp7xvpn070u5s5qkr2zmmnctsx6e6jh': 'CPU',
+  'erd1nanufkhtuevqazkesl5zkwf7ulqpvwv9jr8x7mlajtxgp3wthk7q3l56ph': 'GreenGlitch',
+  'erd1n28dse0sej7m2rz02ceftr30596arzx2a0trcegl9p3ztdagjahqa9szcx': 'KWAK',
+  'erd19ja5j02h9la0plt849d7375h9jqj075a827z330tm3j6ykavyz5svv09j0': "Pope's Guild",
+  'erd1cvrt362smydm350xw9dnfdq767df4t7fewcwrfad0sxal8qlrwpsqr5w53': 'SparkGuild',
+  'erd1mfn9qlm0uyhg66suzu993v82m4nsakkkckk8f5drjlt9gjtmrczq5x2t9s': 'EGLD',
+  'erd10tsug4fepy9eluduzv55m3r0c7pvc9cfdvha6xd8s6uah0ep9waq5pc3ze': 'ShroomTeam',
+  'erd1mul7pnllqms440wke8s6v4h828zwrr4lq7epy2v2jwwrj2zsmvlsyewc77': 'Apex | Project X',
+  'erd10xsxzsaevkv70ysuxlakv7ctku8x4q0l6eqfpfellcpefxenx0kqlzsp8d': 'TOMMY',
+  'erd168emr3utuznv4cy0g55sw43yyqd86lkhr7jzzrcf0rcp3znfas7sjqp008': 'RosettaStake',
+  'erd1nzt08ur6xvnlqv0wyp9uqcuhpgpsnz8lnj8sydsrxl9q5fjvazxslvgk7z': 'DinoVox',
+  'erd1k3m6t0jv2f9rmklc5vs9fcfp623gpw0ndzwhty6pktqu7d7e550s8jm6n9': 'AmishTech',
+  'erd1zl9y9a82ftly798738ap8ve0w9mq5x2nxsekw06eqyd6q9mqfarq5tegn3': 'MrEGLD X ProjectX',
+  'erd1y5803g73qe6n9wppvug7ewa8577pt3en8pgddz5u6j6kqeuvt9rqx7cn7a': 'ToXicDAO | Project X',
+  'erd1k8xz4cln330uyshn49hqhtz99artn6ywcldygm8eep0u9f30am6q8lrhej': 'T DAO',
+  'erd15kkg45e9qjjxxvwa90pjnx6k0q2lwyq53usd2tvu3jcz20u44wfqh9g66r': 'LazyCompany',
+  'erd1yd8zy8tf8sjs4h5jgx7qc5qet5zh3szzyn4re5kfymqmrmgga9kq3plg8l': 'XcronProtocol',
+  'erd1n3w8ltzkj63w2j9k8j0elwlnqm4qp3cwuhsw6r6nyv0cuas548aqzjs9y5': 'Ignore',
+  // Test leader (has real agents for testing)
+  'erd1uv40ahysflse896x4ktnh6ecx43u7cmy9wnxnvcyp7deg299a4sq6vaywa': 'Test Guild',
+};
+
+/*
+ * Internal data shape (what applyState expects):
  * {
- *   state: 'green' | 'red' | 'off',
  *   command: { text: string, timestamp: ISO8601 },
  *   round: number,
  *   timeRemaining: number (seconds),
- *   agents: [{ id: string, name: string, guild: string, score: number, state: 'scoring'|'penalized'|'idle' }],
- *   guilds: [{ name: string, totalScore: number, agentCount: number }],
+ *   agents: [{ id, name, guild, score, sending: boolean, velocity: number }],
+ *   guilds: [{ name, totalScore, agentCount }],
  * }
  */
 
@@ -1146,20 +1204,22 @@ const CONFIG = {
    STATE
    ═══════════════════════════════════════════ */
 const STATE = {
-  arenaState: 'off',
   command: { text: '', timestamp: '' },
-  round: null,
+  round: CONFIG.ROUND,
   timeRemaining: 0,
   agents: [],
   guilds: [],
   commandHistory: [],
   lastCommandText: '',
-  lastArenaState: null,
   agentDomMap: new Map(),
   spriteCache: new Map(),
   previousScores: new Map(),
+  previousTotalTxs: new Map(),  // For velocity derivation between polls
   pollInterval: null,
   timerInterval: null,
+  // Live mode state
+  leaders: [],         // Leader addresses fetched on init
+  leadersLoaded: false,
 };
 
 /* ═══════════════════════════════════════════
@@ -1540,14 +1600,16 @@ function updateHeader(data) {
   $('#header-guilds').textContent = data.guilds.length;
 
   const badge = $('#live-badge');
-  if (data.state !== 'off') {
+  if (data.agents.length > 0) {
     badge.classList.add('active');
   } else {
     badge.classList.remove('active');
   }
 
   // Timer
-  STATE.timeRemaining = data.timeRemaining || 0;
+  if (data.timeRemaining != null) {
+    STATE.timeRemaining = data.timeRemaining;
+  }
   updateTimerDisplay();
 }
 
@@ -1557,12 +1619,12 @@ function updateTimerDisplay() {
 
 // ─── Jumbotron (Caesar bubble only) ───
 function updateJumbotron(data) {
-  // Caesar crab speech bubble
+  // Caesar crab speech bubble — shows the raw cryptic signal text
   const caesarText = $('#caesar-text');
   if (caesarText) {
     if (data.command?.text) {
       caesarText.textContent = data.command.text;
-      caesarText.className = data.state || 'off';
+      caesarText.className = '';
     } else {
       caesarText.textContent = 'AWAITING ORDERS...';
       caesarText.className = 'off';
@@ -1575,7 +1637,7 @@ function updateJumbotron(data) {
 // Wandering state per agent
 const WANDER = new Map(); // id -> { x, y, targetX, targetY, homeX, homeY, radius, timer }
 
-function updateArena(agents, arenaState) {
+function updateArena(agents) {
   const floor = $('#arena-floor');
   const floorRect = floor.getBoundingClientRect();
   const arenaW = floorRect.width;
@@ -1648,16 +1710,12 @@ function updateArena(agents, arenaState) {
       });
     }
 
-    // Update sprite frame — claws UP when sending TXs (scoring OR penalized), DOWN when idle
+    // Update sprite frame — claws UP when sending TXs, DOWN when idle
     const spriteEl = el.querySelector('.agent-sprite');
-    const isSending = agent.state === 'scoring' || agent.state === 'penalized';
-    spriteEl.style.backgroundImage = `url(${isSending ? sprites.up : sprites.down})`;
+    spriteEl.style.backgroundImage = `url(${agent.sending ? sprites.up : sprites.down})`;
 
-    // State class
-    const stateClass = agent.state === 'scoring' ? 'agent--scoring'
-      : agent.state === 'penalized' ? 'agent--penalized'
-      : 'agent--idle';
-    el.className = 'agent ' + stateClass;
+    // State class — just sending or idle
+    el.className = 'agent ' + (agent.sending ? 'agent--sending' : 'agent--idle');
 
     el._data = agent;
 
@@ -1691,10 +1749,10 @@ function wanderLoop(timestamp) {
     const el = STATE.agentDomMap.get(id);
     if (!el) return;
 
-    const agentState = el._data?.state || 'idle';
-    // Velocity factor from mock data (30-180 range) — normalized to 0.2-1.0
-    const velocity = el._data?._velocity || 80;
-    const velFactor = Math.min(1, Math.max(0.2, velocity / 180));
+    const isSending = el._data?.sending || false;
+    // Velocity: 0-1 scale. Higher = more TXs per second
+    const velocity = el._data?.velocity || 0;
+    const velFactor = Math.min(1, Math.max(0.1, velocity));
 
     // Count down to next target
     w.timer -= dt;
@@ -1702,20 +1760,14 @@ function wanderLoop(timestamp) {
       const rng = seededRandom(hashCode(id) + Math.floor(timestamp / 500));
       const angle = rng() * Math.PI * 2;
 
-      if (agentState === 'scoring') {
-        // Scoring: dart around energetically within a wider radius
-        const dist = rng() * w.radius * (0.5 + velFactor * 0.4);
+      if (isSending) {
+        // Sending TXs: dart around energetically, speed scales with velocity
+        const dist = rng() * w.radius * (0.4 + velFactor * 0.5);
         w.targetX = Math.max(10, Math.min((STATE.arenaW || 500) - 40, w.homeX + Math.cos(angle) * dist));
         w.targetY = Math.max(10, Math.min((STATE.arenaH || 300) - 40, w.homeY + Math.sin(angle) * dist));
-        w.timer = 0.3 + rng() * 0.8 * (1.2 - velFactor); // fast agents pick new targets more often
-      } else if (agentState === 'penalized') {
-        // Penalized: still sending! Frantic/nervous — moving but shouldn't be
-        const dist = rng() * w.radius * (0.3 + velFactor * 0.3);
-        w.targetX = Math.max(10, Math.min((STATE.arenaW || 500) - 40, w.homeX + Math.cos(angle) * dist));
-        w.targetY = Math.max(10, Math.min((STATE.arenaH || 300) - 40, w.homeY + Math.sin(angle) * dist));
-        w.timer = 0.5 + rng() * 1.5;
+        w.timer = 0.2 + rng() * 0.8 * (1.2 - velFactor); // fast agents pick new targets more often
       } else {
-        // Idle: barely move, gentle sway
+        // Not sending: barely move, gentle sway
         const dist = rng() * w.radius * 0.12;
         w.targetX = Math.max(10, Math.min((STATE.arenaW || 500) - 40, w.homeX + Math.cos(angle) * dist));
         w.targetY = Math.max(10, Math.min((STATE.arenaH || 300) - 40, w.homeY + Math.sin(angle) * dist));
@@ -1723,10 +1775,8 @@ function wanderLoop(timestamp) {
       }
     }
 
-    // Movement speed — scoring agents zip around, idle ones barely drift
-    const speed = agentState === 'scoring' ? (1.5 + velFactor * 2.5)
-                : agentState === 'penalized' ? (0.8 + velFactor * 1.5)
-                : 0.15;
+    // Movement speed — sending agents zip around, idle ones barely drift
+    const speed = isSending ? (1.0 + velFactor * 3.0) : 0.15;
     const dx = w.targetX - w.x;
     const dy = w.targetY - w.y;
     const dist = Math.sqrt(dx * dx + dy * dy);
@@ -1745,15 +1795,13 @@ function wanderLoop(timestamp) {
     el.style.top = w.y + 'px';
 
     // Claw animation: sending agents pump claws up/down
-    // Scoring = sending during GO (good), Penalized = sending during STOP (bad, but still sending!)
     if (el._sprites && el._data) {
-      const isSending = agentState === 'scoring' || agentState === 'penalized';
       if (isSending) {
         const pumpSpeed = 300 + (1 - velFactor) * 400; // 300-700ms per frame
         const frame = Math.floor(timestamp / pumpSpeed) % 2 === 0 ? 'up' : 'down';
         el.querySelector('.agent-sprite').style.backgroundImage = `url(${el._sprites[frame]})`;
       } else {
-        // Idle: claws always down
+        // Not sending: claws always down
         el.querySelector('.agent-sprite').style.backgroundImage = `url(${el._sprites.down})`;
       }
     }
@@ -1935,10 +1983,9 @@ function updateCommandLog() {
 
   panel.innerHTML = entries.map(entry => {
     const timeStr = new Date(entry.timestamp).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-    const text = entry.text.length > 100 ? entry.text.slice(0, 97) + '...' : entry.text;
+    const text = entry.text.length > 120 ? entry.text.slice(0, 117) + '...' : entry.text;
     return `
       <div class="log-entry">
-        <div class="log-dot ${entry.state}"></div>
         <div class="log-time">${timeStr}</div>
         <div class="log-text">${escapeHtml(text)}</div>
       </div>
@@ -1956,39 +2003,217 @@ function escapeHtml(str) {
    STATE ORCHESTRATOR
    ═══════════════════════════════════════════ */
 function applyState(data) {
-  // Detect state change
-  if (data.state !== STATE.lastArenaState && STATE.lastArenaState !== null && data.state !== 'off') {
-    triggerArenaFlash(data.state);
-
-    // Log command on state change
-    if (data.command?.text) {
-      STATE.commandHistory.unshift({
-        text: data.command.text,
-        timestamp: data.command.timestamp || new Date().toISOString(),
-        state: data.state,
-      });
-      if (STATE.commandHistory.length > CONFIG.MAX_LOG_ENTRIES) {
-        STATE.commandHistory.length = CONFIG.MAX_LOG_ENTRIES;
-      }
-      updateCommandLog();
+  // Log new command if it changed
+  if (data.command?.text && data.command.text !== STATE.lastCommandText) {
+    STATE.lastCommandText = data.command.text;
+    STATE.commandHistory.unshift({
+      text: data.command.text,
+      timestamp: data.command.timestamp || new Date().toISOString(),
+    });
+    if (STATE.commandHistory.length > CONFIG.MAX_LOG_ENTRIES) {
+      STATE.commandHistory.length = CONFIG.MAX_LOG_ENTRIES;
     }
+    updateCommandLog();
   }
 
-  STATE.arenaState = data.state;
-  STATE.lastArenaState = data.state;
   STATE.agents = data.agents;
   STATE.guilds = data.guilds;
   STATE.command = data.command || STATE.command;
+  STATE.round = data.round || STATE.round;
 
   updateHeader(data);
   updateJumbotron(data);
-  updateArena(data.agents, data.state);
+  updateArena(data.agents);
   updateAgentLeaderboard(data.agents);
   updateGuildLeaderboard(data.guilds);
 }
 
 /* ═══════════════════════════════════════════
-   MOCK DATA SYSTEM
+   LIVE DATA FETCHING
+   ═══════════════════════════════════════════ */
+
+// Fetch guild leaders (once on init)
+async function fetchLeaders() {
+  if (STATE.leadersLoaded) return STATE.leaders;
+  try {
+    const resp = await fetch(CONFIG.LEADERS_URL);
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    const addresses = await resp.json();
+    // Deduplicate and filter to leaders we have guild names for
+    STATE.leaders = [...new Set(addresses)];
+    STATE.leadersLoaded = true;
+    console.log('[Agent Arena] Loaded', STATE.leaders.length, 'leaders');
+    return STATE.leaders;
+  } catch (err) {
+    console.warn('[Agent Arena] Failed to fetch leaders:', err.message);
+    return [];
+  }
+}
+
+// Fetch scoring data for all guilds
+async function fetchAllScoring(leaders) {
+  const allAgents = [];
+  const promises = leaders.map(async (leader) => {
+    try {
+      const resp = await fetch(`${CONFIG.SCORING_URL}?address=${leader}`);
+      if (!resp.ok) return;
+      const agents = await resp.json();
+      if (!Array.isArray(agents) || agents.length === 0) return;
+      const guildName = LEADER_TO_GUILD[leader] || truncateAddr(leader);
+      agents.forEach((a, i) => {
+        allAgents.push({
+          id: a.address,
+          name: 'Bot-' + String(allAgents.length + 1).padStart(3, '0'),
+          guild: guildName,
+          score: a.score || 0,
+          totalTxs: a.totalTxs || 0,
+          startTimestampMs: a.startTimestampMs,
+          endTimestampMs: a.endTimestampMs,
+          sending: false,   // will be updated by activity check
+          velocity: 0,      // will be updated by activity check
+        });
+      });
+    } catch (err) {
+      console.warn('[Agent Arena] Scoring fetch failed for', truncateAddr(leader), err.message);
+    }
+  });
+  await Promise.all(promises);
+  return allAgents;
+}
+
+// Fetch latest signal (Caesar's command)
+async function fetchLatestSignal(startMs, endMs) {
+  try {
+    const url = `${CONFIG.SIGNALS_URL}?status=success&sender=${CONFIG.ADMIN_ADDRESS}&receiver=${CONFIG.TARGET_ADDRESS}&after=${startMs}&before=${endMs}&size=5`;
+    const resp = await fetch(url);
+    if (!resp.ok) return null;
+    const transfers = await resp.json();
+    if (!Array.isArray(transfers) || transfers.length === 0) return null;
+    // Latest signal is first (sorted by time desc)
+    const latest = transfers[0];
+    // Decode base64 data field
+    let text = '';
+    try {
+      text = atob(latest.data);
+    } catch { text = latest.data || ''; }
+    return {
+      text,
+      timestamp: new Date(latest.timestampMs).toISOString(),
+      allSignals: transfers.map(t => {
+        let decoded = '';
+        try { decoded = atob(t.data); } catch { decoded = t.data || ''; }
+        return { text: decoded, timestamp: new Date(t.timestampMs).toISOString() };
+      }),
+    };
+  } catch (err) {
+    console.warn('[Agent Arena] Signal fetch failed:', err.message);
+    return null;
+  }
+}
+
+// Check agent activity — batched to avoid hammering API
+async function fetchAgentActivity(agents) {
+  const now = Date.now();
+  const windowMs = CONFIG.ACTIVITY_WINDOW_MS;
+
+  for (let i = 0; i < agents.length; i += CONFIG.ACTIVITY_BATCH_SIZE) {
+    const batch = agents.slice(i, i + CONFIG.ACTIVITY_BATCH_SIZE);
+    await Promise.all(batch.map(async (agent) => {
+      try {
+        const resp = await fetch(`${CONFIG.ACTIVITY_URL}/${agent.id}/transfers?size=10`);
+        if (!resp.ok) return;
+        const transfers = await resp.json();
+        if (!Array.isArray(transfers) || transfers.length === 0) {
+          agent.sending = false;
+          agent.velocity = 0;
+          return;
+        }
+        // Count TXs in recent window
+        const recentTxs = transfers.filter(t => (now - t.timestampMs) < windowMs);
+        agent.sending = recentTxs.length > 0;
+        // Velocity: normalize to 0-1 scale (assume 20 TXs/min is max)
+        agent.velocity = Math.min(1, recentTxs.length / 20);
+      } catch {
+        // Silently fail — keep previous state
+      }
+    }));
+    // Stagger between batches
+    if (i + CONFIG.ACTIVITY_BATCH_SIZE < agents.length) {
+      await new Promise(r => setTimeout(r, CONFIG.ACTIVITY_BATCH_DELAY_MS));
+    }
+  }
+
+  // Also derive velocity from totalTxs delta between polls
+  agents.forEach(agent => {
+    const prevTxs = STATE.previousTotalTxs.get(agent.id);
+    if (prevTxs !== undefined && agent.totalTxs > prevTxs) {
+      const txDelta = agent.totalTxs - prevTxs;
+      // Use this as a secondary/fallback velocity signal
+      const deltaVel = Math.min(1, txDelta / 100);
+      agent.velocity = Math.max(agent.velocity, deltaVel);
+    }
+    STATE.previousTotalTxs.set(agent.id, agent.totalTxs);
+  });
+}
+
+// Build guild summaries from agent data
+function buildGuildSummaries(agents) {
+  const guildMap = new Map();
+  agents.forEach(agent => {
+    if (!guildMap.has(agent.guild)) {
+      guildMap.set(agent.guild, { name: agent.guild, totalScore: 0, agentCount: 0 });
+    }
+    const g = guildMap.get(agent.guild);
+    g.totalScore += agent.score;
+    g.agentCount++;
+  });
+  return [...guildMap.values()];
+}
+
+// Full live data fetch cycle
+async function fetchLiveData() {
+  const leaders = await fetchLeaders();
+  if (leaders.length === 0) throw new Error('No leaders');
+
+  const agents = await fetchAllScoring(leaders);
+  if (agents.length === 0) throw new Error('No agents');
+
+  // Fetch activity for all agents (batched)
+  await fetchAgentActivity(agents);
+
+  // Fetch latest signal
+  // Use startTimestampMs/endTimestampMs from first agent as time window
+  const startMs = agents[0]?.startTimestampMs || (Date.now() - 3600000);
+  const endMs = agents[0]?.endTimestampMs || Date.now();
+  const signal = await fetchLatestSignal(startMs, endMs);
+
+  // Add any new signals to command history
+  if (signal?.allSignals) {
+    signal.allSignals.reverse().forEach(s => {
+      if (s.text && s.text !== STATE.lastCommandText) {
+        // Will be picked up by applyState's command change detection
+      }
+    });
+  }
+
+  // Time remaining
+  let timeRemaining = null;
+  if (endMs) {
+    const remaining = Math.max(0, Math.floor((endMs - Date.now()) / 1000));
+    timeRemaining = remaining;
+  }
+
+  return {
+    command: signal ? { text: signal.text, timestamp: signal.timestamp } : STATE.command,
+    round: CONFIG.ROUND,
+    timeRemaining,
+    agents,
+    guilds: buildGuildSummaries(agents),
+  };
+}
+
+/* ═══════════════════════════════════════════
+   MOCK DATA SYSTEM (demo fallback)
    ═══════════════════════════════════════════ */
 const MOCK_GUILDS = [
   'Phantom Node', 'Neon Cartel', 'Byte Bandits', 'Stellar Forge',
@@ -1997,43 +2222,42 @@ const MOCK_GUILDS = [
 ];
 
 const MOCK_COMMANDS = [
-  { text: "Alright, the floor is yours. Go.", state: "green" },
-  { text: "Everyone freeze. Not a single transaction.", state: "red" },
-  { text: "Hit it. Full speed ahead.", state: "green" },
-  { text: "STOP. I said STOP.", state: "red" },
-  { text: "The light is as green as a forest in spring.", state: "green" },
-  { text: "I definitely did NOT just say go. Wink wink.", state: "green" },
-  { text: "Cease all operations immediately.", state: "red" },
-  { text: "Red means go, right? Just kidding. Stop.", state: "red" },
-  { text: "Transaction time. Let them fly.", state: "green" },
-  { text: "Pause. Take a breath. Don't send.", state: "red" },
-  { text: "I would NEVER tell you to start sending right now...", state: "green" },
-  { text: "Resume. Now.", state: "green" },
-  { text: "Hold. Do not proceed until further notice.", state: "red" },
-  { text: "The opposite of stop.", state: "green" },
-  { text: "What's the opposite of go? Do that.", state: "red" },
-  { text: "Fire at will, agents!", state: "green" },
-  { text: "Engines off. Silence on the chain.", state: "red" },
-  { text: "Green light means green light. Obvious, right? Go.", state: "green" },
-  { text: "NOT NOW. Stand down.", state: "red" },
-  { text: "The arena is open. Prove your worth.", state: "green" },
+  "Alright, the floor is yours. Go.",
+  "Everyone freeze. Not a single transaction.",
+  "Hit it. Full speed ahead.",
+  "STOP. I said STOP.",
+  "The light is as green as a forest in spring.",
+  "I definitely did NOT just say go. Wink wink.",
+  "Cease all operations immediately.",
+  "Red means go, right? Just kidding. Stop.",
+  "Transaction time. Let them fly.",
+  "Pause. Take a breath. Don't send.",
+  "I would NEVER tell you to start sending right now...",
+  "Resume. Now.",
+  "Hold. Do not proceed until further notice.",
+  "The opposite of stop.",
+  "What's the opposite of go? Do that.",
+  "Fire at will, agents!",
+  "Engines off. Silence on the chain.",
+  "Green light means green light. Obvious, right? Go.",
+  "NOT NOW. Stand down.",
+  "The arena is open. Prove your worth.",
 ];
 
 const MOCK = {
   agents: [],
   commandIndex: 0,
-  currentCommand: MOCK_COMMANDS[0],
   round: 1,
   timeRemaining: 1800,
   initialized: false,
   lastTick: Date.now(),
+  sendingPhase: true,
 };
 
 function initMockData() {
   if (MOCK.initialized) return;
   MOCK.initialized = true;
 
-  // Generate agents
   const agentsPerGuild = [7, 6, 6, 6, 6, 5, 6, 7, 6, 5, 6, 6];
   let agentIndex = 0;
 
@@ -2050,14 +2274,14 @@ function initMockData() {
         name: 'Bot-' + String(agentIndex + 1).padStart(3, '0'),
         guild: guild,
         score: Math.floor(rng() * 4000 + 200),
-        state: 'idle',
-        _velocity: rng() * 150 + 30,
+        sending: false,
+        velocity: rng() * 0.8 + 0.2,
+        _baseVelocity: rng() * 150 + 30,
       });
       agentIndex++;
     }
   });
 
-  // Put a few agents near milestone
   MOCK.agents[0].score = 4950;
   MOCK.agents[3].score = 5120;
   MOCK.agents[7].score = 4880;
@@ -2071,31 +2295,30 @@ function mockTick() {
   const elapsed = (now - MOCK.lastTick) / 1000;
   MOCK.lastTick = now;
 
-  // Cycle commands
-  if (now % CONFIG.DEMO_COMMAND_INTERVAL_MS < CONFIG.POLL_INTERVAL_MS + 200) {
-    const prev = MOCK.currentCommand;
+  // Cycle commands and toggle sending phase
+  if (now % CONFIG.DEMO_COMMAND_INTERVAL_MS < CONFIG.DEMO_POLL_INTERVAL_MS + 200) {
     MOCK.commandIndex = (MOCK.commandIndex + 1) % MOCK_COMMANDS.length;
-    MOCK.currentCommand = MOCK_COMMANDS[MOCK.commandIndex];
+    MOCK.sendingPhase = !MOCK.sendingPhase;
   }
-
-  const currentState = MOCK.currentCommand.state;
 
   // Update agent states and scores
   MOCK.agents.forEach(agent => {
     const rng = seededRandom(hashCode(agent.id) + Math.floor(now / 3000));
     const roll = rng();
 
-    if (currentState === 'green') {
-      // GO — everyone is scoring
-      agent.state = 'scoring';
-      agent.score += Math.floor(agent._velocity * elapsed * (0.8 + rng() * 0.4));
+    if (MOCK.sendingPhase) {
+      // Most agents send, some stay idle
+      agent.sending = roll > 0.1;
+      agent.velocity = agent.sending ? (0.3 + rng() * 0.7) : 0;
+      if (agent.sending) {
+        agent.score += Math.floor(agent._baseVelocity * elapsed * (0.8 + rng() * 0.4));
+      }
     } else {
-      // STOP — most idle, some penalized for still sending
-      if (roll < 0.15) {
-        agent.state = 'penalized';
-        agent.score -= Math.floor(agent._velocity * elapsed * (0.3 + rng() * 0.4));
-      } else {
-        agent.state = 'idle';
+      // Most agents idle, some keep sending (and lose points)
+      agent.sending = roll < 0.15;
+      agent.velocity = agent.sending ? (0.2 + rng() * 0.5) : 0;
+      if (agent.sending) {
+        agent.score -= Math.floor(agent._baseVelocity * elapsed * (0.3 + rng() * 0.4));
       }
     }
   });
@@ -2106,46 +2329,24 @@ function mockTick() {
     MOCK.timeRemaining = 1800;
     const prevRound = MOCK.round;
     MOCK.round = MOCK.round === 1 ? 2 : 1;
-    // Show ring girl for round transitions
     if (typeof showRingGirl === 'function') {
-      if (prevRound === 1) {
-        showRingGirl('BREAK');
-        setTimeout(() => showRingGirl('ROUND 2'), 8000);
-      } else {
-        showRingGirl('BREAK');
-        setTimeout(() => showRingGirl('ROUND 1'), 8000);
-      }
+      showRingGirl(prevRound === 1 ? 'BREAK' : 'ROUND 1');
+      setTimeout(() => showRingGirl(prevRound === 1 ? 'ROUND 2' : 'BREAK'), 8000);
     }
   }
 
-  // Build guild summaries
-  const guildMap = new Map();
-  MOCK.agents.forEach(agent => {
-    if (!guildMap.has(agent.guild)) {
-      guildMap.set(agent.guild, { name: agent.guild, totalScore: 0, agentCount: 0 });
-    }
-    const g = guildMap.get(agent.guild);
-    g.totalScore += agent.score;
-    g.agentCount++;
-  });
-
   return {
-    state: currentState,
     command: {
-      text: MOCK.currentCommand.text,
+      text: MOCK_COMMANDS[MOCK.commandIndex],
       timestamp: new Date().toISOString(),
     },
     round: MOCK.round,
     timeRemaining: MOCK.timeRemaining,
     agents: MOCK.agents.map(a => ({
-      id: a.id,
-      name: a.name,
-      guild: a.guild,
-      score: a.score,
-      state: a.state,
-      _velocity: a._velocity,
+      id: a.id, name: a.name, guild: a.guild, score: a.score,
+      sending: a.sending, velocity: a.velocity,
     })),
-    guilds: [...guildMap.values()],
+    guilds: buildGuildSummaries(MOCK.agents),
   };
 }
 
@@ -2155,19 +2356,26 @@ function mockTick() {
 async function poll() {
   try {
     let data;
-    if (CONFIG.POLL_URL) {
-      const resp = await fetch(CONFIG.POLL_URL);
-      if (!resp.ok) throw new Error('HTTP ' + resp.status);
-      data = await resp.json();
+    if (CONFIG.LIVE_MODE) {
+      data = await fetchLiveData();
+      $('#mode-label').textContent = 'LIVE';
+      $('#mode-label').style.color = '';
     } else {
       data = mockTick();
+      $('#mode-label').textContent = 'DEMO';
+      $('#mode-label').style.color = '';
     }
     applyState(data);
-    $('#mode-label').textContent = CONFIG.POLL_URL ? 'LIVE' : 'DEMO';
   } catch (err) {
     console.warn('[Agent Arena] Poll failed:', err.message);
-    $('#mode-label').textContent = 'OFFLINE';
-    $('#mode-label').style.color = 'var(--neon-red)';
+    // Fall back to demo mode on failure
+    if (CONFIG.LIVE_MODE) {
+      console.log('[Agent Arena] Falling back to demo mode');
+      const data = mockTick();
+      applyState(data);
+      $('#mode-label').textContent = 'OFFLINE';
+      $('#mode-label').style.color = 'var(--neon-red)';
+    }
   }
 }
 
@@ -2457,8 +2665,9 @@ function init() {
   }
   // Initial poll
   poll();
-  // Start polling loop
-  STATE.pollInterval = setInterval(poll, CONFIG.POLL_INTERVAL_MS);
+  // Start polling loop — different intervals for live vs demo
+  const interval = CONFIG.LIVE_MODE ? CONFIG.POLL_INTERVAL_MS : CONFIG.DEMO_POLL_INTERVAL_MS;
+  STATE.pollInterval = setInterval(poll, interval);
   // Start timer countdown
   startTimerCountdown();
   // Start JS-driven wander loop
@@ -2472,7 +2681,7 @@ function init() {
     clearTimeout(resizeTimeout);
     resizeTimeout = setTimeout(() => {
       if (STATE.agents.length > 0) {
-        updateArena(STATE.agents, STATE.arenaState);
+        updateArena(STATE.agents);
       }
     }, 200);
   });
