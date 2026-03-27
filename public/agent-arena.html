@@ -1108,8 +1108,9 @@ body {
    ═══════════════════════════════════════════ */
 const CONFIG = {
   LIVE_MODE: true,
-  POLL_INTERVAL_MS: 60000,       // 60s for live API
-  DEMO_POLL_INTERVAL_MS: 3000,   // 3s for demo mode
+  POLL_INTERVAL_MS: 60000,        // 60s for scoring data
+  SIGNAL_POLL_INTERVAL_MS: 8000,  // 8s for signal/command updates (near real-time)
+  DEMO_POLL_INTERVAL_MS: 3000,    // 3s for demo mode
   DEMO_COMMAND_INTERVAL_MS: 8000,
   SPRITE_SIZE: 24,
   SPRITE_DISPLAY: 36,
@@ -1121,20 +1122,15 @@ const CONFIG = {
   LEADERS_URL: 'https://mvx-portal-api-8vpmr.ondigitalocean.app/api/v1/guilds/all-leaders',
   SCORING_URL: 'https://bon-challenges-api.multiversx.com/challenges/guild-wars/red-light-green-light',
   SIGNALS_URL: 'https://api.battleofnodes.com/transfers',
-  ACTIVITY_URL: 'https://api.battleofnodes.com/accounts',
 
-  // ── Signal addresses (may change before challenge) ──
+  // ── Signal addresses ──
   ADMIN_ADDRESS: 'erd1cjjuju9sns6rrgrmndwcjmvpqkpruuqdvl00z7ruv8r3mwcu0v6qzjrm2q',
   TARGET_ADDRESS: 'erd1s0hzpn90yje34n4vth6vl0vlzd4uz7xz5y49mlak3dwacnkcfkwsl5nnhq',
 
-  // ── Round config (manual, set before event) ──
-  ROUND: 1,
-  ROUND_END_MS: null, // Set to epoch ms for countdown, null = no timer
-
-  // ── Concurrent API request limit ──
-  ACTIVITY_BATCH_SIZE: 10,
-  ACTIVITY_BATCH_DELAY_MS: 50,
-  ACTIVITY_WINDOW_MS: 60000,  // "recent" = last 60s
+  // ── Round schedule (UTC) ──
+  // Round 1: 16:00 - 16:30, Round 2: 17:00 - 17:30
+  // Set EVENT_DATE to the day of the event (YYYY-MM-DD)
+  EVENT_DATE: null,  // e.g. '2026-04-02' — null = auto-detect from API timestamps
 };
 
 /*
@@ -1216,10 +1212,12 @@ const STATE = {
   previousScores: new Map(),
   previousTotalTxs: new Map(),  // For velocity derivation between polls
   pollInterval: null,
+  signalPollInterval: null,
   timerInterval: null,
   // Live mode state
   leaders: [],         // Leader addresses fetched on init
   leadersLoaded: false,
+  signalTimeWindow: { startMs: null, endMs: null }, // From scoring API timestamps
 };
 
 /* ═══════════════════════════════════════════
@@ -2050,7 +2048,7 @@ async function fetchLeaders() {
   }
 }
 
-// Fetch scoring data for all guilds
+// Fetch scoring data for all guilds + derive sending state from totalTxs diffs
 async function fetchAllScoring(leaders) {
   const allAgents = [];
   const promises = leaders.map(async (leader) => {
@@ -2060,17 +2058,31 @@ async function fetchAllScoring(leaders) {
       const agents = await resp.json();
       if (!Array.isArray(agents) || agents.length === 0) return;
       const guildName = LEADER_TO_GUILD[leader] || truncateAddr(leader);
-      agents.forEach((a, i) => {
+      agents.forEach((a) => {
+        const prevTxs = STATE.previousTotalTxs.get(a.address);
+        const currentTxs = a.totalTxs || 0;
+        const txDelta = (prevTxs !== undefined) ? Math.max(0, currentTxs - prevTxs) : 0;
+
+        // Sending = had new TXs since last poll
+        const sending = txDelta > 0;
+        // Velocity: normalize delta to 0-1 (assume ~120 TXs/min is high throughput)
+        // Simulated rate: txDelta / pollInterval → per-second, then map to movement
+        const velocity = sending ? Math.min(1, txDelta / 120) : 0;
+
+        STATE.previousTotalTxs.set(a.address, currentTxs);
+
         allAgents.push({
           id: a.address,
-          name: 'Bot-' + String(allAgents.length + 1).padStart(3, '0'),
+          name: truncateAddr(a.address),
           guild: guildName,
           score: a.score || 0,
-          totalTxs: a.totalTxs || 0,
+          totalTxs: currentTxs,
+          totalPermittedTxs: a.totalPermittedTxs || 0,
+          totalUnpermittedTxs: a.totalUnpermittedTxs || 0,
           startTimestampMs: a.startTimestampMs,
           endTimestampMs: a.endTimestampMs,
-          sending: false,   // will be updated by activity check
-          velocity: 0,      // will be updated by activity check
+          sending,
+          velocity,
         });
       });
     } catch (err) {
@@ -2078,82 +2090,40 @@ async function fetchAllScoring(leaders) {
     }
   });
   await Promise.all(promises);
+
+  // Store time window from API for signal fetching
+  if (allAgents.length > 0) {
+    STATE.signalTimeWindow.startMs = allAgents[0].startTimestampMs || (Date.now() - 3600000);
+    STATE.signalTimeWindow.endMs = allAgents[0].endTimestampMs || Date.now();
+  }
+
   return allAgents;
 }
 
-// Fetch latest signal (Caesar's command)
+// Fetch latest signal (Caesar's command) — data field is plain text
 async function fetchLatestSignal(startMs, endMs) {
   try {
-    const url = `${CONFIG.SIGNALS_URL}?status=success&sender=${CONFIG.ADMIN_ADDRESS}&receiver=${CONFIG.TARGET_ADDRESS}&after=${startMs}&before=${endMs}&size=5`;
+    const s = startMs || STATE.signalTimeWindow.startMs || (Date.now() - 3600000);
+    const e = endMs || STATE.signalTimeWindow.endMs || Date.now();
+    const url = `${CONFIG.SIGNALS_URL}?status=success&sender=${CONFIG.ADMIN_ADDRESS}&receiver=${CONFIG.TARGET_ADDRESS}&after=${s}&before=${e}&size=5`;
     const resp = await fetch(url);
     if (!resp.ok) return null;
     const transfers = await resp.json();
     if (!Array.isArray(transfers) || transfers.length === 0) return null;
     // Latest signal is first (sorted by time desc)
     const latest = transfers[0];
-    // Decode base64 data field
-    let text = '';
-    try {
-      text = atob(latest.data);
-    } catch { text = latest.data || ''; }
     return {
-      text,
+      text: latest.data || '',
       timestamp: new Date(latest.timestampMs).toISOString(),
-      allSignals: transfers.map(t => {
-        let decoded = '';
-        try { decoded = atob(t.data); } catch { decoded = t.data || ''; }
-        return { text: decoded, timestamp: new Date(t.timestampMs).toISOString() };
-      }),
+      allSignals: transfers.map(t => ({
+        text: t.data || '',
+        timestamp: new Date(t.timestampMs).toISOString(),
+      })),
     };
   } catch (err) {
     console.warn('[Agent Arena] Signal fetch failed:', err.message);
     return null;
   }
-}
-
-// Check agent activity — batched to avoid hammering API
-async function fetchAgentActivity(agents) {
-  const now = Date.now();
-  const windowMs = CONFIG.ACTIVITY_WINDOW_MS;
-
-  for (let i = 0; i < agents.length; i += CONFIG.ACTIVITY_BATCH_SIZE) {
-    const batch = agents.slice(i, i + CONFIG.ACTIVITY_BATCH_SIZE);
-    await Promise.all(batch.map(async (agent) => {
-      try {
-        const resp = await fetch(`${CONFIG.ACTIVITY_URL}/${agent.id}/transfers?size=10`);
-        if (!resp.ok) return;
-        const transfers = await resp.json();
-        if (!Array.isArray(transfers) || transfers.length === 0) {
-          agent.sending = false;
-          agent.velocity = 0;
-          return;
-        }
-        // Count TXs in recent window
-        const recentTxs = transfers.filter(t => (now - t.timestampMs) < windowMs);
-        agent.sending = recentTxs.length > 0;
-        // Velocity: normalize to 0-1 scale (assume 20 TXs/min is max)
-        agent.velocity = Math.min(1, recentTxs.length / 20);
-      } catch {
-        // Silently fail — keep previous state
-      }
-    }));
-    // Stagger between batches
-    if (i + CONFIG.ACTIVITY_BATCH_SIZE < agents.length) {
-      await new Promise(r => setTimeout(r, CONFIG.ACTIVITY_BATCH_DELAY_MS));
-    }
-  }
-
-  // Also derive velocity from totalTxs delta between polls
-  agents.forEach(agent => {
-    const prevTxs = STATE.previousTotalTxs.get(agent.id);
-    if (prevTxs !== undefined && agent.totalTxs > prevTxs) {
-      const txDelta = agent.totalTxs - prevTxs;
-      // Use this as a secondary/fallback velocity signal
-      const deltaVel = Math.min(1, txDelta / 100);
-      agent.velocity = Math.max(agent.velocity, deltaVel);
-    }
-    STATE.previousTotalTxs.set(agent.id, agent.totalTxs);
-  });
 }
 
 // Build guild summaries from agent data
@@ -2170,46 +2140,83 @@ function buildGuildSummaries(agents) {
   return [...guildMap.values()];
 }
 
-// Full live data fetch cycle
+// Determine current round from schedule or API timestamps
+function detectRound() {
+  const now = new Date();
+  const hh = now.getUTCHours();
+  const mm = now.getUTCMinutes();
+  const mins = hh * 60 + mm;
+  // Round 1: 16:00–16:30 UTC (960–990), Round 2: 17:00–17:30 UTC (1020–1050)
+  if (mins >= 960 && mins < 990) return { round: 1, endMs: getUTCSlotEnd(now, 16, 30) };
+  if (mins >= 990 && mins < 1020) return { round: 0, endMs: getUTCSlotEnd(now, 17, 0), label: 'BREAK' }; // break
+  if (mins >= 1020 && mins < 1050) return { round: 2, endMs: getUTCSlotEnd(now, 17, 30) };
+  return { round: 0, endMs: null, label: 'WAITING' };
+}
+
+function getUTCSlotEnd(now, endHour, endMin) {
+  const d = new Date(now);
+  d.setUTCHours(endHour, endMin, 0, 0);
+  return d.getTime();
+}
+
+// Full live data fetch cycle (scoring only — signals polled separately)
 async function fetchLiveData() {
   const leaders = await fetchLeaders();
   if (leaders.length === 0) throw new Error('No leaders');
 
+  // Scoring + activity derivation (totalTxs diff)
   const agents = await fetchAllScoring(leaders);
   if (agents.length === 0) throw new Error('No agents');
 
-  // Fetch activity for all agents (batched)
-  await fetchAgentActivity(agents);
-
-  // Fetch latest signal
-  // Use startTimestampMs/endTimestampMs from first agent as time window
-  const startMs = agents[0]?.startTimestampMs || (Date.now() - 3600000);
-  const endMs = agents[0]?.endTimestampMs || Date.now();
-  const signal = await fetchLatestSignal(startMs, endMs);
-
-  // Add any new signals to command history
-  if (signal?.allSignals) {
-    signal.allSignals.reverse().forEach(s => {
-      if (s.text && s.text !== STATE.lastCommandText) {
-        // Will be picked up by applyState's command change detection
-      }
-    });
-  }
+  // Round detection
+  const roundInfo = detectRound();
+  const round = roundInfo.round || STATE.round;
 
   // Time remaining
   let timeRemaining = null;
-  if (endMs) {
-    const remaining = Math.max(0, Math.floor((endMs - Date.now()) / 1000));
-    timeRemaining = remaining;
+  if (roundInfo.endMs) {
+    timeRemaining = Math.max(0, Math.floor((roundInfo.endMs - Date.now()) / 1000));
   }
 
   return {
-    command: signal ? { text: signal.text, timestamp: signal.timestamp } : STATE.command,
-    round: CONFIG.ROUND,
+    command: STATE.command, // command updated by separate signal poll
+    round,
     timeRemaining,
     agents,
     guilds: buildGuildSummaries(agents),
   };
+}
+
+// Separate fast signal poll (every ~8s for near-real-time commands)
+async function pollSignals() {
+  if (!CONFIG.LIVE_MODE) return;
+  try {
+    const signal = await fetchLatestSignal();
+    if (signal?.text && signal.text !== STATE.lastCommandText) {
+      STATE.command = { text: signal.text, timestamp: signal.timestamp };
+      STATE.lastCommandText = signal.text;
+      STATE.commandHistory.unshift({ text: signal.text, timestamp: signal.timestamp });
+      if (STATE.commandHistory.length > CONFIG.MAX_LOG_ENTRIES) {
+        STATE.commandHistory.length = CONFIG.MAX_LOG_ENTRIES;
+      }
+      updateCommandLog();
+      updateJumbotron({ command: STATE.command });
+    }
+    // Backfill any missed signals into command log
+    if (signal?.allSignals) {
+      signal.allSignals.forEach(s => {
+        if (s.text && !STATE.commandHistory.some(h => h.text === s.text && h.timestamp === s.timestamp)) {
+          STATE.commandHistory.push(s);
+        }
+      });
+      STATE.commandHistory.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+      if (STATE.commandHistory.length > CONFIG.MAX_LOG_ENTRIES) {
+        STATE.commandHistory.length = CONFIG.MAX_LOG_ENTRIES;
+      }
+    }
+  } catch (err) {
+    console.warn('[Agent Arena] Signal poll failed:', err.message);
+  }
 }
 
 /* ═══════════════════════════════════════════
@@ -2668,6 +2675,11 @@ function init() {
   // Start polling loop — different intervals for live vs demo
   const interval = CONFIG.LIVE_MODE ? CONFIG.POLL_INTERVAL_MS : CONFIG.DEMO_POLL_INTERVAL_MS;
   STATE.pollInterval = setInterval(poll, interval);
+  // Separate fast signal poll for near-real-time commands (live mode only)
+  if (CONFIG.LIVE_MODE) {
+    setTimeout(pollSignals, 2000); // first signal poll 2s after init
+    STATE.signalPollInterval = setInterval(pollSignals, CONFIG.SIGNAL_POLL_INTERVAL_MS);
+  }
   // Start timer countdown
   startTimerCountdown();
   // Start JS-driven wander loop
