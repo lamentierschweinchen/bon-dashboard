@@ -1304,10 +1304,12 @@ function truncateAddr(addr) {
 }
 
 function formatTime(seconds) {
-  if (!seconds || seconds <= 0) return '--:--';
-  const m = Math.floor(seconds / 60);
-  const s = seconds % 60;
-  return String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
+  if (seconds == null) return '--:--';
+  const abs = Math.abs(Math.floor(seconds));
+  const m = Math.floor(abs / 60);
+  const s = abs % 60;
+  const prefix = seconds < 0 ? '-' : '';
+  return prefix + String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
 }
 
 function relativeTime(timestamp) {
@@ -1677,7 +1679,17 @@ function updateHeader(data) {
 }
 
 function updateTimerDisplay() {
-  $('#header-timer').textContent = formatTime(STATE.timeRemaining);
+  const el = $('#header-timer');
+  const secs = STATE.timeRemaining;
+  el.textContent = formatTime(secs);
+  // Urgent red when under 60s
+  if (secs != null && secs > 0 && secs <= 60) {
+    el.style.color = 'var(--neon-red)';
+    el.style.borderColor = 'rgba(255,23,68,0.3)';
+  } else {
+    el.style.color = '';
+    el.style.borderColor = '';
+  }
 }
 
 // ─── Jumbotron (Caesar bubble only) ───
@@ -2421,11 +2433,23 @@ const MOCK_COMMANDS = [
 const MOCK = {
   agents: [],
   commandIndex: 0,
-  round: 1,
-  timeRemaining: 1800,
   initialized: false,
   lastTick: Date.now(),
   sendingPhase: true,
+  // Simulated timeline: starts 60s before R1
+  // Phase sequence: PRE(60s) → R1(90s) → BREAK(60s) → R2(90s) → END
+  // (compressed from real 30min rounds for demo)
+  simTime: 0,          // seconds elapsed since demo start
+  phases: [
+    { name: 'PRE-BATTLE', duration: 60, round: 0 },
+    { name: 'ROUND 1',   duration: 90, round: 1 },
+    { name: 'BREAK',     duration: 60, round: 0 },
+    { name: 'ROUND 2',   duration: 90, round: 2 },
+    { name: 'FINISHED',  duration: 9999, round: 0 },
+  ],
+  currentPhaseIndex: 0,
+  phaseTimeElapsed: 0,
+  ringGirlShown: new Set(),
 };
 
 function initMockData() {
@@ -2469,26 +2493,63 @@ function mockTick() {
   const elapsed = (now - MOCK.lastTick) / 1000;
   MOCK.lastTick = now;
 
-  // Cycle commands and toggle sending phase
-  if (now % CONFIG.DEMO_COMMAND_INTERVAL_MS < CONFIG.DEMO_POLL_INTERVAL_MS + 200) {
+  // Advance simulation time
+  MOCK.simTime += elapsed;
+  MOCK.phaseTimeElapsed += elapsed;
+
+  // Phase progression
+  const phase = MOCK.phases[MOCK.currentPhaseIndex];
+  if (MOCK.phaseTimeElapsed >= phase.duration && MOCK.currentPhaseIndex < MOCK.phases.length - 1) {
+    MOCK.phaseTimeElapsed -= phase.duration;
+    MOCK.currentPhaseIndex++;
+    MOCK.ringGirlShown.clear();
+    const newPhase = MOCK.phases[MOCK.currentPhaseIndex];
+    if (typeof showRingGirl === 'function') {
+      if (newPhase.name === 'ROUND 1') showRingGirl('ROUND 1');
+      else if (newPhase.name === 'BREAK') showRingGirl('BREAK');
+      else if (newPhase.name === 'ROUND 2') showRingGirl('ROUND 2');
+      else if (newPhase.name === 'FINISHED') showRingGirl('GG');
+    }
+  }
+
+  const curPhase = MOCK.phases[MOCK.currentPhaseIndex];
+  const timeLeftInPhase = Math.max(0, curPhase.duration - MOCK.phaseTimeElapsed);
+  const isRound = curPhase.round > 0;
+
+  // Ring girl countdowns during PRE-BATTLE and BREAK
+  if ((curPhase.name === 'PRE-BATTLE' || curPhase.name === 'BREAK') && typeof showRingGirl === 'function') {
+    const countdowns = [30, 15, 5, 1]; // seconds (compressed for demo)
+    countdowns.forEach(t => {
+      const key = curPhase.name + '_' + t;
+      if (timeLeftInPhase <= t && timeLeftInPhase > t - 1.5 && !MOCK.ringGirlShown.has(key)) {
+        MOCK.ringGirlShown.add(key);
+        showRingGirl(t + 'S');
+      }
+    });
+  }
+
+  // Cycle commands every 8s during rounds
+  if (isRound && now % CONFIG.DEMO_COMMAND_INTERVAL_MS < CONFIG.DEMO_POLL_INTERVAL_MS + 200) {
     MOCK.commandIndex = (MOCK.commandIndex + 1) % MOCK_COMMANDS.length;
     MOCK.sendingPhase = !MOCK.sendingPhase;
   }
 
-  // Update agent states and scores
+  // Update agent states and scores (only during rounds)
   MOCK.agents.forEach(agent => {
     const rng = seededRandom(hashCode(agent.id) + Math.floor(now / 3000));
     const roll = rng();
 
-    if (MOCK.sendingPhase) {
-      // Most agents send, some stay idle
+    if (!isRound) {
+      // Pre-battle / break / finished: agents idle
+      agent.sending = false;
+      agent.velocity = 0;
+    } else if (MOCK.sendingPhase) {
       agent.sending = roll > 0.1;
       agent.velocity = agent.sending ? (0.3 + rng() * 0.7) : 0;
       if (agent.sending) {
         agent.score += Math.floor(agent._baseVelocity * elapsed * (0.8 + rng() * 0.4));
       }
     } else {
-      // Most agents idle, some keep sending (and lose points)
       agent.sending = roll < 0.15;
       agent.velocity = agent.sending ? (0.2 + rng() * 0.5) : 0;
       if (agent.sending) {
@@ -2497,28 +2558,22 @@ function mockTick() {
     }
   });
 
-  // Timer countdown
-  MOCK.timeRemaining = Math.max(0, MOCK.timeRemaining - Math.floor(elapsed));
-  if (MOCK.timeRemaining <= 0) {
-    MOCK.timeRemaining = 1800;
-    const prevRound = MOCK.round;
-    MOCK.round = MOCK.round === 1 ? 2 : 1;
-    if (typeof showRingGirl === 'function') {
-      showRingGirl(prevRound === 1 ? 'BREAK' : 'ROUND 1');
-      setTimeout(() => showRingGirl(prevRound === 1 ? 'ROUND 2' : 'BREAK'), 8000);
-    }
-  }
+  // Command text
+  let commandText = '';
+  if (curPhase.name === 'PRE-BATTLE') commandText = '';
+  else if (curPhase.name === 'BREAK') commandText = '';
+  else if (curPhase.name === 'FINISHED') commandText = '';
+  else commandText = MOCK_COMMANDS[MOCK.commandIndex];
 
   return {
-    command: {
-      text: MOCK_COMMANDS[MOCK.commandIndex],
-      timestamp: new Date().toISOString(),
-    },
-    round: MOCK.round,
-    timeRemaining: MOCK.timeRemaining,
+    command: commandText ? { text: commandText, timestamp: new Date().toISOString() } : STATE.command,
+    round: curPhase.round,
+    timeRemaining: Math.ceil(timeLeftInPhase),
     agents: MOCK.agents.map(a => ({
       id: a.id, name: a.name, guild: a.guild, score: a.score,
       sending: a.sending, velocity: a.velocity,
+      totalPermittedTxs: Math.max(0, a.score), totalUnpermittedTxs: Math.floor(Math.random() * 20),
+      totalTxs: Math.max(0, a.score) + Math.floor(Math.random() * 20),
     })),
     guilds: buildGuildSummaries(MOCK.agents),
   };
@@ -2542,6 +2597,16 @@ function toggleMode() {
   STATE.previousTotalTxs.clear();
   STATE.commandHistory = [];
   STATE.lastCommandText = '';
+  STATE.lastDetectedRound = -1;
+  // Reset mock timeline
+  MOCK.simTime = 0;
+  MOCK.phaseTimeElapsed = 0;
+  MOCK.currentPhaseIndex = 0;
+  MOCK.initialized = false;
+  MOCK.lastTick = Date.now();
+  MOCK.sendingPhase = true;
+  MOCK.commandIndex = 0;
+  MOCK.ringGirlShown.clear();
   // Immediate poll in new mode
   poll();
   const interval = CONFIG.LIVE_MODE ? CONFIG.POLL_INTERVAL_MS : CONFIG.DEMO_POLL_INTERVAL_MS;
