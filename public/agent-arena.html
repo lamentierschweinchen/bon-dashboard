@@ -1268,7 +1268,7 @@ const STATE = {
   // Live mode state
   leaders: [],         // Leader addresses fetched on init
   leadersLoaded: false,
-  signalTimeWindow: { startMs: null, endMs: null }, // From scoring API timestamps
+  signalTimeWindow: { startMs: 1774627170000, endMs: 1774632630000 }, // Event window from Stefan
   // Round score tracking (for R1/R2 breakdown in tooltip)
   r1ScoreSnapshot: new Map(),   // agent id → score at end of R1
   r1Snapshotted: false,
@@ -2267,7 +2267,7 @@ async function fetchLatestSignal(startMs, endMs) {
   try {
     const s = startMs || STATE.signalTimeWindow.startMs || (Date.now() - 3600000);
     const e = endMs || STATE.signalTimeWindow.endMs || Date.now();
-    const url = `${CONFIG.SIGNALS_URL}?status=success&sender=${CONFIG.ADMIN_ADDRESS}&receiver=${CONFIG.TARGET_ADDRESS}&after=${s}&before=${e}&size=5`;
+    const url = `${CONFIG.SIGNALS_URL}?status=success&sender=${CONFIG.ADMIN_ADDRESS}&receiver=${CONFIG.TARGET_ADDRESS}&after=${s}&before=${e}&size=10000`;
     const resp = await fetch(url);
     if (!resp.ok) return null;
     const transfers = await resp.json();
