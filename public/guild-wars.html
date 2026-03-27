@@ -286,15 +286,15 @@
     </div>
     <div class="metric-card">
       <div class="metric-label">Points Remaining</div>
-      <div class="metric-value">110</div>
+      <div class="metric-value">122</div>
     </div>
     <div class="metric-card">
       <div class="metric-label">Max Possible Total</div>
-      <div class="metric-value">550</div>
+      <div class="metric-value">562</div>
     </div>
     <div class="metric-card">
       <div class="metric-label">Prize Pool</div>
-      <div class="metric-value"><span class="metric-money">$9,500</span></div>
+      <div class="metric-value"><span class="metric-money">$10,000</span></div>
     </div>
   </div>
 
@@ -303,7 +303,7 @@
   <div class="custom-panel" id="customPanel">
     <div class="custom-header">
       <label>Apply to all — Ch5:</label>
-      <input type="number" id="bulkCh5" min="0" max="110" step="0.01" placeholder="—">
+      <input type="number" id="bulkCh5" min="0" max="122" step="0.01" placeholder="—">
       <button class="apply-btn" id="applyAllBtn">Apply to all</button>
       <div class="toggle-wrap">
         <input type="checkbox" class="toggle" id="newEntrantToggle">
@@ -311,16 +311,6 @@
       </div>
     </div>
     <div class="custom-grid" id="customGrid"></div>
-  </div>
-
-  <div class="rank-chart-section">
-    <div class="rank-chart-header">
-      <div class="rank-chart-title">Rank Over Time</div>
-      <div class="rank-chart-legend" id="chartLegend"></div>
-    </div>
-    <div class="rank-chart-wrap">
-      <canvas id="rankChart" height="320"></canvas>
-    </div>
   </div>
 
   <div class="table-wrap">
@@ -339,6 +329,16 @@
     <div class="insight-body" id="insightBody"></div>
   </div>
 
+  <div class="rank-chart-section">
+    <div class="rank-chart-header">
+      <div class="rank-chart-title">Rank Over Time</div>
+      <div class="rank-chart-legend" id="chartLegend"></div>
+    </div>
+    <div class="rank-chart-wrap">
+      <canvas id="rankChart" height="320"></canvas>
+    </div>
+  </div>
+
   <div class="prize-panel">
     <div class="prize-panel-title">Prize Structure</div>
     <div class="prize-columns">
@@ -347,7 +347,7 @@
         <div class="prize-row gold"><span class="pos">1st</span><span class="amt">$250</span></div>
         <div class="prize-row silver"><span class="pos">2nd</span><span class="amt">$150</span></div>
         <div class="prize-row bronze"><span class="pos">3rd</span><span class="amt">$100</span></div>
-        <div class="prize-row"><span class="pos" style="color:var(--color-text-tertiary)">x 5 challenges</span><span class="amt">$2,500 total</span></div>
+        <div class="prize-row"><span class="pos" style="color:var(--color-text-tertiary)">× 5 challenges</span><span class="amt">$2,500 total</span></div>
       </div>
       <div class="prize-col-section">
         <h4>Final Standings Payout</h4>
@@ -387,7 +387,7 @@ const GUILDS = [
   { name: "Apex | Project X", scores: [1.67, 0, 0, 0] },
 ];
 
-const MAX_TOTAL = 550;
+const MAX_TOTAL = 562;
 const NUM_ACTUAL = 4;
 
 // Per-challenge prizes: $250 / $150 / $100 for top 3
@@ -615,7 +615,7 @@ function readCustomInputs() {
   return result;
 }
 
-function clamp(v) { return Math.min(110, Math.max(0, v)); }
+function clamp(v) { return Math.min(122, Math.max(0, v)); }
 
 function formatScore(val, isProjected) {
   if (val === null || val === undefined) return `<span class="score-null">—</span>`;
@@ -875,11 +875,11 @@ function renderCustomGrid() {
   let html = `<div class="cg-header">Guild</div><div class="cg-header">Ch 5</div>`;
   GUILDS.forEach(g => {
     html += `<div class="cg-name" data-guild="${g.name}">${g.name}</div>`;
-    html += `<input type="number" min="0" max="110" step="0.01" data-input="${g.name}-ch5" data-ch="5" value="${r(avg(g.scores))}" placeholder="0">`;
+    html += `<input type="number" min="0" max="122" step="0.01" data-input="${g.name}-ch5" data-ch="5" value="${r(avg(g.scores))}" placeholder="0">`;
   });
   if (newEntrantEnabled) {
     html += `<div class="cg-name new-entrant-name">New Entrant</div>`;
-    html += `<input type="number" min="0" max="110" step="0.01" data-input="__newEntrant-ch5" data-ch="5" value="0" placeholder="0">`;
+    html += `<input type="number" min="0" max="122" step="0.01" data-input="__newEntrant-ch5" data-ch="5" value="0" placeholder="0">`;
   }
   grid.innerHTML = html;
 }
