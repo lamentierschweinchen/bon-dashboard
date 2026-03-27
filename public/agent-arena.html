@@ -2343,7 +2343,7 @@ function detectRound() {
       const preCountdowns = [1800, 900, 300, 60]; // 30m, 15m, 5m, 1m
       preCountdowns.forEach(threshold => {
         const key = 'pre_countdown_' + threshold;
-        if (secsToR1 <= threshold && secsToR1 > threshold - 12 && !STATE[key]) {
+        if (secsToR1 <= threshold && !STATE[key]) {
           STATE[key] = true;
           const label = threshold >= 60 ? Math.floor(threshold / 60) + ' MIN' : threshold + 'S';
           showRingGirl(label);
@@ -2357,7 +2357,7 @@ function detectRound() {
       const breakCountdowns = [900, 600, 300, 60]; // 15m, 10m, 5m, 1m
       breakCountdowns.forEach(threshold => {
         const key = 'break_countdown_' + threshold;
-        if (secsToR2 <= threshold && secsToR2 > threshold - 12 && !STATE[key]) {
+        if (secsToR2 <= threshold && !STATE[key]) {
           STATE[key] = true;
           const label = threshold >= 60 ? Math.floor(threshold / 60) + ' MIN' : threshold + 'S';
           showRingGirl(label);
@@ -2693,6 +2693,10 @@ function startTimerCountdown() {
     if (STATE.timeRemaining > 0) {
       STATE.timeRemaining--;
       updateTimerDisplay();
+    }
+    // Check ring girl countdowns every second (not just on 60s poll)
+    if (CONFIG.LIVE_MODE) {
+      detectRound();
     }
   }, 1000);
 }
