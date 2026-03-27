@@ -1172,7 +1172,6 @@ const CONFIG = {
   MOBILE_AGENT_CAP: 30,
 
   // ── Live API endpoints ──
-  LEADERS_URL: 'https://mvx-portal-api-8vpmr.ondigitalocean.app/api/v1/guilds/all-leaders',
   SCORING_URL: 'https://bon-challenges-api.multiversx.com/challenges/guild-wars/red-light-green-light',
   SIGNALS_URL: 'https://api.battleofnodes.com/transfers',
 
@@ -2150,22 +2149,61 @@ function applyState(data) {
    LIVE DATA FETCHING
    ═══════════════════════════════════════════ */
 
-// Fetch guild leaders (once on init)
-async function fetchLeaders() {
+// Hardcoded leader list (bypasses CORS-blocked portal API)
+const HARDCODED_LEADERS = [
+  'erd1zcuwhagaa7agay9dvq32kcw9qvft5pdjzwg47scsgrus7m2hwpaq2fndaa',
+  'erd168emr3utuznv4cy0g55sw43yyqd86lkhr7jzzrcf0rcp3znfas7sjqp008',
+  'erd10xsxzsaevkv70ysuxlakv7ctku8x4q0l6eqfpfellcpefxenx0kqlzsp8d',
+  'erd1mfn9qlm0uyhg66suzu993v82m4nsakkkckk8f5drjlt9gjtmrczq5x2t9s',
+  'erd1mul7pnllqms440wke8s6v4h828zwrr4lq7epy2v2jwwrj2zsmvlsyewc77',
+  'erd1zl9y9a82ftly798738ap8ve0w9mq5x2nxsekw06eqyd6q9mqfarq5tegn3',
+  'erd1nzt08ur6xvnlqv0wyp9uqcuhpgpsnz8lnj8sydsrxl9q5fjvazxslvgk7z',
+  'erd1k3m6t0jv2f9rmklc5vs9fcfp623gpw0ndzwhty6pktqu7d7e550s8jm6n9',
+  'erd10tsug4fepy9eluduzv55m3r0c7pvc9cfdvha6xd8s6uah0ep9waq5pc3ze',
+  'erd1ev05hd5jwzvlc7t9ul874jpde42ht00udz6yr63wtt47apl640nshcaxjp',
+  'erd1kkwdfljj5666h6udu3p72s3h6zk7u9k7tym9t8hwf3f2427tk5esf68k97',
+  'erd1f8mjys2dmw6sravrev3f6kx9v4n4u972ntup5e4fqrgecpwdpjds9lr2pv',
+  'erd1u68hfj9gyugv96x8gl79563mh5qlfa36smhxld22wnnpqycsq52q5cm594',
+  'erd1vmys90ptc5fk6p39askj37nqw9u48f5d8gqvndm9rqv3yxvq45sqn3k3mv',
+  'erd1y5803g73qe6n9wppvug7ewa8577pt3en8pgddz5u6j6kqeuvt9rqx7cn7a',
+  'erd1z6e40aw9fvll27hp4y7djprv5en6qd8yuh2zvw2yqutss5hha6nqqfz5af',
+  'erd15kkg45e9qjjxxvwa90pjnx6k0q2lwyq53usd2tvu3jcz20u44wfqh9g66r',
+  'erd1nanufkhtuevqazkesl5zkwf7ulqpvwv9jr8x7mlajtxgp3wthk7q3l56ph',
+  'erd1uaauymt0ltf960uddzhewz2zqghpas30y6chh8jh385ma5dlvzss898rva',
+  'erd1n28dse0sej7m2rz02ceftr30596arzx2a0trcegl9p3ztdagjahqa9szcx',
+  'erd1yu9sprgy5znvphpwcqcnu3khnkkkp7xvpn070u5s5qkr2zmmnctsx6e6jh',
+  'erd1hkdhaqa6a7sfmrc2mmzajrp895tfrcm7usufspwpye644z5tjh4svstj6r',
+  'erd10mcwua04j5r9ujny9y3pza32kmeeq9vqs8eq2je26r27yh28ynfqhxmahk',
+  'erd1nr7jg0jplcrk5ferhgf7eda6sd48t92mlnsfjcclhhxax8e9cagq5a8ahg',
+  'erd1f4c7msf8t9g8f2j75md7fedsqe6es0apnlwg4j33uax74fy7fxpsm09023',
+  'erd1pkrn8u7f94hgew26dndfk2a5q0hdz82m76eyctkh5w0remh5wdqse3s3pa',
+  'erd1k8xz4cln330uyshn49hqhtz99artn6ywcldygm8eep0u9f30am6q8lrhej',
+  'erd158rt37truyh2yl5s0fp83nw9u2llmsxhr8g298eugt9x0w03d23qc8n9ng',
+  'erd1n2fa4vdxf6gtfzacsyxfuh6zquxrshe7zecwjlrc703jjhlzts8qjtcuug',
+  'erd1qlqlvap0gd3p2esjc0zjehewgqfktcymfyc23dls837tc5xk7m9q3rut2f',
+  'erd1hlu9d70frrvmd8s6jur723jl9p58tvsfl4hjtey7lzc7rgnnjwpssj2jlv',
+  'erd1t6dm4p559f8tcph8rardarveh93wu2q47m740drh95ut8mxdtwyq08qnse',
+  'erd1n3w8ltzkj63w2j9k8j0elwlnqm4qp3cwuhsw6r6nyv0cuas548aqzjs9y5',
+  'erd1yd8zy8tf8sjs4h5jgx7qc5qet5zh3szzyn4re5kfymqmrmgga9kq3plg8l',
+  'erd1zvpnjujtnj0v6846ecg7phgmpfqea50tq89qh0ak2m6fq90qqnxsykclqd',
+  'erd1mgntar7uuagj3d3hdmrfs4vrk9rpd4yywwx6zhy42ehnqfzt5f6qf94f98',
+  'erd19d99sgcgvdrt5md8etum268z0ekxuxxre76qtplwe4hm08a6ndnqdajxcs',
+  'erd1k95h05a57tdxn9j4tktqefz0ntafngyf9r9ev78l6t56wfn8vetq7rj0sy',
+  'erd1cvrt362smydm350xw9dnfdq767df4t7fewcwrfad0sxal8qlrwpsqr5w53',
+  'erd10crv3eqxayl0n34sl5mtkj8wrlhvggw5a5lfrss7dgjjgtqkg9sq577ej6',
+  'erd1wjl8hyq6m4g4mhe52dl68065qqqu9q8fs0fkydcfcdffl0c25jcsct7gmk',
+  'erd10l4mrdt58hc4kd939k93aau37mtmqj3y00wq7574krchmwzllc2swcuqul',
+  'erd19ja5j02h9la0plt849d7375h9jqj075a827z330tm3j6ykavyz5svv09j0',
+  // Test leader
+  'erd1uv40ahysflse896x4ktnh6ecx43u7cmy9wnxnvcyp7deg299a4sq6vaywa',
+];
+
+function fetchLeaders() {
   if (STATE.leadersLoaded) return STATE.leaders;
-  try {
-    const resp = await fetch(CONFIG.LEADERS_URL);
-    if (!resp.ok) throw new Error('HTTP ' + resp.status);
-    const addresses = await resp.json();
-    // Deduplicate and filter to leaders we have guild names for
-    STATE.leaders = [...new Set(addresses)];
-    STATE.leadersLoaded = true;
-    console.log('[Agent Arena] Loaded', STATE.leaders.length, 'leaders');
-    return STATE.leaders;
-  } catch (err) {
-    console.warn('[Agent Arena] Failed to fetch leaders:', err.message);
-    return [];
-  }
+  STATE.leaders = [...new Set(HARDCODED_LEADERS)];
+  STATE.leadersLoaded = true;
+  console.log('[Agent Arena] Using', STATE.leaders.length, 'hardcoded leaders');
+  return STATE.leaders;
 }
 
 // Fetch scoring data for all guilds + derive sending state from totalTxs diffs
@@ -2349,9 +2387,8 @@ async function fetchLiveData() {
   }
 
   let agents = [];
-  let leaders = [];
   try {
-    leaders = await fetchLeaders();
+    const leaders = fetchLeaders();
     if (leaders.length > 0) {
       agents = await fetchAllScoring(leaders);
     }
