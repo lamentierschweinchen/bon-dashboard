@@ -195,7 +195,7 @@
   .toggle:checked { background: var(--color-new-entrant); }
   .toggle:checked::after { transform: translateX(16px); }
   .custom-grid {
-    display: grid; grid-template-columns: 1fr 80px 80px; gap: 8px;
+    display: grid; grid-template-columns: 1fr 80px; gap: 8px;
     max-height: 360px; overflow-y: auto; padding-right: 4px;
     align-items: center;
   }
@@ -243,11 +243,11 @@
   <div class="metrics">
     <div class="metric-card">
       <div class="metric-label">Challenges Played</div>
-      <div class="metric-value">3 <span class="metric-dim">/ 5</span></div>
+      <div class="metric-value">4 <span class="metric-dim">/ 5</span></div>
     </div>
     <div class="metric-card">
       <div class="metric-label">Points Remaining</div>
-      <div class="metric-value">220</div>
+      <div class="metric-value">110</div>
     </div>
     <div class="metric-card">
       <div class="metric-label">Max Possible Total</div>
@@ -259,9 +259,7 @@
 
   <div class="custom-panel" id="customPanel">
     <div class="custom-header">
-      <label>Apply to all — Ch4:</label>
-      <input type="number" id="bulkCh4" min="0" max="110" step="0.01" placeholder="—">
-      <label>Ch5:</label>
+      <label>Apply to all — Ch5:</label>
       <input type="number" id="bulkCh5" min="0" max="110" step="0.01" placeholder="—">
       <button class="apply-btn" id="applyAllBtn">Apply to all</button>
       <div class="toggle-wrap">
@@ -290,26 +288,29 @@
 </div>
 
 <script>
+// Ch1-Ch4 actual scores (4 challenges complete, 1 remaining)
 const GUILDS = [
-  { name: "RosettaStake", scores: [110, 110, 110] },
-  { name: "DinoVox", scores: [88.02, 36.09, 35.77] },
-  { name: "Last Resort", scores: [11.44, 75.28, 51.93] },
-  { name: "Disruptive Dots", scores: [15.98, 20.29, 77.20] },
-  { name: "Superrarebears", scores: [0, 84.89, 28.35] },
-  { name: "OpenHeart", scores: [55.13, 26.32, 25.49] },
-  { name: "KWAK", scores: [24.60, 28.90, 23.17] },
-  { name: "TOMMY", scores: [30.43, 29.05, 13.97] },
-  { name: "GreenGlitch", scores: [21.12, 6.12, 19.57] },
-  { name: "HeroOrZero", scores: [17.56, 20.52, 0] },
-  { name: "SomeGuild", scores: [4.70, 18.94, 0] },
-  { name: "Emorya", scores: [4.92, 0, 0] },
-  { name: "XcronProtocol", scores: [0, 0, 3.66] },
-  { name: "LazyCompany", scores: [0, 1.91, 1.01] },
-  { name: "MrEGLD x ProjectX", scores: [2.50, 0, 0] },
-  { name: "Apex | Project X", scores: [1.67, 0, 0] },
+  { name: "RosettaStake", scores: [110, 110, 110, 110] },
+  { name: "DinoVox", scores: [88.02, 36.09, 35.77, 54.40] },
+  { name: "Last Resort", scores: [11.44, 75.28, 51.93, 23.75] },
+  { name: "Disruptive Dots", scores: [15.98, 20.29, 77.20, 0] },
+  { name: "Superrarebears", scores: [0, 84.89, 28.35, 25.00] },
+  { name: "OpenHeart", scores: [55.13, 26.32, 25.49, 25.00] },
+  { name: "TOMMY", scores: [30.43, 29.05, 13.97, 25.47] },
+  { name: "KWAK", scores: [24.60, 28.90, 23.17, 17.50] },
+  { name: "SparkGuild", scores: [0, 0, 0, 12.63] },
+  { name: "GreenGlitch", scores: [21.12, 6.12, 19.57, 7.50] },
+  { name: "HeroOrZero", scores: [17.56, 20.52, 0, 0] },
+  { name: "SomeGuild", scores: [4.70, 18.94, 0, 0] },
+  { name: "Emorya", scores: [4.92, 0, 0, 0] },
+  { name: "XcronProtocol", scores: [0, 0, 3.66, 0] },
+  { name: "LazyCompany", scores: [0, 1.91, 1.01, 0] },
+  { name: "MrEGLD x ProjectX", scores: [2.50, 0, 0, 0] },
+  { name: "Apex | Project X", scores: [1.67, 0, 0, 0] },
 ];
 
 const MAX_TOTAL = 550;
+const NUM_ACTUAL = 4; // Ch1-Ch4 are actual scores
 
 function avg(scores) {
   const nonZero = scores.filter(s => s > 0);
@@ -324,42 +325,42 @@ const SCENARIOS = [
     id: "current", label: "Current Standings",
     compute() {
       return {
-        guilds: GUILDS.map(g => ({ name: g.name, scores: [...g.scores, null, null], isNew: false })),
-        insight: `<strong>RosettaStake</strong> leads with a perfect 330 — 170 points ahead of 2nd-place DinoVox (159.88). ` +
-          `Positions 2nd through 6th are separated by only 53 points, making the mid-table race wide open. ` +
-          `With <strong>220 points</strong> still on the table across two challenges, dramatic shifts are possible — but catching Rosetta requires near-perfect rounds and Rosetta stumbling.`
+        guilds: GUILDS.map(g => ({ name: g.name, scores: [...g.scores, null], isNew: false })),
+        insight: `<strong>RosettaStake</strong> leads with a perfect 440 — four consecutive 110s and 226 points clear of 2nd-place DinoVox (214.28). ` +
+          `With only <strong>110 points</strong> left in Ch5, 1st place is mathematically locked. ` +
+          `The real battle is 2nd through 5th: DinoVox (214), Last Resort (162), Superrarebears (138), OpenHeart (132), and Disruptive Dots (113) are all within one great round of each other. ` +
+          `Notable: Disruptive Dots scored 0 in Ch4 after their Ch3 breakout, and SparkGuild entered the competition for the first time.`
       };
     }
   },
   {
     id: "new-entrant", label: "New Entrant",
     compute() {
-      // New entrant wins both challenges at 110. Someone else is always strong 2nd.
-      // Rosetta stays elite: 2nd on tech (~55-60 weighted) + full content (25) + 2nd milestone (7) ≈ 88-90
-      // Other strong guilds fight for 3rd tech: ~30-40 weighted + content + maybe 3rd milestone ≈ 60-70
+      // New entrant wins Ch5 at 110. With them taking 1st tech, Rosetta gets ~88 (2nd tech + content + milestone).
+      // Other guilds compressed slightly since a new dominant player takes the top tech spot.
       const overrides = {
-        "RosettaStake": [90, 88],
-        "DinoVox": [65, 58],
-        "Last Resort": [58, 68],
-        "Disruptive Dots": [70, 55],
-        "Superrarebears": [60, 52],
-        "OpenHeart": [42, 40],
-        "KWAK": [28, 26],
-        "TOMMY": [25, 22],
+        "RosettaStake": 88,
+        "DinoVox": 58,
+        "Last Resort": 55,
+        "Superrarebears": 48,
+        "OpenHeart": 42,
+        "Disruptive Dots": 50,
+        "TOMMY": 25,
+        "KWAK": 26,
       };
       const guilds = GUILDS.map(g => {
         const ov = overrides[g.name];
-        if (ov) return { name: g.name, scores: [...g.scores, ov[0], ov[1]], isNew: false };
+        if (ov !== undefined) return { name: g.name, scores: [...g.scores, ov], isNew: false };
         const a = r(avg(g.scores));
-        return { name: g.name, scores: [...g.scores, a, a], isNew: false };
+        return { name: g.name, scores: [...g.scores, a], isNew: false };
       });
-      guilds.push({ name: "New Entrant", scores: [0, 0, 0, 110, 110], isNew: true });
+      guilds.push({ name: "New Entrant", scores: [0, 0, 0, 0, 110], isNew: true });
       return {
         guilds,
-        insight: `A brand-new guild wins <strong>both</strong> remaining challenges at 110 each, totalling 220. ` +
-          `That places them around 4th–5th overall — impressive, but not enough to catch the top 3 who have three rounds of banked points. ` +
-          `RosettaStake still finishes 1st at ~508 even without winning tech — their 330-point war chest is too deep. ` +
-          `The lesson: <strong>skipping early challenges is a massive handicap</strong>, even if you dominate later.`
+        insight: `A brand-new guild wins Ch5 at 110 — the maximum possible. ` +
+          `Their total: <strong>110 points</strong>. That places them around 10th-11th overall, behind every guild that has competed in multiple rounds. ` +
+          `RosettaStake finishes at 528 with a strong 2nd-place Ch5. DinoVox holds 2nd at ~272. ` +
+          `The lesson: with only 1 challenge left, <strong>a new entrant has zero chance at the podium</strong>. The ship sailed after Ch3.`
       };
     }
   },
@@ -368,77 +369,77 @@ const SCENARIOS = [
     compute() {
       const guilds = GUILDS.map(g => {
         const a = r(avg(g.scores));
-        return { name: g.name, scores: [...g.scores, a, a], isNew: false };
+        return { name: g.name, scores: [...g.scores, a], isNew: false };
       });
       return {
         guilds,
-        insight: `Each guild repeats their average performance (from rounds they competed in) for both remaining challenges. ` +
-          `<strong>RosettaStake</strong> projects to 550 (the theoretical max) since their average IS 110. ` +
-          `DinoVox projects to ~266, Last Resort to ~231, and Disruptive Dots to ~189. ` +
-          `The mid-table gap barely changes — guilds that have been consistent stay consistent, and the overall order largely holds.`
+        insight: `Each guild repeats their average performance (from rounds they competed in). ` +
+          `<strong>RosettaStake</strong> projects to 550 — the theoretical max — since their average IS 110. ` +
+          `DinoVox projects to ~268 (avg 53.57), Last Resort to ~203 (avg 40.60), Superrarebears to ~184 (avg 46.08). ` +
+          `At average pace, the standings barely shift. The order is largely set — only an exceptional Ch5 performance changes anything.`
       };
     }
   },
   {
     id: "rosetta-stumbles", label: "Rosetta Stumbles",
     compute() {
-      // Rosetta has two bad rounds (~40 each). With Rosetta out of the tech race,
-      // someone else wins each round at 105-110. Strong 2nd gets ~85-90. 3rd gets ~65-75.
-      // This is a realistic competitive field where the vacuum gets filled.
+      // Rosetta has a bad Ch5 (~40). With Rosetta not dominating tech, DinoVox wins at 108.
+      // Other strong guilds benefit from the vacuum.
       const overrides = {
-        "RosettaStake": [40, 40],
-        "Disruptive Dots": [108, 72],       // Wins Ch4 (upward momentum), strong 2nd in Ch5
-        "Last Resort": [85, 105],            // Strong 2nd in Ch4, wins Ch5
-        "DinoVox": [72, 68],                 // Solid 3rd both rounds
-        "Superrarebears": [65, 60],          // Competitive mid-pack
-        "OpenHeart": [48, 45],               // Content-heavy, weaker tech
-        "KWAK": [30, 28],
-        "TOMMY": [26, 24],
+        "RosettaStake": 40,
+        "DinoVox": 108,             // Wins Ch5 (strong 2nd in Ch4, upward momentum)
+        "Last Resort": 72,          // Strong 2nd/3rd tech + full content
+        "Superrarebears": 65,       // Competitive, full content
+        "Disruptive Dots": 55,      // Bounce-back from Ch4 zero
+        "OpenHeart": 45,            // Content-heavy, weaker tech
+        "TOMMY": 30,
+        "KWAK": 28,
+        "SparkGuild": 20,
       };
       const guilds = GUILDS.map(g => {
         const ov = overrides[g.name];
-        if (ov) return { name: g.name, scores: [...g.scores, ov[0], ov[1]], isNew: false };
+        if (ov !== undefined) return { name: g.name, scores: [...g.scores, ov], isNew: false };
         const a = r(avg(g.scores));
-        return { name: g.name, scores: [...g.scores, a, a], isNew: false };
+        return { name: g.name, scores: [...g.scores, a], isNew: false };
       });
       return {
         guilds,
-        insight: `RosettaStake has two uncharacteristically weak rounds at 40 each (5th on tech, partial content). ` +
-          `<strong>Disruptive Dots</strong> seizes Ch4 at 108 and <strong>Last Resort</strong> takes Ch5 at 105 — both realistic winner scores. ` +
-          `Even so, Rosetta finishes at <strong>410</strong> — still 1st. Last Resort surges to ~329, Disruptive Dots to ~294, DinoVox to ~300. ` +
-          `The takeaway: Rosetta's 330-point war chest means <strong>even two bad rounds don't cost them the title</strong>. But the fight for 2nd becomes a genuine three-way race.`
+        insight: `RosettaStake has an uncharacteristically weak Ch5 at 40 (5th on tech, partial content, no milestone). ` +
+          `<strong>DinoVox</strong> seizes the opportunity and wins Ch5 at 108 — a realistic winner score with full content and 1st milestone. ` +
+          `Rosetta still finishes at <strong>480</strong> — untouchable for 1st. DinoVox surges to 322, Last Resort to 234, Superrarebears to 203. ` +
+          `The takeaway: Rosetta's 440-point war chest means <strong>even a bad final round can't cost them the title</strong>. But DinoVox cements a strong 2nd.`
       };
     }
   },
   {
     id: "comeback", label: "Comeback Kids",
     compute() {
-      // Two lower-ranked guilds have breakout rounds and WIN their challenge.
-      // Winning means 100+ score. Rosetta stays elite at ~88-90 (2nd tech + content + milestone).
-      // Current front-runners get compressed but not destroyed — they're still good teams, just not winning tech.
+      // A lower-ranked guild has a breakout Ch5 and wins it.
+      // Superrarebears (5th, 138.24) showed they can compete (84.89 in Ch2).
+      // They win Ch5 at 108. Rosetta stays elite at 88. Front-runners compressed.
       const overrides = {
-        "RosettaStake": [88, 90],            // Still elite, 2nd tech both rounds
-        "OpenHeart": [107, 55],              // Wins Ch4! (6th → breakout). Decent Ch5.
-        "GreenGlitch": [45, 105],            // Decent Ch4, wins Ch5! (9th → breakout)
-        "DinoVox": [62, 65],                 // 3rd-4th tech range both rounds
-        "Last Resort": [68, 58],             // Competitive both rounds
-        "Disruptive Dots": [58, 62],         // Competitive both rounds
-        "Superrarebears": [52, 48],          // Mid-pack
-        "KWAK": [30, 28],
-        "TOMMY": [25, 22],
+        "RosettaStake": 88,          // Still elite, 2nd tech
+        "Superrarebears": 108,       // WINS Ch5! (5th → breakout, they were 2nd in Ch2 so it's proven)
+        "DinoVox": 60,               // 3rd-4th tech range
+        "Last Resort": 55,           // Competitive
+        "Disruptive Dots": 65,       // Bounce-back round
+        "OpenHeart": 45,             // Content-heavy
+        "TOMMY": 28,
+        "KWAK": 26,
+        "SparkGuild": 18,
       };
       const guilds = GUILDS.map(g => {
         const ov = overrides[g.name];
-        if (ov) return { name: g.name, scores: [...g.scores, ov[0], ov[1]], isNew: false };
+        if (ov !== undefined) return { name: g.name, scores: [...g.scores, ov], isNew: false };
         const a = r(avg(g.scores));
-        return { name: g.name, scores: [...g.scores, a, a], isNew: false };
+        return { name: g.name, scores: [...g.scores, a], isNew: false };
       });
       return {
         guilds,
-        insight: `<strong>OpenHeart</strong> (currently 6th) wins Ch4 at 107, and <strong>GreenGlitch</strong> (currently 9th) wins Ch5 at 105 — both realistic winner scores with full content and milestone bonuses. ` +
-          `Rosetta stays strong at ~178 across both rounds (2nd tech + content). ` +
-          `OpenHeart vaults to ~269 total (3rd place). GreenGlitch jumps to ~197, leapfrogging five guilds. ` +
-          `The point: <strong>two breakout wins from mid-table guilds completely reshuffle the standings</strong> and push them into trophy contention.`
+        insight: `<strong>Superrarebears</strong> (currently 5th at 138) has a breakout Ch5 at 108 — they proved they can do it with 84.89 in Ch2. ` +
+          `This vaults them to <strong>246 total</strong>, leapfrogging Last Resort (217) and closing the gap on DinoVox (274). ` +
+          `Rosetta stays dominant at 528 (2nd tech + content). ` +
+          `The point: <strong>one dominant round from a mid-table guild can vault them two positions</strong> and completely reshape the podium race.`
       };
     }
   },
@@ -447,14 +448,13 @@ const SCENARIOS = [
     compute() {
       const customData = readCustomInputs();
       const guilds = GUILDS.map(g => {
-        const cd = customData[g.name] || { ch4: 0, ch5: 0 };
-        return { name: g.name, scores: [...g.scores, cd.ch4, cd.ch5], isNew: false };
+        const ch5 = customData[g.name] || 0;
+        return { name: g.name, scores: [...g.scores, ch5], isNew: false };
       });
-      if (customData.__newEntrant) {
-        const ne = customData.__newEntrant;
-        guilds.push({ name: "New Entrant", scores: [0, 0, 0, ne.ch4, ne.ch5], isNew: true });
+      if (customData.__newEntrant !== undefined) {
+        guilds.push({ name: "New Entrant", scores: [0, 0, 0, 0, customData.__newEntrant], isNew: true });
       }
-      const sorted = guilds.sort((a, b) => totalScore(b) - totalScore(a));
+      const sorted = [...guilds].sort((a, b) => totalScore(b) - totalScore(a));
       const top = sorted[0];
       const second = sorted[1];
       const gap = r(totalScore(top) - totalScore(second));
@@ -462,14 +462,13 @@ const SCENARIOS = [
         guilds,
         insight: `Custom scenario. <strong>${top.name}</strong> leads at ${r(totalScore(top))} points, ` +
           `${gap} ahead of <strong>${second.name}</strong> (${r(totalScore(second))}). ` +
-          `Adjust the scores in the panel above to explore different outcomes.`
+          `Adjust Ch5 scores in the panel above to explore different outcomes.`
       };
     }
   }
 ];
 
 let activeScenario = "current";
-let customValues = {};
 let newEntrantEnabled = false;
 
 function totalScore(g) {
@@ -477,37 +476,22 @@ function totalScore(g) {
 }
 
 function existingTotal(g) {
-  return g.scores.slice(0, 3).reduce((sum, s) => sum + (s || 0), 0);
+  return g.scores.slice(0, NUM_ACTUAL).reduce((sum, s) => sum + (s || 0), 0);
 }
 
 function projectedTotal(g) {
-  return (g.scores[3] || 0) + (g.scores[4] || 0);
+  return g.scores[NUM_ACTUAL] || 0;
 }
 
 function readCustomInputs() {
   const result = {};
-  const grid = document.getElementById('customGrid');
-  const rows = grid.querySelectorAll('[data-guild]');
-  rows.forEach(row => {
-    const name = row.dataset.guild;
-    const inputs = row.parentElement.querySelectorAll(`[data-guild="${name}"] ~ input, input[data-guild-input="${name}"]`);
-  });
-  // Read from stored values
   GUILDS.forEach(g => {
-    const ch4Input = document.querySelector(`input[data-input="${g.name}-ch4"]`);
-    const ch5Input = document.querySelector(`input[data-input="${g.name}-ch5"]`);
-    result[g.name] = {
-      ch4: ch4Input ? clamp(parseFloat(ch4Input.value) || 0) : 0,
-      ch5: ch5Input ? clamp(parseFloat(ch5Input.value) || 0) : 0,
-    };
+    const inp = document.querySelector(`input[data-input="${g.name}-ch5"]`);
+    result[g.name] = inp ? clamp(parseFloat(inp.value) || 0) : 0;
   });
   if (newEntrantEnabled) {
-    const neCh4 = document.querySelector('input[data-input="__newEntrant-ch4"]');
-    const neCh5 = document.querySelector('input[data-input="__newEntrant-ch5"]');
-    result.__newEntrant = {
-      ch4: neCh4 ? clamp(parseFloat(neCh4.value) || 0) : 0,
-      ch5: neCh5 ? clamp(parseFloat(neCh5.value) || 0) : 0,
-    };
+    const neInp = document.querySelector('input[data-input="__newEntrant-ch5"]');
+    result.__newEntrant = neInp ? clamp(parseFloat(neInp.value) || 0) : 0;
   }
   return result;
 }
@@ -538,7 +522,7 @@ function renderTable(data) {
       <td>${formatScore(g.scores[0], false)}</td>
       <td>${formatScore(g.scores[1], false)}</td>
       <td>${formatScore(g.scores[2], false)}</td>
-      <td>${formatScore(g.scores[3], g.scores[3] !== null)}</td>
+      <td>${formatScore(g.scores[3], false)}</td>
       <td>${formatScore(g.scores[4], g.scores[4] !== null)}</td>
       <td class="total-col">${total.toFixed(2)}</td>
       <td class="bar-cell">
@@ -575,14 +559,12 @@ function buildCustomPanel() {
   renderCustomGrid();
 
   document.getElementById('applyAllBtn').addEventListener('click', () => {
-    const ch4Val = document.getElementById('bulkCh4').value;
     const ch5Val = document.getElementById('bulkCh5').value;
-    grid.querySelectorAll('input[data-ch="4"]').forEach(inp => {
-      if (ch4Val !== '') inp.value = clamp(parseFloat(ch4Val));
-    });
-    grid.querySelectorAll('input[data-ch="5"]').forEach(inp => {
-      if (ch5Val !== '') inp.value = clamp(parseFloat(ch5Val));
-    });
+    if (ch5Val !== '') {
+      grid.querySelectorAll('input[data-ch="5"]').forEach(inp => {
+        inp.value = clamp(parseFloat(ch5Val));
+      });
+    }
     runScenario();
   });
 
@@ -597,16 +579,14 @@ function buildCustomPanel() {
 
 function renderCustomGrid() {
   const grid = document.getElementById('customGrid');
-  let html = `<div class="cg-header">Guild</div><div class="cg-header">Ch 4</div><div class="cg-header">Ch 5</div>`;
+  let html = `<div class="cg-header">Guild</div><div class="cg-header">Ch 5</div>`;
   GUILDS.forEach(g => {
     const a = avg(g.scores);
     html += `<div class="cg-name" data-guild="${g.name}">${g.name}</div>`;
-    html += `<input type="number" min="0" max="110" step="0.01" data-input="${g.name}-ch4" data-ch="4" value="${r(a)}" placeholder="0">`;
     html += `<input type="number" min="0" max="110" step="0.01" data-input="${g.name}-ch5" data-ch="5" value="${r(a)}" placeholder="0">`;
   });
   if (newEntrantEnabled) {
     html += `<div class="cg-name new-entrant-name">New Entrant</div>`;
-    html += `<input type="number" min="0" max="110" step="0.01" data-input="__newEntrant-ch4" data-ch="4" value="0" placeholder="0">`;
     html += `<input type="number" min="0" max="110" step="0.01" data-input="__newEntrant-ch5" data-ch="5" value="0" placeholder="0">`;
   }
   grid.innerHTML = html;
