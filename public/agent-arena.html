@@ -2262,7 +2262,12 @@ async function fetchAllScoring(leaders) {
   return allAgents;
 }
 
-// Fetch latest signal (Caesar's command) — data field is plain text
+// Fetch latest signal (Caesar's command) — data field is base64 encoded
+function decodeSignalData(raw) {
+  if (!raw) return '';
+  try { return atob(raw); } catch { return raw; }
+}
+
 async function fetchLatestSignal(startMs, endMs) {
   try {
     const s = startMs || STATE.signalTimeWindow.startMs || (Date.now() - 3600000);
@@ -2275,10 +2280,10 @@ async function fetchLatestSignal(startMs, endMs) {
     // Latest signal is first (sorted by time desc)
     const latest = transfers[0];
     return {
-      text: latest.data || '',
+      text: decodeSignalData(latest.data),
       timestamp: new Date(latest.timestampMs).toISOString(),
       allSignals: transfers.map(t => ({
-        text: t.data || '',
+        text: decodeSignalData(t.data),
         timestamp: new Date(t.timestampMs).toISOString(),
       })),
     };
