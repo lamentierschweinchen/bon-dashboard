@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Guild Wars — Scenario Planner</title>
+<title>Guild Wars — Final Results</title>
 <style>
   :root {
     --color-background-primary: #020b18;
@@ -18,13 +18,13 @@
     --color-accent-orange-light: #ff8c42;
     --color-accent-cyan: #23f0c7;
     --color-accent-blue: #00b4d8;
-    --color-projected: #ff8c42;
-    --color-new-entrant: #23f0c7;
     --color-background-info: rgba(35,240,199,0.06);
     --color-text-info: #23f0c7;
     --color-border-info: rgba(35,240,199,0.2);
     --color-bar-existing: #e8601c;
-    --color-bar-projected: #ff8c42;
+    --color-gold: #ffd700;
+    --color-silver: #c0c0c0;
+    --color-bronze: #cd7f32;
     --border-radius-md: 10px;
     --border-radius-lg: 14px;
     --glass-bg: rgba(255,255,255,0.03);
@@ -44,8 +44,6 @@
       --color-background-info: rgba(35,240,199,0.08);
       --color-text-info: #0d8a6f;
       --color-border-info: rgba(13,138,111,0.25);
-      --color-bar-existing: #e8601c;
-      --color-bar-projected: #ff8c42;
       --glass-bg: rgba(255,255,255,0.7);
       --glass-border: rgba(10,26,53,0.1);
     }
@@ -62,7 +60,7 @@
     line-height: 1.5;
   }
 
-  .container { max-width: 1100px; margin: 0 auto; }
+  .container { max-width: 1200px; margin: 0 auto; }
 
   .header {
     display: flex; align-items: center; gap: 12px;
@@ -87,18 +85,71 @@
   .metric-value { font-size: 28px; font-weight: 800; color: var(--color-text-primary); }
   .metric-value .metric-dim { font-size: 16px; font-weight: 400; color: var(--color-text-secondary); }
   .metric-value .metric-money { color: var(--color-accent-cyan); }
+  .metric-value .metric-champ { color: var(--color-accent-orange); font-size: 20px; }
 
-  .scenarios { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 24px; }
-  .scenario-btn {
+  /* Tabs */
+  .tabs { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 24px; }
+  .tab-btn {
     padding: 8px 18px; border-radius: 20px; border: 1px solid var(--color-border-secondary);
     background: transparent; color: var(--color-text-secondary); cursor: pointer;
     font-size: 13px; font-weight: 500; transition: all 0.2s; font-family: inherit;
   }
-  .scenario-btn:hover { border-color: var(--color-accent-orange-light); color: var(--color-text-primary); }
-  .scenario-btn.active {
+  .tab-btn:hover { border-color: var(--color-accent-orange-light); color: var(--color-text-primary); }
+  .tab-btn.active {
     background: var(--color-accent-orange); border-color: var(--color-accent-orange);
     color: #fff; font-weight: 600;
   }
+
+  /* Challenge sub-tabs */
+  .ch-tabs { display: flex; gap: 6px; margin-bottom: 16px; }
+  .ch-btn {
+    padding: 6px 14px; border-radius: 16px; border: 1px solid var(--color-border-tertiary);
+    background: transparent; color: var(--color-text-tertiary); cursor: pointer;
+    font-size: 12px; font-weight: 500; transition: all 0.2s; font-family: inherit;
+  }
+  .ch-btn:hover { border-color: var(--color-accent-cyan); color: var(--color-text-primary); }
+  .ch-btn.active {
+    background: rgba(35,240,199,0.12); border-color: var(--color-accent-cyan);
+    color: var(--color-accent-cyan); font-weight: 600;
+  }
+  .ch-subtitle {
+    font-size: 13px; color: var(--color-text-secondary); margin-bottom: 16px;
+  }
+  .ch-subtitle strong { color: var(--color-text-primary); }
+
+  /* Table */
+  .table-wrap {
+    background: var(--glass-bg); border: 1px solid var(--glass-border);
+    border-radius: var(--border-radius-lg); overflow-x: auto; margin-bottom: 20px;
+    backdrop-filter: blur(12px);
+  }
+  table { width: 100%; border-collapse: collapse; }
+  th {
+    text-align: left; padding: 12px 10px; font-size: 10px; text-transform: uppercase;
+    letter-spacing: 1.5px; color: var(--color-text-tertiary); font-weight: 500;
+    border-bottom: 1px solid var(--color-border-tertiary);
+  }
+  th:first-child { width: 36px; text-align: center; }
+  td { padding: 10px 10px; font-size: 13px; border-bottom: 1px solid var(--color-border-tertiary); }
+  tr:last-child td { border-bottom: none; }
+  td:first-child { text-align: center; color: var(--color-text-tertiary); font-size: 12px; }
+  .guild-name { font-weight: 600; white-space: nowrap; }
+  .score-zero { color: var(--color-text-tertiary); }
+  .total-col { font-weight: 700; font-size: 14px; }
+  .prize-col { color: var(--color-accent-cyan); font-weight: 600; font-size: 13px; white-space: nowrap; }
+  .bar-cell { width: 140px; }
+  .bar-container {
+    width: 100%; height: 18px; background: rgba(255,255,255,0.04);
+    border-radius: 9px; overflow: hidden; display: flex;
+  }
+  .bar-seg {
+    height: 100%; transition: width 0.4s ease;
+  }
+
+  /* Rank medal badges */
+  .rank-1 { color: var(--color-gold); font-weight: 700; }
+  .rank-2 { color: var(--color-silver); font-weight: 700; }
+  .rank-3 { color: var(--color-bronze); font-weight: 700; }
 
   /* Rank chart */
   .rank-chart-section {
@@ -112,71 +163,16 @@
   .rank-chart-title {
     font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px;
   }
-  .rank-chart-legend {
-    display: flex; flex-wrap: wrap; gap: 10px; font-size: 11px;
-  }
+  .rank-chart-legend { display: flex; flex-wrap: wrap; gap: 10px; font-size: 11px; }
   .legend-item {
     display: flex; align-items: center; gap: 4px; cursor: pointer; opacity: 0.7; transition: opacity 0.2s;
   }
   .legend-item:hover, .legend-item.active { opacity: 1; }
   .legend-dot { width: 8px; height: 8px; border-radius: 50%; }
-  .rank-chart-wrap {
-    position: relative; width: 100%; overflow-x: auto;
-  }
+  .rank-chart-wrap { position: relative; width: 100%; overflow-x: auto; }
   canvas#rankChart { width: 100%; height: 320px; display: block; }
 
-  /* Table */
-  .table-wrap {
-    background: var(--glass-bg); border: 1px solid var(--glass-border);
-    border-radius: var(--border-radius-lg); overflow-x: auto; margin-bottom: 20px;
-    backdrop-filter: blur(12px);
-  }
-  table { width: 100%; border-collapse: collapse; min-width: 900px; }
-  th {
-    text-align: left; padding: 12px 10px; font-size: 10px; text-transform: uppercase;
-    letter-spacing: 1.5px; color: var(--color-text-tertiary); font-weight: 500;
-    border-bottom: 1px solid var(--color-border-tertiary);
-  }
-  th:first-child { width: 36px; text-align: center; }
-  td { padding: 10px 10px; font-size: 13px; border-bottom: 1px solid var(--color-border-tertiary); }
-  tr:last-child td { border-bottom: none; }
-  td:first-child { text-align: center; color: var(--color-text-tertiary); font-size: 12px; }
-  .guild-name { font-weight: 600; white-space: nowrap; }
-  .score-actual { color: var(--color-text-primary); }
-  .score-projected { color: var(--color-projected); font-weight: 600; }
-  .score-zero { color: var(--color-text-tertiary); }
-  .score-null { color: var(--color-text-tertiary); }
-  .total-col { font-weight: 700; font-size: 14px; }
-  .prize-col { color: var(--color-accent-cyan); font-weight: 600; font-size: 13px; white-space: nowrap; }
-  .prize-col .prize-projected { opacity: 0.5; font-weight: 400; }
-  .bar-cell { width: 140px; }
-  .bar-container {
-    width: 100%; height: 18px; background: rgba(255,255,255,0.04);
-    border-radius: 9px; overflow: hidden; display: flex;
-  }
-  .bar-existing {
-    height: 100%; background: var(--color-bar-existing); transition: width 0.4s ease;
-    border-radius: 9px 0 0 9px;
-  }
-  .bar-projected {
-    height: 100%; background: var(--color-bar-projected); opacity: 0.5; transition: width 0.4s ease;
-    background-image: repeating-linear-gradient(-45deg, transparent, transparent 3px, rgba(255,255,255,0.1) 3px, rgba(255,255,255,0.1) 6px);
-  }
-
-  tr.new-entrant { border-left: 3px solid var(--color-new-entrant); }
-  tr.new-entrant .guild-name { color: var(--color-new-entrant); font-style: italic; }
-  tr.new-entrant .bar-existing { background: var(--color-new-entrant); }
-  tr.new-entrant .bar-projected { background: var(--color-new-entrant); opacity: 0.4; }
-
-  .insight {
-    background: var(--color-background-info); border: 1px solid var(--color-border-info);
-    border-radius: var(--border-radius-lg); padding: 16px 20px; margin-bottom: 24px;
-  }
-  .insight-title { font-size: 11px; text-transform: uppercase; letter-spacing: 2px; color: var(--color-text-info); margin-bottom: 6px; font-weight: 600; }
-  .insight-body { font-size: 13px; color: var(--color-text-secondary); line-height: 1.65; }
-  .insight-body strong { color: var(--color-text-primary); font-weight: 600; }
-
-  /* Prize structure panel */
+  /* Prize panel */
   .prize-panel {
     background: var(--glass-bg); border: 1px solid var(--glass-border);
     border-radius: var(--border-radius-lg); padding: 20px; margin-bottom: 20px;
@@ -203,69 +199,25 @@
   .prize-row.silver .pos { color: #c0c0c0; }
   .prize-row.bronze .pos { color: #cd7f32; }
 
-  /* Custom panel */
-  .custom-panel {
-    background: var(--glass-bg); border: 1px solid var(--glass-border);
-    border-radius: var(--border-radius-lg); padding: 20px; margin-bottom: 20px;
-    backdrop-filter: blur(12px); display: none;
+  /* Insight box */
+  .insight {
+    background: var(--color-background-info); border: 1px solid var(--color-border-info);
+    border-radius: var(--border-radius-lg); padding: 16px 20px; margin-bottom: 24px;
   }
-  .custom-panel.visible { display: block; }
-  .custom-header { display: flex; align-items: center; gap: 16px; margin-bottom: 16px; flex-wrap: wrap; }
-  .custom-header label { font-size: 12px; color: var(--color-text-secondary); }
-  .custom-header input[type="number"] {
-    width: 64px; padding: 6px 8px; border-radius: 6px;
-    border: 1px solid var(--color-border-secondary); background: var(--color-background-secondary);
-    color: var(--color-text-primary); font-size: 13px; font-family: inherit;
-  }
-  .apply-btn {
-    padding: 6px 14px; border-radius: 6px; border: 1px solid var(--color-accent-orange);
-    background: transparent; color: var(--color-accent-orange); cursor: pointer;
-    font-size: 12px; font-family: inherit; font-weight: 500; transition: all 0.2s;
-  }
-  .apply-btn:hover { background: var(--color-accent-orange); color: #fff; }
-  .toggle-wrap { display: flex; align-items: center; gap: 8px; margin-left: auto; }
-  .toggle-wrap label { font-size: 12px; color: var(--color-text-secondary); cursor: pointer; }
-  .toggle {
-    width: 36px; height: 20px; border-radius: 10px; border: none;
-    background: var(--color-border-secondary); cursor: pointer; position: relative;
-    transition: background 0.2s; appearance: none; -webkit-appearance: none;
-  }
-  .toggle::after {
-    content: ''; position: absolute; top: 2px; left: 2px;
-    width: 16px; height: 16px; border-radius: 50%; background: #fff; transition: transform 0.2s;
-  }
-  .toggle:checked { background: var(--color-new-entrant); }
-  .toggle:checked::after { transform: translateX(16px); }
-  .custom-grid {
-    display: grid; grid-template-columns: 1fr 80px; gap: 8px;
-    max-height: 360px; overflow-y: auto; padding-right: 4px; align-items: center;
-  }
-  .custom-grid .cg-header {
-    font-size: 10px; text-transform: uppercase; letter-spacing: 1.5px;
-    color: var(--color-text-tertiary); padding-bottom: 4px;
-    border-bottom: 1px solid var(--color-border-tertiary); font-weight: 500;
-  }
-  .custom-grid .cg-name { font-size: 13px; font-weight: 500; padding: 4px 0; }
-  .custom-grid input[type="number"] {
-    width: 100%; padding: 6px 8px; border-radius: 6px;
-    border: 1px solid var(--color-border-tertiary); background: var(--color-background-secondary);
-    color: var(--color-text-primary); font-size: 13px; font-family: inherit; text-align: center;
-  }
-  .custom-grid input[type="number"]:focus { outline: none; border-color: var(--color-accent-orange); }
-  .new-entrant-name { color: var(--color-new-entrant); font-style: italic; }
+  .insight-title { font-size: 11px; text-transform: uppercase; letter-spacing: 2px; color: var(--color-text-info); margin-bottom: 6px; font-weight: 600; }
+  .insight-body { font-size: 13px; color: var(--color-text-secondary); line-height: 1.65; }
+  .insight-body strong { color: var(--color-text-primary); font-weight: 600; }
 
-  .custom-grid::-webkit-scrollbar { width: 4px; }
-  .custom-grid::-webkit-scrollbar-track { background: transparent; }
-  .custom-grid::-webkit-scrollbar-thumb { background: var(--color-border-secondary); border-radius: 2px; }
+  .view { display: none; }
+  .view.active { display: block; }
 
   @media (max-width: 640px) {
     body { padding: 16px; }
     .metrics { grid-template-columns: repeat(2, 1fr); }
     .metric-value { font-size: 22px; }
-    .scenarios { gap: 6px; }
-    .scenario-btn { padding: 6px 12px; font-size: 12px; }
-    .custom-header { flex-direction: column; align-items: flex-start; }
-    .toggle-wrap { margin-left: 0; }
+    .tabs { gap: 6px; }
+    .tab-btn { padding: 6px 12px; font-size: 12px; }
+    .ch-tabs { flex-wrap: wrap; }
     .prize-columns { grid-template-columns: 1fr; }
     .rank-chart-legend { display: none; }
   }
@@ -275,93 +227,105 @@
 <div class="container">
   <div class="header">
     <div class="header-logo"></div>
-    <div class="header-title">Guild Wars — Scenario Planner</div>
+    <div class="header-title">Guild Wars — Final Results</div>
     <div class="header-sub">Battle of Nodes</div>
   </div>
 
   <div class="metrics">
     <div class="metric-card">
-      <div class="metric-label">Challenges Played</div>
-      <div class="metric-value">4 <span class="metric-dim">/ 5</span></div>
+      <div class="metric-label">Challenges Complete</div>
+      <div class="metric-value">5 <span class="metric-dim">/ 5</span></div>
     </div>
     <div class="metric-card">
-      <div class="metric-label">Points Remaining</div>
-      <div class="metric-value">122</div>
-    </div>
-    <div class="metric-card">
-      <div class="metric-label">Max Possible Total</div>
-      <div class="metric-value">562</div>
-
+      <div class="metric-label">Guilds Competed</div>
+      <div class="metric-value">17</div>
     </div>
     <div class="metric-card">
       <div class="metric-label">Prize Pool</div>
       <div class="metric-value"><span class="metric-money">$10,000</span></div>
     </div>
+    <div class="metric-card">
+      <div class="metric-label">Champion</div>
+      <div class="metric-value"><span class="metric-champ">RosettaStake</span></div>
+    </div>
   </div>
 
-  <div class="scenarios" id="scenarioBar"></div>
+  <div class="tabs" id="tabBar"></div>
 
-  <div class="custom-panel" id="customPanel">
-    <div class="custom-header">
-      <label>Apply to all — Ch5:</label>
-      <input type="number" id="bulkCh5" min="0" max="122" step="0.01" placeholder="—">
-      <button class="apply-btn" id="applyAllBtn">Apply to all</button>
-      <div class="toggle-wrap">
-        <input type="checkbox" class="toggle" id="newEntrantToggle">
-        <label for="newEntrantToggle">Add new entrant</label>
+  <!-- Per Challenge View -->
+  <div class="view" id="view-challenge">
+    <div class="ch-tabs" id="chTabBar"></div>
+    <div class="ch-subtitle" id="chSubtitle"></div>
+    <div class="table-wrap">
+      <table>
+        <thead id="chTableHead"></thead>
+        <tbody id="chTableBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Overall Standings View -->
+  <div class="view" id="view-overall">
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>#</th><th>Guild</th><th>Ch 1</th><th>Ch 2</th><th>Ch 3</th><th>Ch 4</th><th>Ch 5</th><th>Total</th><th class="bar-cell">Distribution</th>
+          </tr>
+        </thead>
+        <tbody id="overallTableBody"></tbody>
+      </table>
+    </div>
+    <div class="rank-chart-section">
+      <div class="rank-chart-header">
+        <div class="rank-chart-title">Rank Over Time</div>
+        <div class="rank-chart-legend" id="chartLegend"></div>
+      </div>
+      <div class="rank-chart-wrap">
+        <canvas id="rankChart" height="320"></canvas>
       </div>
     </div>
-    <div class="custom-grid" id="customGrid"></div>
   </div>
 
-  <div class="table-wrap">
-    <table>
-      <thead>
-        <tr>
-          <th>#</th><th>Guild</th><th>Ch 1</th><th>Ch 2</th><th>Ch 3</th><th>Ch 4</th><th>Ch 5</th><th>Total</th><th>Prize $</th><th class="bar-cell">Distribution</th>
-        </tr>
-      </thead>
-      <tbody id="tableBody"></tbody>
-    </table>
-  </div>
-
-  <div class="insight" id="insightPanel">
-    <div class="insight-title">Insight</div>
-    <div class="insight-body" id="insightBody"></div>
-  </div>
-
-  <div class="rank-chart-section">
-    <div class="rank-chart-header">
-      <div class="rank-chart-title">Rank Over Time</div>
-      <div class="rank-chart-legend" id="chartLegend"></div>
+  <!-- Grand Summary View -->
+  <div class="view" id="view-grand">
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>#</th><th>Guild</th><th>Ch 1</th><th>Ch 2</th><th>Ch 3</th><th>Ch 4</th><th>Ch 5</th><th>Total</th><th>Round $</th><th>Final $</th><th>Total $</th><th class="bar-cell">Distribution</th>
+          </tr>
+        </thead>
+        <tbody id="grandTableBody"></tbody>
+      </table>
     </div>
-    <div class="rank-chart-wrap">
-      <canvas id="rankChart" height="320"></canvas>
+    <div class="insight" id="grandInsight">
+      <div class="insight-title">Summary</div>
+      <div class="insight-body" id="grandInsightBody"></div>
     </div>
-  </div>
-
-  <div class="prize-panel">
-    <div class="prize-panel-title">Prize Structure</div>
-    <div class="prize-columns">
-      <div class="prize-col-section">
-        <h4>Per-Challenge Top 3</h4>
-        <div class="prize-row gold"><span class="pos">1st</span><span class="amt">$250</span></div>
-        <div class="prize-row silver"><span class="pos">2nd</span><span class="amt">$150</span></div>
-        <div class="prize-row bronze"><span class="pos">3rd</span><span class="amt">$100</span></div>
-        <div class="prize-row"><span class="pos" style="color:var(--color-text-tertiary)">× 5 challenges</span><span class="amt">$2,500 total</span></div>
-      </div>
-      <div class="prize-col-section">
-        <h4>Final Standings Payout</h4>
-        <div class="prize-row gold"><span class="pos">1st</span><span class="amt">$2,500</span></div>
-        <div class="prize-row silver"><span class="pos">2nd</span><span class="amt">$1,500</span></div>
-        <div class="prize-row bronze"><span class="pos">3rd</span><span class="amt">$1,000</span></div>
-        <div class="prize-row"><span class="pos">4th</span><span class="amt">$750</span></div>
-        <div class="prize-row"><span class="pos">5th</span><span class="amt">$500</span></div>
-        <div class="prize-row"><span class="pos">6th</span><span class="amt">$400</span></div>
-        <div class="prize-row"><span class="pos">7th</span><span class="amt">$300</span></div>
-        <div class="prize-row"><span class="pos">8th</span><span class="amt">$250</span></div>
-        <div class="prize-row"><span class="pos">9th</span><span class="amt">$200</span></div>
-        <div class="prize-row"><span class="pos">10th</span><span class="amt">$100</span></div>
+    <div class="prize-panel">
+      <div class="prize-panel-title">Prize Structure</div>
+      <div class="prize-columns">
+        <div class="prize-col-section">
+          <h4>Per-Challenge Top 3</h4>
+          <div class="prize-row gold"><span class="pos">1st</span><span class="amt">$250</span></div>
+          <div class="prize-row silver"><span class="pos">2nd</span><span class="amt">$150</span></div>
+          <div class="prize-row bronze"><span class="pos">3rd</span><span class="amt">$100</span></div>
+          <div class="prize-row"><span class="pos" style="color:var(--color-text-tertiary)">&times; 5 challenges</span><span class="amt">$2,500 total</span></div>
+        </div>
+        <div class="prize-col-section">
+          <h4>Final Standings Payout</h4>
+          <div class="prize-row gold"><span class="pos">1st</span><span class="amt">$2,500</span></div>
+          <div class="prize-row silver"><span class="pos">2nd</span><span class="amt">$1,500</span></div>
+          <div class="prize-row bronze"><span class="pos">3rd</span><span class="amt">$1,000</span></div>
+          <div class="prize-row"><span class="pos">4th</span><span class="amt">$750</span></div>
+          <div class="prize-row"><span class="pos">5th</span><span class="amt">$500</span></div>
+          <div class="prize-row"><span class="pos">6th</span><span class="amt">$400</span></div>
+          <div class="prize-row"><span class="pos">7th</span><span class="amt">$300</span></div>
+          <div class="prize-row"><span class="pos">8th</span><span class="amt">$250</span></div>
+          <div class="prize-row"><span class="pos">9th</span><span class="amt">$200</span></div>
+          <div class="prize-row"><span class="pos">10th</span><span class="amt">$100</span></div>
+        </div>
       </div>
     </div>
   </div>
@@ -369,34 +333,36 @@
 
 <script>
 const GUILDS = [
-  { name: "RosettaStake", scores: [110, 110, 110, 110] },
-  { name: "DinoVox", scores: [88.02, 36.09, 35.77, 54.40] },
-  { name: "Last Resort", scores: [11.44, 75.28, 51.93, 25.00] },
-  { name: "Disruptive Dots", scores: [15.98, 20.29, 77.20, 0] },
-  { name: "Superrarebears", scores: [0, 84.89, 28.35, 25.00] },
-  { name: "OpenHeart", scores: [55.13, 26.32, 25.49, 25.00] },
-  { name: "TOMMY", scores: [30.43, 29.05, 13.97, 25.47] },
-  { name: "KWAK", scores: [24.60, 28.90, 23.17, 17.50] },
-  { name: "SparkGuild", scores: [0, 0, 0, 12.63] },
-  { name: "GreenGlitch", scores: [21.12, 6.12, 19.57, 7.50] },
-  { name: "HeroOrZero", scores: [17.56, 20.52, 0, 0] },
-  { name: "SomeGuild", scores: [4.70, 18.94, 0, 0] },
-  { name: "Emorya", scores: [4.92, 0, 0, 0] },
-  { name: "XcronProtocol", scores: [0, 0, 3.66, 0] },
-  { name: "LazyCompany", scores: [0, 1.91, 1.01, 0] },
-  { name: "MrEGLD x ProjectX", scores: [2.50, 0, 0, 0] },
-  { name: "Apex | Project X", scores: [1.67, 0, 0, 0] },
+  { name: "RosettaStake", scores: [110, 110, 110, 110, 48.62] },
+  { name: "DinoVox", scores: [88.02, 36.09, 35.77, 54.40, 26.43] },
+  { name: "Disruptive Dots", scores: [15.98, 20.29, 77.20, 0, 120.75] },
+  { name: "Superrarebears", scores: [0, 84.89, 28.35, 25.00, 52.30] },
+  { name: "Last Resort", scores: [11.44, 75.28, 51.93, 25.00, 25.00] },
+  { name: "OpenHeart", scores: [55.13, 26.32, 25.49, 25.00, 40.11] },
+  { name: "TOMMY", scores: [30.43, 29.05, 13.97, 25.47, 23.75] },
+  { name: "KWAK", scores: [24.60, 28.90, 23.17, 17.50, 2.50] },
+  { name: "GreenGlitch", scores: [21.12, 6.12, 19.57, 7.50, 17.97] },
+  { name: "HeroOrZero", scores: [17.56, 20.52, 0, 0, 0] },
+  { name: "LazyCompany", scores: [0, 1.91, 1.01, 0, 28.78] },
+  { name: "SomeGuild", scores: [4.70, 18.94, 0, 0, 0] },
+  { name: "SparkGuild", scores: [0, 0, 0, 12.63, 0] },
+  { name: "Emorya", scores: [4.92, 0, 0, 0, 0] },
+  { name: "XcronProtocol", scores: [0, 0, 3.66, 0, 0] },
+  { name: "MrEGLD x ProjectX", scores: [2.50, 0, 0, 0, 0] },
+  { name: "Apex | Project X", scores: [1.67, 0, 0, 0, 0] },
 ];
 
-const MAX_TOTAL = 562;
-const NUM_ACTUAL = 4;
+const CHALLENGE_NAMES = [
+  "Transaction Sprint",
+  "Supernova Surge",
+  "Crossover",
+  "Contract Storm",
+  "Agent Arena"
+];
 
-// Per-challenge prizes: $250 / $150 / $100 for top 3
 const CHALLENGE_PRIZES = [250, 150, 100];
-// Final standing prizes (1st through 10th)
 const FINAL_PRIZES = [2500, 1500, 1000, 750, 500, 400, 300, 250, 200, 100];
 
-// Distinct colors for top guilds in the rank chart
 const GUILD_COLORS = {
   "RosettaStake": "#e8601c",
   "DinoVox": "#00b4d8",
@@ -409,276 +375,207 @@ const GUILD_COLORS = {
   "SparkGuild": "#fb923c",
   "GreenGlitch": "#22c55e",
   "HeroOrZero": "#94a3b8",
+  "LazyCompany": "#737373",
   "SomeGuild": "#6b7280",
   "Emorya": "#78716c",
   "XcronProtocol": "#a1a1aa",
-  "LazyCompany": "#737373",
   "MrEGLD x ProjectX": "#9ca3af",
   "Apex | Project X": "#6b7280",
 };
 
-function avg(scores) {
-  const nonZero = scores.filter(s => s > 0);
-  return nonZero.length === 0 ? 0 : nonZero.reduce((a, b) => a + b, 0) / nonZero.length;
-}
+// Bar segment colors for each challenge
+const CH_COLORS = ["#e8601c", "#ff6b9d", "#00b4d8", "#a78bfa", "#23f0c7"];
 
 function r(n) { return Math.round(n * 100) / 100; }
+function totalScore(g) { return g.scores.reduce((s, v) => s + v, 0); }
 
-// Compute per-challenge prize money earned by each guild across Ch1-4
-function computeChallengePrizes(guilds) {
-  const prizes = {};
-  guilds.forEach(g => prizes[g.name] = 0);
-  for (let ch = 0; ch < NUM_ACTUAL; ch++) {
-    const ranked = guilds.filter(g => g.scores[ch] > 0)
+// Compute per-challenge top 3 prizes
+function getChallengePrizeWinners() {
+  const winners = []; // array of 5 arrays, each [{name, prize}]
+  for (let ch = 0; ch < 5; ch++) {
+    const ranked = GUILDS.filter(g => g.scores[ch] > 0)
       .sort((a, b) => b.scores[ch] - a.scores[ch]);
+    const chWinners = [];
     for (let i = 0; i < Math.min(3, ranked.length); i++) {
-      prizes[ranked[i].name] += CHALLENGE_PRIZES[i];
+      chWinners.push({ name: ranked[i].name, prize: CHALLENGE_PRIZES[i] });
     }
+    winners.push(chWinners);
   }
-  return prizes;
+  return winners;
 }
 
-// Compute projected Ch5 challenge prize
-function computeCh5Prize(scenarioGuilds) {
+const chPrizeWinners = getChallengePrizeWinners();
+
+// Total round prizes per guild
+function getRoundPrizes() {
   const prizes = {};
-  scenarioGuilds.forEach(g => prizes[g.name] = 0);
-  const ch5scores = scenarioGuilds.filter(g => g.scores[4] && g.scores[4] > 0)
-    .sort((a, b) => b.scores[4] - a.scores[4]);
-  for (let i = 0; i < Math.min(3, ch5scores.length); i++) {
-    prizes[ch5scores[i].name] += CHALLENGE_PRIZES[i];
-  }
+  GUILDS.forEach(g => prizes[g.name] = 0);
+  chPrizeWinners.forEach(chW => {
+    chW.forEach(w => prizes[w.name] += w.prize);
+  });
   return prizes;
 }
 
-// Compute final standing prize based on projected rank
-function computeFinalPrize(rank) {
-  return rank <= FINAL_PRIZES.length ? FINAL_PRIZES[rank - 1] : 0;
+const roundPrizes = getRoundPrizes();
+
+// Final standings sorted
+const standingsSorted = [...GUILDS].sort((a, b) => totalScore(b) - totalScore(a));
+
+// Final placement prizes
+function getFinalPrize(guildName) {
+  const idx = standingsSorted.findIndex(g => g.name === guildName);
+  return idx >= 0 && idx < FINAL_PRIZES.length ? FINAL_PRIZES[idx] : 0;
 }
 
-const challengePrizesEarned = computeChallengePrizes(GUILDS);
+// --- Tab Management ---
+let activeTab = "overall";
+let activeCh = 0;
 
-// Rank history: compute cumulative rank after each challenge
-function computeRankHistory(scenarioGuilds) {
-  const numChallenges = scenarioGuilds[0].scores.length;
-  const history = {};
-  scenarioGuilds.forEach(g => history[g.name] = []);
-
-  for (let ch = 0; ch < numChallenges; ch++) {
-    // Only include guilds that have competed in at least one challenge up to this point
-    const cumulative = scenarioGuilds.map(g => ({
-      name: g.name,
-      total: g.scores.slice(0, ch + 1).reduce((s, v) => s + (v || 0), 0),
-      competed: g.scores.slice(0, ch + 1).some(v => v !== null && v > 0)
-    }));
-    cumulative.sort((a, b) => b.total - a.total);
-    let rank = 0;
-    cumulative.forEach((c, i) => {
-      rank = i + 1;
-      if (c.competed) {
-        history[c.name].push(rank);
-      } else {
-        history[c.name].push(null);
-      }
-    });
-  }
-  return history;
-}
-
-const SCENARIOS = [
-  {
-    id: "current", label: "Current Standings",
-    compute() {
-      return {
-        guilds: GUILDS.map(g => ({ name: g.name, scores: [...g.scores, null], isNew: false })),
-        insight: `<strong>RosettaStake</strong> leads with a perfect 440 — four consecutive 110s and 226 points clear of 2nd-place DinoVox (214.28). ` +
-          `With only <strong>110 points</strong> left in Ch5, 1st place is mathematically locked. ` +
-          `The real battle is 2nd through 5th: DinoVox (214), Last Resort (162), Superrarebears (138), OpenHeart (132), and Disruptive Dots (113) are all within one great round of each other. ` +
-          `Notable: Disruptive Dots scored 0 in Ch4 after their Ch3 breakout, and SparkGuild entered the competition for the first time.`
-      };
-    }
-  },
-  {
-    id: "new-entrant", label: "New Entrant",
-    compute() {
-      const overrides = {
-        "RosettaStake": 88, "DinoVox": 58, "Last Resort": 55,
-        "Superrarebears": 48, "OpenHeart": 42, "Disruptive Dots": 50,
-        "TOMMY": 25, "KWAK": 26,
-      };
-      const guilds = GUILDS.map(g => {
-        const ov = overrides[g.name];
-        if (ov !== undefined) return { name: g.name, scores: [...g.scores, ov], isNew: false };
-        return { name: g.name, scores: [...g.scores, r(avg(g.scores))], isNew: false };
-      });
-      guilds.push({ name: "New Entrant", scores: [0, 0, 0, 0, 110], isNew: true });
-      return {
-        guilds,
-        insight: `A brand-new guild wins Ch5 at 110. Their total: <strong>110 points</strong> — around 10th-11th overall, behind every guild that competed in multiple rounds. ` +
-          `RosettaStake finishes at 528 with a strong 2nd-place Ch5. DinoVox holds 2nd at ~272. ` +
-          `With only 1 challenge left, <strong>a new entrant has zero chance at the podium</strong>. The ship sailed after Ch3.`
-      };
-    }
-  },
-  {
-    id: "average", label: "Average Pace",
-    compute() {
-      const guilds = GUILDS.map(g => ({ name: g.name, scores: [...g.scores, r(avg(g.scores))], isNew: false }));
-      return {
-        guilds,
-        insight: `Each guild repeats their average performance. <strong>RosettaStake</strong> projects to 550 (the theoretical max). ` +
-          `DinoVox to ~268, Last Resort to ~203, Superrarebears to ~184. ` +
-          `At average pace, the standings barely shift — only an exceptional Ch5 performance changes anything.`
-      };
-    }
-  },
-  {
-    id: "rosetta-stumbles", label: "Rosetta Stumbles",
-    compute() {
-      const overrides = {
-        "RosettaStake": 40, "DinoVox": 108, "Last Resort": 72,
-        "Superrarebears": 65, "Disruptive Dots": 55, "OpenHeart": 45,
-        "TOMMY": 30, "KWAK": 28, "SparkGuild": 20,
-      };
-      const guilds = GUILDS.map(g => {
-        const ov = overrides[g.name];
-        if (ov !== undefined) return { name: g.name, scores: [...g.scores, ov], isNew: false };
-        return { name: g.name, scores: [...g.scores, r(avg(g.scores))], isNew: false };
-      });
-      return {
-        guilds,
-        insight: `RosettaStake stumbles to 40 in Ch5. <strong>DinoVox</strong> wins at 108. ` +
-          `Rosetta still finishes at <strong>480</strong> — untouchable. DinoVox surges to 322, Last Resort to 234. ` +
-          `Rosetta's 440-point war chest means <strong>even a bad final round can't cost them the title</strong>. But DinoVox cements a strong 2nd.`
-      };
-    }
-  },
-  {
-    id: "comeback", label: "Comeback Kids",
-    compute() {
-      const overrides = {
-        "RosettaStake": 88, "Superrarebears": 108, "DinoVox": 60,
-        "Last Resort": 55, "Disruptive Dots": 65, "OpenHeart": 45,
-        "TOMMY": 28, "KWAK": 26, "SparkGuild": 18,
-      };
-      const guilds = GUILDS.map(g => {
-        const ov = overrides[g.name];
-        if (ov !== undefined) return { name: g.name, scores: [...g.scores, ov], isNew: false };
-        return { name: g.name, scores: [...g.scores, r(avg(g.scores))], isNew: false };
-      });
-      return {
-        guilds,
-        insight: `<strong>Superrarebears</strong> (5th, 138) has a breakout Ch5 at 108 — they proved it with 84.89 in Ch2. ` +
-          `This vaults them to <strong>246</strong>, leapfrogging Last Resort (217) and closing on DinoVox (274). ` +
-          `<strong>One dominant round from a mid-table guild can vault them two positions</strong> and reshape the podium.`
-      };
-    }
-  },
-  {
-    id: "custom", label: "Custom",
-    compute() {
-      const customData = readCustomInputs();
-      const guilds = GUILDS.map(g => ({
-        name: g.name, scores: [...g.scores, customData[g.name] || 0], isNew: false
-      }));
-      if (customData.__newEntrant !== undefined) {
-        guilds.push({ name: "New Entrant", scores: [0, 0, 0, 0, customData.__newEntrant], isNew: true });
-      }
-      const sorted = [...guilds].sort((a, b) => totalScore(b) - totalScore(a));
-      const top = sorted[0], second = sorted[1];
-      const gap = r(totalScore(top) - totalScore(second));
-      return {
-        guilds,
-        insight: `Custom scenario. <strong>${top.name}</strong> leads at ${r(totalScore(top))}, ` +
-          `${gap} ahead of <strong>${second.name}</strong> (${r(totalScore(second))}). ` +
-          `Adjust Ch5 scores above to explore outcomes.`
-      };
-    }
-  }
-];
-
-let activeScenario = "current";
-let newEntrantEnabled = false;
-
-function totalScore(g) { return g.scores.reduce((sum, s) => sum + (s || 0), 0); }
-function existingTotal(g) { return g.scores.slice(0, NUM_ACTUAL).reduce((sum, s) => sum + (s || 0), 0); }
-function projectedTotal(g) { return g.scores[NUM_ACTUAL] || 0; }
-
-function readCustomInputs() {
-  const result = {};
-  GUILDS.forEach(g => {
-    const inp = document.querySelector(`input[data-input="${g.name}-ch5"]`);
-    result[g.name] = inp ? clamp(parseFloat(inp.value) || 0) : 0;
+function buildTabs() {
+  const bar = document.getElementById('tabBar');
+  const tabs = [
+    { id: "challenge", label: "Per Challenge" },
+    { id: "overall", label: "Overall Standings" },
+    { id: "grand", label: "Grand Summary" },
+  ];
+  bar.innerHTML = tabs.map(t =>
+    `<button class="tab-btn${t.id === activeTab ? ' active' : ''}" data-tab="${t.id}">${t.label}</button>`
+  ).join('');
+  bar.addEventListener('click', e => {
+    const btn = e.target.closest('[data-tab]');
+    if (!btn) return;
+    activeTab = btn.dataset.tab;
+    bar.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === activeTab));
+    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+    document.getElementById('view-' + activeTab).classList.add('active');
+    if (activeTab === 'overall') drawRankChart();
   });
-  if (newEntrantEnabled) {
-    const neInp = document.querySelector('input[data-input="__newEntrant-ch5"]');
-    result.__newEntrant = neInp ? clamp(parseFloat(neInp.value) || 0) : 0;
-  }
-  return result;
+  document.getElementById('view-' + activeTab).classList.add('active');
 }
 
-function clamp(v) { return Math.min(122, Math.max(0, v)); }
-
-function formatScore(val, isProjected) {
-  if (val === null || val === undefined) return `<span class="score-null">—</span>`;
-  if (val === 0) return `<span class="score-zero">0</span>`;
-  return `<span class="${isProjected ? 'score-projected' : 'score-actual'}">${val.toFixed(2)}</span>`;
+function buildChTabs() {
+  const bar = document.getElementById('chTabBar');
+  bar.innerHTML = CHALLENGE_NAMES.map((name, i) =>
+    `<button class="ch-btn${i === activeCh ? ' active' : ''}" data-ch="${i}">Ch ${i + 1}</button>`
+  ).join('');
+  bar.addEventListener('click', e => {
+    const btn = e.target.closest('[data-ch]');
+    if (!btn) return;
+    activeCh = parseInt(btn.dataset.ch);
+    bar.querySelectorAll('.ch-btn').forEach(b => b.classList.toggle('active', parseInt(b.dataset.ch) === activeCh));
+    renderChallenge();
+  });
 }
 
-function formatPrize(earned, projected) {
-  const total = earned + projected;
-  if (total === 0) return `<span class="score-zero">—</span>`;
-  if (projected === 0) return `$${earned.toLocaleString()}`;
-  if (earned === 0) return `<span class="prize-projected">$${projected.toLocaleString()}</span>`;
-  return `$${earned.toLocaleString()} <span class="prize-projected">+${projected.toLocaleString()}</span>`;
-}
+// --- Per Challenge View ---
+function renderChallenge() {
+  const ch = activeCh;
+  const subtitle = document.getElementById('chSubtitle');
+  subtitle.innerHTML = `<strong>Challenge ${ch + 1}: ${CHALLENGE_NAMES[ch]}</strong> &mdash; ${ch < 4 ? 'Max 110 pts' : 'Max 132 pts'} &mdash; Prize pool: $500 (top 3)`;
 
-function renderTable(data) {
-  const sorted = [...data.guilds].sort((a, b) => totalScore(b) - totalScore(a));
-  const ch5Prizes = computeCh5Prize(data.guilds);
-  const tbody = document.getElementById('tableBody');
-  tbody.innerHTML = sorted.map((g, i) => {
-    const total = totalScore(g);
-    const existing = existingTotal(g);
-    const projected = projectedTotal(g);
-    const existPct = (existing / MAX_TOTAL) * 100;
-    const projPct = (projected / MAX_TOTAL) * 100;
-    const rowClass = g.isNew ? ' class="new-entrant"' : '';
+  const ranked = GUILDS.filter(g => g.scores[ch] > 0)
+    .sort((a, b) => b.scores[ch] - a.scores[ch]);
+
+  const prizes = {};
+  chPrizeWinners[ch].forEach(w => prizes[w.name] = w.prize);
+
+  const thead = document.getElementById('chTableHead');
+  thead.innerHTML = `<tr><th>#</th><th>Guild</th><th>Score</th><th>Prize</th></tr>`;
+
+  const tbody = document.getElementById('chTableBody');
+  tbody.innerHTML = ranked.map((g, i) => {
     const rank = i + 1;
+    const rankClass = rank <= 3 ? ` class="rank-${rank}"` : '';
+    const prize = prizes[g.name] || 0;
+    const medal = rank === 1 ? ' \u{1F3C6}' : rank === 2 ? ' \u{1F948}' : rank === 3 ? ' \u{1F949}' : '';
+    return `<tr>
+      <td${rankClass}>${rank}</td>
+      <td class="guild-name">${g.name}${medal}</td>
+      <td>${g.scores[ch].toFixed(2)}</td>
+      <td class="prize-col">${prize ? '$' + prize.toLocaleString() : '<span class="score-zero">\u2014</span>'}</td>
+    </tr>`;
+  }).join('');
+}
 
-    // Prize money: earned from Ch1-4 + projected Ch5 prize + projected final prize
-    const earnedPrize = g.isNew ? 0 : (challengePrizesEarned[g.name] || 0);
-    const ch5Prize = ch5Prizes[g.name] || 0;
-    const finalPrize = computeFinalPrize(rank);
-    const projectedPrize = ch5Prize + finalPrize;
-
-    return `<tr${rowClass}>
-      <td>${rank}</td>
+// --- Overall Standings View ---
+function renderOverall() {
+  const maxTotal = totalScore(standingsSorted[0]);
+  const tbody = document.getElementById('overallTableBody');
+  tbody.innerHTML = standingsSorted.map((g, i) => {
+    const total = totalScore(g);
+    const rank = i + 1;
+    const rankClass = rank <= 3 ? ` class="rank-${rank}"` : '';
+    return `<tr>
+      <td${rankClass}>${rank}</td>
       <td class="guild-name">${g.name}</td>
-      <td>${formatScore(g.scores[0], false)}</td>
-      <td>${formatScore(g.scores[1], false)}</td>
-      <td>${formatScore(g.scores[2], false)}</td>
-      <td>${formatScore(g.scores[3], false)}</td>
-      <td>${formatScore(g.scores[4], g.scores[4] !== null)}</td>
+      ${g.scores.map(s => `<td>${s > 0 ? s.toFixed(2) : '<span class="score-zero">0</span>'}</td>`).join('')}
       <td class="total-col">${total.toFixed(2)}</td>
-      <td class="prize-col">${formatPrize(earnedPrize, projectedPrize)}</td>
       <td class="bar-cell">
         <div class="bar-container">
-          <div class="bar-existing" style="width:${existPct}%"></div>
-          <div class="bar-projected" style="width:${projPct}%"></div>
+          ${g.scores.map((s, ci) => `<div class="bar-seg" style="width:${(s / maxTotal) * 100}%;background:${CH_COLORS[ci]}"></div>`).join('')}
         </div>
       </td>
     </tr>`;
   }).join('');
 }
 
-function renderInsight(data) {
-  document.getElementById('insightBody').innerHTML = data.insight;
+// --- Grand Summary View ---
+function renderGrand() {
+  const maxTotal = totalScore(standingsSorted[0]);
+  const tbody = document.getElementById('grandTableBody');
+  let totalDistributed = 0;
+  tbody.innerHTML = standingsSorted.map((g, i) => {
+    const total = totalScore(g);
+    const rank = i + 1;
+    const rankClass = rank <= 3 ? ` class="rank-${rank}"` : '';
+    const rp = roundPrizes[g.name] || 0;
+    const fp = getFinalPrize(g.name);
+    const tp = rp + fp;
+    totalDistributed += tp;
+    return `<tr>
+      <td${rankClass}>${rank}</td>
+      <td class="guild-name">${g.name}</td>
+      ${g.scores.map(s => `<td>${s > 0 ? s.toFixed(2) : '<span class="score-zero">0</span>'}</td>`).join('')}
+      <td class="total-col">${total.toFixed(2)}</td>
+      <td class="prize-col">${rp ? '$' + rp.toLocaleString() : '<span class="score-zero">\u2014</span>'}</td>
+      <td class="prize-col">${fp ? '$' + fp.toLocaleString() : '<span class="score-zero">\u2014</span>'}</td>
+      <td class="prize-col" style="font-size:14px">${tp ? '$' + tp.toLocaleString() : '<span class="score-zero">\u2014</span>'}</td>
+      <td class="bar-cell">
+        <div class="bar-container">
+          ${g.scores.map((s, ci) => `<div class="bar-seg" style="width:${(s / maxTotal) * 100}%;background:${CH_COLORS[ci]}"></div>`).join('')}
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+
+  document.getElementById('grandInsightBody').innerHTML =
+    `<strong>RosettaStake</strong> dominated with 488.62 points and $3,600 in total prize money \u2014 winning every challenge from Ch1 through Ch4 before ` +
+    `<strong>Disruptive Dots</strong> broke through with a massive 120.75 in Ch5 (Agent Arena), the highest non-Rosetta score in the competition. ` +
+    `DinoVox held steady at 2nd overall ($1,800). Superrarebears (4th, $1,050) edged out Last Resort (5th, $700) by just 1.89 points. ` +
+    `<strong>$${totalDistributed.toLocaleString()}</strong> distributed across ${standingsSorted.filter(g => roundPrizes[g.name] + getFinalPrize(g.name) > 0).length} guilds.`;
 }
 
-// --- Rank Over Time Chart ---
+// --- Rank Chart ---
 let highlightedGuilds = new Set(["RosettaStake", "DinoVox", "Last Resort", "Disruptive Dots", "Superrarebears", "OpenHeart"]);
 
-function drawRankChart(scenarioGuilds) {
+function computeRankHistory() {
+  const history = {};
+  GUILDS.forEach(g => history[g.name] = []);
+  for (let ch = 0; ch < 5; ch++) {
+    const cumulative = GUILDS.map(g => ({
+      name: g.name,
+      total: g.scores.slice(0, ch + 1).reduce((s, v) => s + v, 0),
+      competed: g.scores.slice(0, ch + 1).some(v => v > 0)
+    }));
+    cumulative.sort((a, b) => b.total - a.total);
+    cumulative.forEach((c, i) => {
+      history[c.name].push(c.competed ? i + 1 : null);
+    });
+  }
+  return history;
+}
+
+function drawRankChart() {
   const canvas = document.getElementById('rankChart');
   const ctx = canvas.getContext('2d');
   const dpr = window.devicePixelRatio || 1;
@@ -690,128 +587,85 @@ function drawRankChart(scenarioGuilds) {
   ctx.scale(dpr, dpr);
   const W = rect.width, H = 320;
 
-  const history = computeRankHistory(scenarioGuilds);
-  const numCols = scenarioGuilds[0].scores.length;
-  const maxRank = scenarioGuilds.length;
-
+  const history = computeRankHistory();
+  const maxRank = GUILDS.length;
   const padL = 40, padR = 20, padT = 20, padB = 36;
   const chartW = W - padL - padR;
   const chartH = H - padT - padB;
 
   ctx.clearRect(0, 0, W, H);
 
-  // Grid lines and labels
+  const textColor = getComputedStyle(document.documentElement).getPropertyValue('--color-text-tertiary').trim() || 'rgba(255,255,255,0.3)';
   ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--color-border-tertiary').trim() || 'rgba(255,255,255,0.08)';
   ctx.lineWidth = 1;
-  const textColor = getComputedStyle(document.documentElement).getPropertyValue('--color-text-tertiary').trim() || 'rgba(255,255,255,0.3)';
   ctx.fillStyle = textColor;
   ctx.font = '10px -apple-system, system-ui, sans-serif';
   ctx.textAlign = 'right';
 
-  // Y-axis: rank labels (show 1, 5, 10, 15, max)
   const yLabels = [1, 3, 5, 7, 10, Math.min(13, maxRank), maxRank].filter((v, i, a) => a.indexOf(v) === i);
   yLabels.forEach(rank => {
     const y = padT + ((rank - 1) / (maxRank - 1)) * chartH;
-    ctx.beginPath();
-    ctx.moveTo(padL, y);
-    ctx.lineTo(W - padR, y);
-    ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(padL, y); ctx.lineTo(W - padR, y); ctx.stroke();
     ctx.fillText(rank.toString(), padL - 8, y + 3);
   });
 
-  // X-axis: challenge labels
   ctx.textAlign = 'center';
-  const labels = ['Ch1', 'Ch2', 'Ch3', 'Ch4'];
-  if (numCols === 5) labels.push('Ch5');
-  for (let i = 0; i < numCols; i++) {
-    const x = padL + (i / (numCols - 1)) * chartW;
-    ctx.fillText(labels[i] || `Ch${i + 1}`, x, H - 10);
-    // Vertical gridline
-    ctx.beginPath();
-    ctx.moveTo(x, padT);
-    ctx.lineTo(x, padT + chartH);
-    ctx.stroke();
+  for (let i = 0; i < 5; i++) {
+    const x = padL + (i / 4) * chartW;
+    ctx.fillText('Ch' + (i + 1), x, H - 10);
+    ctx.beginPath(); ctx.moveTo(x, padT); ctx.lineTo(x, padT + chartH); ctx.stroke();
   }
 
-  // Draw lines for each guild
-  const guildNames = Object.keys(history);
-  // Draw non-highlighted first (background), then highlighted on top
-  const drawOrder = guildNames.sort((a, b) => {
-    const aH = highlightedGuilds.has(a) ? 1 : 0;
-    const bH = highlightedGuilds.has(b) ? 1 : 0;
-    return aH - bH;
-  });
+  const drawOrder = Object.keys(history).sort((a, b) =>
+    (highlightedGuilds.has(a) ? 1 : 0) - (highlightedGuilds.has(b) ? 1 : 0)
+  );
 
   drawOrder.forEach(name => {
     const ranks = history[name];
-    const isHighlighted = highlightedGuilds.has(name);
+    const isHL = highlightedGuilds.has(name);
     const color = GUILD_COLORS[name] || '#666';
     const points = [];
-    for (let i = 0; i < ranks.length; i++) {
+    for (let i = 0; i < 5; i++) {
       if (ranks[i] !== null) {
-        points.push({
-          x: padL + (i / (numCols - 1)) * chartW,
-          y: padT + ((ranks[i] - 1) / (maxRank - 1)) * chartH,
-          ch: i
-        });
+        points.push({ x: padL + (i / 4) * chartW, y: padT + ((ranks[i] - 1) / (maxRank - 1)) * chartH });
       }
     }
     if (points.length < 1) return;
 
     ctx.strokeStyle = color;
-    ctx.lineWidth = isHighlighted ? 2.5 : 1;
-    ctx.globalAlpha = isHighlighted ? 1 : 0.2;
+    ctx.lineWidth = isHL ? 2.5 : 1;
+    ctx.globalAlpha = isHL ? 1 : 0.2;
 
     if (points.length > 1) {
       ctx.beginPath();
       ctx.moveTo(points[0].x, points[0].y);
-      for (let i = 1; i < points.length; i++) {
-        ctx.lineTo(points[i].x, points[i].y);
-      }
+      for (let i = 1; i < points.length; i++) ctx.lineTo(points[i].x, points[i].y);
       ctx.stroke();
     }
 
-    // Dots
-    points.forEach((p, idx) => {
-      const isProjected = p.ch >= NUM_ACTUAL;
+    points.forEach(p => {
       ctx.beginPath();
-      ctx.arc(p.x, p.y, isHighlighted ? 4 : 2.5, 0, Math.PI * 2);
+      ctx.arc(p.x, p.y, isHL ? 4 : 2.5, 0, Math.PI * 2);
       ctx.fillStyle = color;
       ctx.fill();
-      if (isProjected) {
-        ctx.strokeStyle = color;
-        ctx.lineWidth = 1.5;
-        ctx.stroke();
-      }
     });
 
-    // Label at last point for highlighted guilds
-    if (isHighlighted && points.length > 0) {
+    if (isHL && points.length > 0) {
       const last = points[points.length - 1];
       ctx.fillStyle = color;
       ctx.font = '10px -apple-system, system-ui, sans-serif';
       ctx.textAlign = 'left';
       ctx.globalAlpha = 1;
-      const labelX = last.x + 8;
-      if (labelX + 60 < W) {
-        ctx.fillText(name.length > 12 ? name.slice(0, 11) + '…' : name, labelX, last.y + 3);
+      if (last.x + 68 < W) {
+        ctx.fillText(name.length > 14 ? name.slice(0, 13) + '\u2026' : name, last.x + 8, last.y + 3);
       }
     }
-
     ctx.globalAlpha = 1;
   });
-
-  // Projected region shading
-  if (numCols === 5) {
-    const projX = padL + ((NUM_ACTUAL) / (numCols - 1)) * chartW;
-    ctx.fillStyle = 'rgba(255,140,66,0.04)';
-    ctx.fillRect(projX - (chartW / (numCols - 1)) * 0.5, padT, W - padR - projX + (chartW / (numCols - 1)) * 0.5, chartH);
-  }
 }
 
 function buildLegend() {
   const container = document.getElementById('chartLegend');
-  // Show all guilds that competed in at least one challenge
   const active = GUILDS.filter(g => g.scores.some(s => s > 0));
   container.innerHTML = active.map(g => {
     const color = GUILD_COLORS[g.name] || '#666';
@@ -821,89 +675,25 @@ function buildLegend() {
       <span>${g.name}</span>
     </div>`;
   }).join('');
-
   container.addEventListener('click', e => {
     const item = e.target.closest('.legend-item');
     if (!item) return;
     const name = item.dataset.guild;
-    if (highlightedGuilds.has(name)) {
-      highlightedGuilds.delete(name);
-      item.classList.remove('active');
-    } else {
-      highlightedGuilds.add(name);
-      item.classList.add('active');
-    }
-    runScenario();
+    if (highlightedGuilds.has(name)) { highlightedGuilds.delete(name); item.classList.remove('active'); }
+    else { highlightedGuilds.add(name); item.classList.add('active'); }
+    drawRankChart();
   });
-}
-
-// --- Scenario Bar & Custom Panel ---
-function buildScenarioBar() {
-  const bar = document.getElementById('scenarioBar');
-  bar.innerHTML = SCENARIOS.map(s =>
-    `<button class="scenario-btn${s.id === activeScenario ? ' active' : ''}" data-scenario="${s.id}">${s.label}</button>`
-  ).join('');
-  bar.addEventListener('click', e => {
-    const btn = e.target.closest('[data-scenario]');
-    if (!btn) return;
-    activeScenario = btn.dataset.scenario;
-    bar.querySelectorAll('.scenario-btn').forEach(b => b.classList.toggle('active', b.dataset.scenario === activeScenario));
-    document.getElementById('customPanel').classList.toggle('visible', activeScenario === 'custom');
-    runScenario();
-  });
-}
-
-function buildCustomPanel() {
-  const grid = document.getElementById('customGrid');
-  renderCustomGrid();
-  document.getElementById('applyAllBtn').addEventListener('click', () => {
-    const ch5Val = document.getElementById('bulkCh5').value;
-    if (ch5Val !== '') {
-      grid.querySelectorAll('input[data-ch="5"]').forEach(inp => inp.value = clamp(parseFloat(ch5Val)));
-    }
-    runScenario();
-  });
-  document.getElementById('newEntrantToggle').addEventListener('change', e => {
-    newEntrantEnabled = e.target.checked;
-    renderCustomGrid();
-    runScenario();
-  });
-  grid.addEventListener('input', debounce(() => runScenario(), 200));
-}
-
-function renderCustomGrid() {
-  const grid = document.getElementById('customGrid');
-  let html = `<div class="cg-header">Guild</div><div class="cg-header">Ch 5</div>`;
-  GUILDS.forEach(g => {
-    html += `<div class="cg-name" data-guild="${g.name}">${g.name}</div>`;
-    html += `<input type="number" min="0" max="122" step="0.01" data-input="${g.name}-ch5" data-ch="5" value="${r(avg(g.scores))}" placeholder="0">`;
-  });
-  if (newEntrantEnabled) {
-    html += `<div class="cg-name new-entrant-name">New Entrant</div>`;
-    html += `<input type="number" min="0" max="122" step="0.01" data-input="__newEntrant-ch5" data-ch="5" value="0" placeholder="0">`;
-  }
-  grid.innerHTML = html;
-}
-
-function debounce(fn, ms) {
-  let t;
-  return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), ms); };
-}
-
-function runScenario() {
-  const scenario = SCENARIOS.find(s => s.id === activeScenario);
-  const data = scenario.compute();
-  renderTable(data);
-  renderInsight(data);
-  drawRankChart(data.guilds);
 }
 
 // Init
-buildScenarioBar();
-buildCustomPanel();
+buildTabs();
+buildChTabs();
+renderChallenge();
+renderOverall();
+renderGrand();
 buildLegend();
-runScenario();
-window.addEventListener('resize', debounce(() => runScenario(), 100));
+drawRankChart();
+window.addEventListener('resize', () => { if (activeTab === 'overall') drawRankChart(); });
 </script>
 </body>
 </html>
