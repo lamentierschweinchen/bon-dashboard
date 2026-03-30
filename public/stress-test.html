@@ -18,7 +18,6 @@
     --accent-bright: #00FFE0;
     --text: #FFFFFF;
     --muted: #6B8BA4;
-    --peak: #FFB800;
     --live: #00FF88;
     --glow-intensity: 0;
   }
@@ -42,6 +41,16 @@
     z-index: 0;
   }
 
+  /* Vignette overlay */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: radial-gradient(ellipse at center, transparent 40%, rgba(8,12,20,0.7) 100%);
+    pointer-events: none;
+    z-index: 1;
+  }
+
   /* Scanline overlay */
   body::after {
     content: '';
@@ -51,42 +60,52 @@
       to bottom,
       transparent 0px,
       transparent 2px,
-      rgba(255,255,255,0.03) 2px,
-      rgba(255,255,255,0.03) 4px
+      rgba(255,255,255,0.025) 2px,
+      rgba(255,255,255,0.025) 4px
     );
     pointer-events: none;
     z-index: 100;
   }
 
-  /* Brand anchor */
+  /* Brand anchor — full wordmark */
   .brand {
     position: fixed;
-    top: 32px;
+    top: 28px;
     left: 50%;
     transform: translateX(-50%);
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 8px;
+    gap: 10px;
     z-index: 10;
   }
 
   .brand svg {
-    width: 32px;
-    height: 32px;
-    opacity: 0.35;
-    filter: drop-shadow(0 0 8px rgba(35, 247, 221, 0.3));
-    transition: opacity 0.6s ease;
+    height: 18px;
+    width: auto;
+    opacity: 0.30;
+    filter: drop-shadow(0 0 12px rgba(35, 247, 221, 0.15));
+    transition: opacity 0.8s ease, filter 0.8s ease;
+  }
+
+  .brand.active svg {
+    opacity: 0.5;
+    filter: drop-shadow(0 0 16px rgba(35, 247, 221, 0.3));
   }
 
   .brand-label {
     font-family: 'Rajdhani', sans-serif;
-    font-size: 11px;
-    font-weight: 600;
-    letter-spacing: 0.3em;
-    color: var(--muted);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.35em;
+    color: var(--accent);
     text-transform: uppercase;
-    opacity: 0.6;
+    opacity: 0.45;
+    transition: opacity 0.8s ease;
+  }
+
+  .brand.active .brand-label {
+    opacity: 0.7;
   }
 
   .container {
@@ -95,23 +114,44 @@
     padding: 0 32px;
     display: flex;
     flex-direction: column;
-    gap: 40px;
+    gap: 32px;
     z-index: 10;
     position: relative;
   }
 
   .panel {
-    background: rgba(13, 20, 32, 0.85);
+    background: rgba(13, 20, 32, 0.8);
     border: 1px solid var(--border);
-    border-radius: 4px;
-    padding: 36px 48px;
-    backdrop-filter: blur(8px);
-    transition: border-color 0.6s ease, box-shadow 0.6s ease;
+    border-radius: 6px;
+    padding: 32px 48px 36px;
+    backdrop-filter: blur(12px);
+    transition: border-color 0.8s ease, box-shadow 0.8s ease;
+    position: relative;
+  }
+
+  .panel::before {
+    content: '';
+    position: absolute;
+    inset: -1px;
+    border-radius: 7px;
+    padding: 1px;
+    background: linear-gradient(135deg, rgba(0,210,200,0.0) 0%, rgba(0,210,200,0.06) 50%, rgba(0,210,200,0.0) 100%);
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.8s ease;
   }
 
   .panel.pulse {
-    border-color: rgba(0, 210, 200, 0.3);
-    box-shadow: 0 0 20px rgba(0, 210, 200, 0.06), inset 0 0 20px rgba(0, 210, 200, 0.02);
+    border-color: rgba(0, 210, 200, 0.25);
+    box-shadow: 0 0 30px rgba(0, 210, 200, 0.05), inset 0 0 30px rgba(0, 210, 200, 0.015);
+  }
+
+  .panel.pulse::before {
+    opacity: 1;
   }
 
   /* Label with live indicator */
@@ -123,7 +163,7 @@
     color: var(--muted);
     text-transform: uppercase;
     text-align: center;
-    margin-bottom: 8px;
+    margin-bottom: 4px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -131,14 +171,18 @@
   }
 
   .live-badge {
-    display: flex;
+    display: inline-flex;
     align-items: center;
     gap: 5px;
+    background: rgba(0, 255, 136, 0.06);
+    border: 1px solid rgba(0, 255, 136, 0.12);
+    border-radius: 3px;
+    padding: 2px 7px 2px 5px;
   }
 
   .live-dot {
-    width: 6px;
-    height: 6px;
+    width: 5px;
+    height: 5px;
     border-radius: 50%;
     background: var(--live);
     animation: livePulse 2s ease infinite;
@@ -147,25 +191,27 @@
 
   @keyframes livePulse {
     0%, 100% { box-shadow: 0 0 0 0 rgba(0, 255, 136, 0.5); transform: scale(1); }
-    50% { box-shadow: 0 0 6px 2px rgba(0, 255, 136, 0.3); transform: scale(1.3); }
+    50% { box-shadow: 0 0 6px 2px rgba(0, 255, 136, 0.25); transform: scale(1.3); }
   }
 
   .live-text {
     font-family: 'Share Tech Mono', monospace;
     font-size: 9px;
     color: var(--live);
-    letter-spacing: 0.08em;
+    letter-spacing: 0.06em;
   }
 
   /* TPS number */
   .big-number {
     font-family: 'Share Tech Mono', monospace;
-    font-size: 96px;
+    font-size: min(96px, 12vw);
     text-align: center;
     line-height: 1.1;
     transition: color 0.6s ease, text-shadow 0.8s ease;
     text-shadow: 0 0 calc(var(--glow-intensity) * 30px) rgba(0, 210, 200, calc(var(--glow-intensity) * 0.6)),
-                 0 0 calc(var(--glow-intensity) * 60px) rgba(0, 210, 200, calc(var(--glow-intensity) * 0.3));
+                 0 0 calc(var(--glow-intensity) * 60px) rgba(0, 210, 200, calc(var(--glow-intensity) * 0.3)),
+                 0 0 calc(var(--glow-intensity) * 100px) rgba(0, 210, 200, calc(var(--glow-intensity) * 0.1));
+    padding: 4px 0 8px;
   }
 
   .big-number.hot {
@@ -173,12 +219,12 @@
   }
 
   /* Gauge */
-  .gauge { margin-top: 24px; }
+  .gauge { margin-top: 16px; }
 
   .gauge-track {
     width: 100%;
     height: 6px;
-    background: rgba(255,255,255,0.05);
+    background: rgba(255,255,255,0.04);
     border-radius: 3px;
     overflow: hidden;
     position: relative;
@@ -190,7 +236,7 @@
     border-radius: 3px;
     width: 0%;
     transition: width 0.6s ease;
-    box-shadow: 0 0 12px rgba(0, 210, 200, 0.4), 0 0 24px rgba(0, 210, 200, 0.15);
+    box-shadow: 0 0 12px rgba(0, 210, 200, 0.4), 0 0 30px rgba(0, 210, 200, 0.12);
     position: relative;
     overflow: hidden;
   }
@@ -202,7 +248,7 @@
     left: -100%;
     width: 100%;
     height: 100%;
-    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.25), transparent);
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
     animation: shimmer 2s ease infinite;
   }
 
@@ -218,22 +264,29 @@
     font-family: 'Share Tech Mono', monospace;
     font-size: 9px;
     color: var(--muted);
+    opacity: 0.6;
   }
 
-  /* Peak row */
+  /* Peak row — teal/cyan accent */
   .peak-row {
-    margin-top: 16px;
+    margin-top: 14px;
     display: flex;
     align-items: center;
     justify-content: center;
     gap: 10px;
-    background: rgba(255, 184, 0, 0.04);
-    border: 1px solid rgba(255, 184, 0, 0.12);
+    background: rgba(0, 210, 200, 0.04);
+    border: 1px solid rgba(0, 210, 200, 0.12);
     border-radius: 3px;
-    padding: 6px 16px;
+    padding: 5px 16px;
     width: fit-content;
     margin-left: auto;
     margin-right: auto;
+    transition: border-color 0.6s ease, background 0.6s ease;
+  }
+
+  .peak-row.flash {
+    border-color: rgba(0, 210, 200, 0.35);
+    background: rgba(0, 210, 200, 0.08);
   }
 
   .peak-label {
@@ -241,28 +294,31 @@
     font-size: 10px;
     font-weight: 600;
     text-transform: uppercase;
-    color: var(--peak);
+    color: var(--accent);
     letter-spacing: 0.12em;
+    opacity: 0.7;
   }
 
   .peak-value {
     font-family: 'Share Tech Mono', monospace;
     font-size: 18px;
-    color: var(--peak);
+    color: var(--accent);
+    text-shadow: 0 0 8px rgba(0, 210, 200, 0.3);
   }
 
   /* Panel 2: Transaction counter (odometer) */
   .tx-number {
     font-family: 'Share Tech Mono', monospace;
-    font-size: 72px;
+    font-size: min(72px, 9vw);
     text-align: center;
     line-height: 1;
     overflow: hidden;
     display: flex;
     justify-content: center;
     align-items: center;
-    text-shadow: 0 0 20px rgba(255, 255, 255, 0.08);
+    text-shadow: 0 0 24px rgba(255, 255, 255, 0.06);
     height: 1.15em;
+    padding: 4px 0 8px;
   }
 
   .digit-slot {
@@ -275,14 +331,15 @@
   }
 
   .digit-slot.comma {
-    width: 0.32em;
+    width: 0.3em;
     overflow: visible;
+    color: rgba(255, 255, 255, 0.35);
   }
 
   .digit-strip {
     display: flex;
     flex-direction: column;
-    transition: transform 300ms cubic-bezier(0.23, 1, 0.32, 1);
+    transition: transform 400ms cubic-bezier(0.23, 1, 0.32, 1);
     will-change: transform;
   }
 
@@ -293,7 +350,7 @@
   }
 
   /* Progress bar */
-  .progress { margin-top: 24px; }
+  .progress { margin-top: 20px; }
 
   .progress-labels {
     display: flex;
@@ -315,6 +372,7 @@
     font-family: 'Share Tech Mono', monospace;
     font-size: 10px;
     color: var(--accent);
+    text-shadow: 0 0 8px rgba(0, 210, 200, 0.2);
   }
 
   .progress-track-container {
@@ -324,7 +382,7 @@
   .progress-track {
     width: 100%;
     height: 4px;
-    background: rgba(255,255,255,0.05);
+    background: rgba(255,255,255,0.04);
     border-radius: 2px;
     overflow: hidden;
   }
@@ -335,7 +393,22 @@
     border-radius: 2px;
     width: 0%;
     transition: width 1s ease;
-    box-shadow: 0 0 8px rgba(0, 210, 200, 0.25);
+    box-shadow: 0 0 8px rgba(0, 210, 200, 0.3);
+    position: relative;
+  }
+
+  /* Progress cursor dot at the leading edge */
+  .progress-cursor {
+    position: absolute;
+    top: -3px;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--accent-bright);
+    box-shadow: 0 0 10px rgba(0, 255, 224, 0.5), 0 0 20px rgba(0, 255, 224, 0.2);
+    transform: translateX(-50%);
+    transition: left 1s ease;
+    z-index: 2;
   }
 
   .progress-ticks {
@@ -355,15 +428,15 @@
   .progress-tick::before {
     content: '';
     width: 1px;
-    height: 6px;
-    background: rgba(255, 255, 255, 0.1);
+    height: 5px;
+    background: rgba(255, 255, 255, 0.08);
   }
 
   .progress-tick span {
     font-family: 'Share Tech Mono', monospace;
     font-size: 8px;
     color: var(--muted);
-    opacity: 0.6;
+    opacity: 0.5;
     margin-top: 2px;
   }
 
@@ -378,7 +451,7 @@
     font-family: 'Share Tech Mono', monospace;
     font-size: 9px;
     z-index: 50;
-    transition: opacity 0.3s ease;
+    transition: opacity 0.3s ease, color 0.3s ease;
   }
 
   .status-dot {
@@ -390,7 +463,7 @@
 
   .status-indicator.connected {
     color: var(--muted);
-    opacity: 0.5;
+    opacity: 0.4;
   }
 
   .status-indicator.connected .status-dot {
@@ -413,6 +486,21 @@
     50% { opacity: 0.3; }
   }
 
+  /* Epoch/block decoration */
+  .meta-line {
+    position: fixed;
+    bottom: 16px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 9px;
+    color: var(--muted);
+    opacity: 0.25;
+    letter-spacing: 0.06em;
+    z-index: 10;
+    white-space: nowrap;
+  }
+
   /* Milestone flash */
   .flash-overlay {
     position: fixed;
@@ -428,9 +516,27 @@
     100% { opacity: 0; }
   }
 
-  @keyframes slideIn {
-    from { transform: translateY(4px); opacity: 0; }
-    to { transform: translateY(0); opacity: 1; }
+  /* Entry animation */
+  .container {
+    animation: fadeUp 0.8s ease both;
+  }
+
+  .brand {
+    animation: fadeUp 0.8s 0.1s ease both;
+  }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateX(-50%) translateY(12px); }
+    to { opacity: 1; transform: translateX(-50%) translateY(0); }
+  }
+
+  .container {
+    animation: fadeUpContainer 0.8s ease both;
+  }
+
+  @keyframes fadeUpContainer {
+    from { opacity: 0; transform: translateY(12px); }
+    to { opacity: 1; transform: translateY(0); }
   }
 </style>
 </head>
@@ -438,9 +544,18 @@
 
 <canvas id="stars"></canvas>
 
-<!-- Brand anchor -->
-<div class="brand">
-  <svg viewBox="396 9 52 42" fill="none" xmlns="http://www.w3.org/2000/svg">
+<!-- Brand anchor — full MultiversX wordmark -->
+<div class="brand" id="brand">
+  <svg width="446" height="73" viewBox="0 0 446 73" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M31.0235 58.8142L48.5197 16.6455H61.5653V71.6255H52.965V25.0571L33.6348 71.9192H27.4487L8.31016 25.3508V71.6255H0V16.6455H13.6258L31.0235 58.8142V58.8142Z" fill="white"/>
+    <path d="M108.65 62.7266C106.811 66.6387 101.501 72.7064 92.7033 72.7064C80.8129 72.7064 72.6943 63.6077 72.6943 51.0845V23.3008H81.5848V49.4221C81.5848 58.5208 86.7088 64.4887 94.8274 64.4887C102.946 64.4887 108.65 58.3269 108.65 49.4221V23.3008H117.448V71.6314H108.65V62.7266V62.7266Z" fill="white"/>
+    <path d="M181.619 71.6251H170.309C159.19 71.6251 153.59 66.2446 153.59 55.4835V31.3182H143.096V23.2945H153.59V11.1094H162.388V23.2945H181.619V31.3182H162.388V53.4277C162.388 60.4706 164.61 63.4075 172.247 63.4075H181.625V71.6251H181.619Z" fill="white"/>
+    <path d="M232.575 72.5069H225.519L202.997 23.3008H212.856L229.285 60.5711L245.621 23.3008H254.703L232.57 72.5069H232.575Z" fill="white"/>
+    <path d="M303.326 48.541H263.604C264.086 57.54 270.469 64.5884 279.841 64.5884C289.213 64.5884 293.275 59.4018 294.047 57.8392H302.746C301.974 62.045 295.881 72.806 279.841 72.806C265.055 72.806 254.708 61.6515 254.708 47.466C254.708 33.2805 265.049 22.126 278.965 22.126C292.881 22.126 303.321 32.6931 303.321 48.541H303.326ZM264.184 41.1047H293.565C291.343 33.7681 286.219 29.7562 278.971 29.7562C271.241 29.7562 266.018 34.0618 264.184 41.1047V41.1047Z" fill="white"/>
+    <path d="M320.651 71.625H311.854V23.3H320.651V32.2047C322.003 28.6805 326.065 22.9121 337.277 22.9121H342.434V31.8169H337.085C324.811 31.8169 320.656 35.729 320.656 44.34V71.6361L320.651 71.625Z" fill="white"/>
+    <path d="M361.784 50.3969C352.603 49.3219 346.127 44.9166 346.127 36.0174C346.127 27.1182 354.054 21.9316 365.747 21.9316C381.891 21.9316 387.109 30.3432 388.652 35.2361H379.275C378.213 33.9616 374.638 29.5619 365.742 29.5619C358.494 29.5619 354.82 32.2051 354.82 35.7238C354.82 39.2424 357.24 41.2982 362.939 41.9853C366.705 42.473 369.027 42.6724 373.182 43.1601C384.492 44.6285 389.32 49.5159 389.32 58.4206C389.32 66.5441 381.974 72.9996 368.446 72.9996C351.629 72.9996 345.733 62.5322 344.671 58.1325H354.049C354.53 59.6951 358.395 65.1754 368.452 65.1754C376.57 65.1754 380.534 62.2385 380.534 58.4262C380.534 54.6138 378.503 52.3585 372.027 51.5772L361.784 50.4025V50.3969Z" fill="white"/>
+    <path d="M188.197 0H197.378V13.9916H188.197V0ZM188.389 23.2842H197.186V71.6148H188.389V23.2842Z" fill="white"/>
+    <path d="M128.578 8.43945H137.376V71.615H128.578V8.43945Z" fill="white"/>
     <path d="M424.639 29.4626L446 17.9923L442.409 11.0547L422.849 19.0063C422.345 19.2114 421.787 19.2114 421.283 19.0063L401.723 11.0547L398.132 17.9923L419.493 29.4626L398.132 40.933L401.723 47.8706L421.283 39.9189C421.787 39.7139 422.345 39.7139 422.849 39.9189L442.409 47.8706L446 40.933L424.639 29.4626Z" fill="#23F7DD"/>
   </svg>
   <span class="brand-label">Critical Mass</span>
@@ -451,6 +566,9 @@
   <div class="status-dot"></div>
   <span id="statusText">CONNECTED</span>
 </div>
+
+<!-- Bottom meta line -->
+<div class="meta-line" id="meta">BATTLENET_V2.0 :: EPOCH ---- :: BLK ----</div>
 
 <div class="flash-overlay" id="flash"></div>
 
@@ -474,7 +592,7 @@
         <span>0</span><span>25K</span><span>50K</span><span>75K</span><span>100K</span>
       </div>
     </div>
-    <div class="peak-row">
+    <div class="peak-row" id="peakRow">
       <span class="peak-label">Session Peak</span>
       <span class="peak-value" id="peak">0</span>
     </div>
@@ -493,6 +611,7 @@
         <div class="progress-track">
           <div class="progress-fill" id="progressFill"></div>
         </div>
+        <div class="progress-cursor" id="progressCursor" style="left:0%"></div>
         <div class="progress-ticks">
           <div class="progress-tick" style="left:25%"><span>250M</span></div>
           <div class="progress-tick" style="left:50%"><span>500M</span></div>
@@ -526,20 +645,24 @@ let lastOdometerValue = '';
 const $tps = document.getElementById('tps');
 const $tpsGauge = document.getElementById('tpsGauge');
 const $peak = document.getElementById('peak');
+const $peakRow = document.getElementById('peakRow');
 const $txCount = document.getElementById('txCount');
 const $pct = document.getElementById('pct');
 const $progressFill = document.getElementById('progressFill');
+const $progressCursor = document.getElementById('progressCursor');
 const $status = document.getElementById('status');
 const $statusText = document.getElementById('statusText');
 const $flash = document.getElementById('flash');
 const $panel1 = document.getElementById('panel1');
 const $panel2 = document.getElementById('panel2');
+const $brand = document.getElementById('brand');
+const $meta = document.getElementById('meta');
 
 // ── Star field ──────────────────────────────────────
 const canvas = document.getElementById('stars');
 const ctx = canvas.getContext('2d');
 let stars = [];
-let starPulse = 0; // 0 to 1, decays
+let starPulse = 0;
 
 function resizeCanvas() {
   canvas.width = window.innerWidth;
@@ -549,15 +672,17 @@ function resizeCanvas() {
 function initStars() {
   resizeCanvas();
   stars = [];
-  for (let i = 0; i < 80; i++) {
+  const count = Math.min(120, Math.floor(canvas.width * canvas.height / 12000));
+  for (let i = 0; i < count; i++) {
     stars.push({
       x: Math.random() * canvas.width,
       y: Math.random() * canvas.height,
-      r: Math.random() * 1.2 + 0.3,
-      baseAlpha: Math.random() * 0.3 + 0.15,
-      vx: (Math.random() - 0.5) * 0.15,
-      vy: (Math.random() - 0.5) * 0.15,
-      // For pulse scatter
+      r: Math.random() * 1.2 + 0.2,
+      baseAlpha: Math.random() * 0.25 + 0.08,
+      vx: (Math.random() - 0.5) * 0.12,
+      vy: (Math.random() - 0.5) * 0.12,
+      twinkleSpeed: Math.random() * 0.02 + 0.005,
+      twinkleOffset: Math.random() * Math.PI * 2,
       scatterVx: 0,
       scatterVy: 0,
     });
@@ -572,60 +697,61 @@ function triggerStarPulse() {
     const dx = s.x - cx;
     const dy = s.y - cy;
     const dist = Math.sqrt(dx * dx + dy * dy) || 1;
-    s.scatterVx = (dx / dist) * 0.6;
-    s.scatterVy = (dy / dist) * 0.6;
+    s.scatterVx = (dx / dist) * 0.5;
+    s.scatterVy = (dy / dist) * 0.5;
   }
 }
 
+let frameCount = 0;
 function drawStars() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-  starPulse *= 0.96; // decay
+  frameCount++;
+  starPulse *= 0.965;
 
   for (const s of stars) {
-    // Move
     s.x += s.vx + s.scatterVx;
     s.y += s.vy + s.scatterVy;
-    s.scatterVx *= 0.95;
-    s.scatterVy *= 0.95;
+    s.scatterVx *= 0.96;
+    s.scatterVy *= 0.96;
 
-    // Wrap
-    if (s.x < 0) s.x = canvas.width;
-    if (s.x > canvas.width) s.x = 0;
-    if (s.y < 0) s.y = canvas.height;
-    if (s.y > canvas.height) s.y = 0;
+    if (s.x < -2) s.x = canvas.width + 2;
+    if (s.x > canvas.width + 2) s.x = -2;
+    if (s.y < -2) s.y = canvas.height + 2;
+    if (s.y > canvas.height + 2) s.y = -2;
 
-    // Color: white normally, teal during pulse
-    const alpha = s.baseAlpha + starPulse * 0.4;
+    // Twinkle
+    const twinkle = Math.sin(frameCount * s.twinkleSpeed + s.twinkleOffset) * 0.3 + 0.7;
+    const alpha = (s.baseAlpha * twinkle) + starPulse * 0.35;
+
+    // Color shift during pulse
     const r = Math.round(255 - starPulse * 255);
     const g = Math.round(255 - starPulse * 45);
     const b = Math.round(255 - starPulse * 55);
+    const radius = s.r + starPulse * 0.4;
 
     ctx.beginPath();
-    ctx.arc(s.x, s.y, s.r + starPulse * 0.5, 0, Math.PI * 2);
-    ctx.fillStyle = `rgba(${r},${g},${b},${alpha})`;
+    ctx.arc(s.x, s.y, radius, 0, Math.PI * 2);
+    ctx.fillStyle = `rgba(${r},${g},${b},${Math.min(alpha, 1)})`;
     ctx.fill();
   }
 
   requestAnimationFrame(drawStars);
 }
 
-window.addEventListener('resize', resizeCanvas);
+window.addEventListener('resize', () => { resizeCanvas(); initStars(); });
 initStars();
 drawStars();
 
 // ── TPS interpolation ───────────────────────────────
 function animateTps() {
   const diff = targetTps - currentTps;
-  currentTps += diff * 0.08; // lerp toward target
+  currentTps += diff * 0.08;
 
-  // Snap when close
   if (Math.abs(diff) < 0.5) currentTps = targetTps;
 
   const display = Math.round(currentTps);
   $tps.textContent = display.toLocaleString('en-US');
 
-  // Glow intensity: 0 at 0 TPS, 1 at 50K+
   const glowIntensity = Math.min(display / 50000, 1);
   document.documentElement.style.setProperty('--glow-intensity', glowIntensity.toFixed(3));
 
@@ -639,7 +765,6 @@ animateTps();
 
 // ── Odometer ────────────────────────────────────────
 function buildOdometer(formatted) {
-  // Build once: create digit strips for each character position
   $txCount.innerHTML = '';
   for (const ch of formatted) {
     if (ch === ',') {
@@ -668,7 +793,6 @@ function buildOdometer(formatted) {
 function updateOdometer(formatted) {
   if (formatted === lastOdometerValue) return;
 
-  // If length changed (new digit magnitude), rebuild
   if (formatted.length !== lastOdometerValue.length) {
     buildOdometer(formatted);
     return;
@@ -693,7 +817,19 @@ function updateOdometer(formatted) {
 // ── Panel pulse ─────────────────────────────────────
 function pulsePanel(el) {
   el.classList.add('pulse');
-  setTimeout(() => el.classList.remove('pulse'), 600);
+  setTimeout(() => el.classList.remove('pulse'), 800);
+}
+
+// ── Brand pulse ─────────────────────────────────────
+function pulseBrand() {
+  $brand.classList.add('active');
+  setTimeout(() => $brand.classList.remove('active'), 800);
+}
+
+// ── Peak flash ──────────────────────────────────────
+function flashPeak() {
+  $peakRow.classList.add('flash');
+  setTimeout(() => $peakRow.classList.remove('flash'), 600);
 }
 
 // ── Milestone ───────────────────────────────────────
@@ -726,9 +862,12 @@ async function poll() {
     const stats = await statsRes.json();
     const txSinceLaunch = parseInt(await txCountRes.text(), 10);
 
-    // Connection: OK
+    // Connection OK
     $status.className = 'status-indicator connected';
     $statusText.textContent = 'CONNECTED';
+
+    // Meta line
+    $meta.textContent = `BATTLENET_V2.0 :: EPOCH ${stats.epoch} :: BLK ${fmt(stats.blocks)} :: SHARDS ${stats.shards}`;
 
     // TPS delta
     const rawTx = stats.transactions;
@@ -738,10 +877,12 @@ async function poll() {
       const delta = rawTx - prevTx;
       const elapsed = now - prevTime;
       if (delta >= 0 && elapsed > 0) {
-        targetTps = Math.round(delta / elapsed);
-        if (targetTps > peakTps) {
-          peakTps = targetTps;
+        const newTps = Math.round(delta / elapsed);
+        targetTps = newTps;
+        if (newTps > peakTps) {
+          peakTps = newTps;
           $peak.textContent = fmt(peakTps);
+          flashPeak();
         }
       }
     }
@@ -749,7 +890,7 @@ async function poll() {
     prevTx = rawTx;
     prevTime = now;
 
-    // Total transactions odometer
+    // Odometer
     const formatted = fmt(txSinceLaunch);
     if (!lastOdometerValue) {
       buildOdometer(formatted);
@@ -757,17 +898,20 @@ async function poll() {
       updateOdometer(formatted);
     }
 
-    // Progress to 1B
+    // Progress
     const pct = (txSinceLaunch / BILLION) * 100;
+    const pctClamped = Math.min(pct, 100);
     $pct.textContent = pct.toFixed(2) + '%';
-    $progressFill.style.width = Math.min(pct, 100) + '%';
+    $progressFill.style.width = pctClamped + '%';
+    $progressCursor.style.left = pctClamped + '%';
 
     // Milestone
     if (txSinceLaunch >= BILLION) triggerMilestone();
 
-    // Visual feedback: pulse panels and stars
+    // Visual pulses
     pulsePanel($panel1);
     pulsePanel($panel2);
+    pulseBrand();
     triggerStarPulse();
 
   } catch (e) {
