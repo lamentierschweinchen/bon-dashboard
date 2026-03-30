@@ -4,6 +4,20 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Critical Mass — Live Dashboard</title>
+
+<!-- Favicon: inline SVG X mark -->
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg viewBox='396 9 52 42' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M424.639 29.4626L446 17.9923L442.409 11.0547L422.849 19.0063C422.345 19.2114 421.787 19.2114 421.283 19.0063L401.723 11.0547L398.132 17.9923L419.493 29.4626L398.132 40.933L401.723 47.8706L421.283 39.9189C421.787 39.7139 422.345 39.7139 422.849 39.9189L442.409 47.8706L446 40.933L424.639 29.4626Z' fill='%2323F7DD'/%3E%3C/svg%3E">
+
+<!-- OG / Twitter -->
+<meta property="og:title" content="Critical Mass — MultiversX Stress Test">
+<meta property="og:description" content="Live TPS meter and transaction counter for the Battle of Nodes stress test event.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://bon-dashboard.vercel.app/stress-test">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Critical Mass — MultiversX Stress Test">
+<meta name="twitter:description" content="Live TPS and transaction counter. Target: 1 billion.">
+<meta name="theme-color" content="#080C14">
+
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
@@ -595,6 +609,24 @@
     from { opacity: 0; transform: translateY(12px); }
     to { opacity: 1; transform: translateY(0); }
   }
+
+  /* Mobile */
+  @media (max-width: 640px) {
+    .container { padding: 0 16px; gap: 24px; }
+    .panel { padding: 24px 20px 28px; }
+    .big-number { font-size: 56px; }
+    .tx-number { font-size: 40px; }
+    .brand svg { height: 14px; }
+    .brand { top: 20px; gap: 6px; }
+    .brand-label { font-size: 8px; }
+    .gauge-ticks { font-size: 8px; }
+    .peak-row { padding: 4px 12px; }
+    .peak-value { font-size: 14px; }
+    .peak-label { font-size: 9px; }
+    .progress-ticks { display: none; }
+    .meta-line { font-size: 7px; }
+    .status-indicator { font-size: 8px; }
+  }
 </style>
 </head>
 <body>
@@ -695,11 +727,14 @@ const TPS_CAP = 120000;  // hard cap — never display above this
 const TPS_WINDOW = 6;    // rolling window size (samples) to smooth indexer batching
 const BILLION = 1_000_000_000;
 
+const IDLE_THRESHOLD_MS = 10000; // show IDLE after 10s of 0 TPS
+
 // ── State ───────────────────────────────────────────
 const txSamples = []; // { count, time } circular buffer
 let peakTps = 0;
 let milestoneTriggered = false;
 let currentTps = 0;
+let lastNonZeroTime = performance.now();
 let targetTps = 0;
 let lastOdometerValue = '';
 
@@ -815,7 +850,12 @@ function animateTps() {
   if (Math.abs(diff) < 0.5) currentTps = targetTps;
 
   const display = Math.round(currentTps);
-  $tps.textContent = display.toLocaleString('en-US');
+
+  // Idle state: show '—' after 10s of zero
+  if (display > 0) lastNonZeroTime = performance.now();
+  const isIdle = display === 0 && (performance.now() - lastNonZeroTime > IDLE_THRESHOLD_MS);
+  $tps.textContent = isIdle ? '—' : display.toLocaleString('en-US');
+  $tps.style.opacity = isIdle ? '0.25' : '1';
 
   const glowIntensity = Math.min(display / 50000, 1);
   document.documentElement.style.setProperty('--glow-intensity', glowIntensity.toFixed(3));
@@ -1003,6 +1043,13 @@ async function poll() {
 
 poll();
 setInterval(poll, POLL_MS);
+
+// ── Tab visibility: flush stale samples on return ───
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') {
+    txSamples.length = 0; // clear rolling window — avoids stale delta spike
+  }
+});
 </script>
 </body>
 </html>
