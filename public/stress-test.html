@@ -221,6 +221,10 @@
   /* Gauge */
   .gauge { margin-top: 16px; }
 
+  .gauge-track-wrap {
+    position: relative;
+  }
+
   .gauge-track {
     width: 100%;
     height: 6px;
@@ -228,6 +232,21 @@
     border-radius: 3px;
     overflow: hidden;
     position: relative;
+  }
+
+  .gauge-glow {
+    position: absolute;
+    top: 50%;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+    transition: left 0.6s ease, opacity 0.4s ease, box-shadow 0.4s ease;
+    left: 0%;
+    opacity: 0;
+    background: radial-gradient(circle, rgba(0,255,224,0.6) 0%, rgba(0,210,200,0.2) 40%, transparent 70%);
+    box-shadow: 0 0 12px rgba(0,210,200,0.3);
   }
 
   .gauge-fill {
@@ -585,8 +604,11 @@
     </div>
     <div class="big-number" id="tps">0</div>
     <div class="gauge">
-      <div class="gauge-track">
-        <div class="gauge-fill" id="tpsGauge"></div>
+      <div class="gauge-track-wrap">
+        <div class="gauge-track">
+          <div class="gauge-fill" id="tpsGauge"></div>
+        </div>
+        <div class="gauge-glow" id="tpsGlow"></div>
       </div>
       <div class="gauge-ticks">
         <span>0</span><span>25K</span><span>50K</span><span>75K</span><span>100K</span>
@@ -628,7 +650,7 @@
 // ── Config ──────────────────────────────────────────
 const API_STATS = 'https://api.battleofnodes.com/stats';
 const API_TX_COUNT = 'https://api.battleofnodes.com/transactions/count?after=1773234000';
-const POLL_MS = 2000;
+const POLL_MS = 1000;
 const TPS_MAX = 100000;
 const BILLION = 1_000_000_000;
 
@@ -644,6 +666,7 @@ let lastOdometerValue = '';
 // ── DOM refs ────────────────────────────────────────
 const $tps = document.getElementById('tps');
 const $tpsGauge = document.getElementById('tpsGauge');
+const $tpsGlow = document.getElementById('tpsGlow');
 const $peak = document.getElementById('peak');
 const $peakRow = document.getElementById('peakRow');
 const $txCount = document.getElementById('txCount');
@@ -756,7 +779,18 @@ function animateTps() {
   document.documentElement.style.setProperty('--glow-intensity', glowIntensity.toFixed(3));
 
   $tps.classList.toggle('hot', display >= 50000);
-  $tpsGauge.style.width = Math.min(display / TPS_MAX * 100, 100) + '%';
+
+  const pctFill = Math.min(display / TPS_MAX * 100, 100);
+  $tpsGauge.style.width = pctFill + '%';
+
+  // Gauge glow: position at edge, intensity scales with TPS
+  const glowScale = Math.min(display / 20000, 1); // ramps 0→1 over 0→20K TPS
+  $tpsGlow.style.left = pctFill + '%';
+  $tpsGlow.style.opacity = display > 0 ? (0.4 + glowScale * 0.6) : 0;
+  const glowSize = 16 + glowScale * 24; // 16px to 40px
+  $tpsGlow.style.width = glowSize + 'px';
+  $tpsGlow.style.height = glowSize + 'px';
+  $tpsGlow.style.boxShadow = `0 0 ${8 + glowScale * 20}px rgba(0,210,200,${0.2 + glowScale * 0.5}), 0 0 ${16 + glowScale * 40}px rgba(0,255,224,${glowScale * 0.25})`;
 
   requestAnimationFrame(animateTps);
 }
@@ -869,12 +903,11 @@ async function poll() {
     // Meta line
     $meta.textContent = `BATTLENET_V2.0 :: EPOCH ${stats.epoch} :: BLK ${fmt(stats.blocks)} :: SHARDS ${stats.shards}`;
 
-    // TPS delta
-    const rawTx = stats.transactions;
+    // TPS delta — derived from real-time /transactions/count, not stale /stats
     const now = performance.now() / 1000;
 
     if (prevTx !== null && prevTime !== null) {
-      const delta = rawTx - prevTx;
+      const delta = txSinceLaunch - prevTx;
       const elapsed = now - prevTime;
       if (delta >= 0 && elapsed > 0) {
         const newTps = Math.round(delta / elapsed);
@@ -887,7 +920,7 @@ async function poll() {
       }
     }
 
-    prevTx = rawTx;
+    prevTx = txSinceLaunch;
     prevTime = now;
 
     // Odometer
