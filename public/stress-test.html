@@ -286,6 +286,44 @@
     opacity: 0.6;
   }
 
+  /* Overflow state: TPS > 100K */
+  .gauge-track-wrap.overflow .gauge-fill {
+    background: linear-gradient(90deg, var(--accent), #00FFE0, #FFFFFF);
+    box-shadow: 0 0 20px rgba(0, 255, 224, 0.6), 0 0 50px rgba(0, 210, 200, 0.3);
+  }
+
+  .gauge-track-wrap.overflow .gauge-track {
+    box-shadow: 0 0 16px rgba(0, 255, 224, 0.25);
+  }
+
+  .overflow-label {
+    position: absolute;
+    right: 0;
+    top: -22px;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 10px;
+    color: var(--accent-bright);
+    text-shadow: 0 0 8px rgba(0, 255, 224, 0.5);
+    opacity: 0;
+    transform: translateY(4px);
+    transition: opacity 0.4s ease, transform 0.4s ease;
+    white-space: nowrap;
+  }
+
+  .gauge-track-wrap.overflow .overflow-label {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  @keyframes overflowPulse {
+    0%, 100% { box-shadow: 0 0 20px rgba(0, 255, 224, 0.4), 0 0 50px rgba(0, 210, 200, 0.2); }
+    50% { box-shadow: 0 0 30px rgba(0, 255, 224, 0.7), 0 0 70px rgba(0, 210, 200, 0.35); }
+  }
+
+  .gauge-track-wrap.overflow .gauge-fill {
+    animation: overflowPulse 1.2s ease infinite;
+  }
+
   /* Peak row — teal/cyan accent */
   .peak-row {
     margin-top: 14px;
@@ -604,14 +642,15 @@
     </div>
     <div class="big-number" id="tps">0</div>
     <div class="gauge">
-      <div class="gauge-track-wrap">
+      <div class="gauge-track-wrap" id="gaugeWrap">
+        <span class="overflow-label" id="overflowLabel">BEYOND 100K</span>
         <div class="gauge-track">
           <div class="gauge-fill" id="tpsGauge"></div>
         </div>
         <div class="gauge-glow" id="tpsGlow"></div>
       </div>
       <div class="gauge-ticks">
-        <span>0</span><span>30K</span><span>60K</span><span>90K</span><span>120K</span>
+        <span>0</span><span>25K</span><span>50K</span><span>75K</span><span>100K</span>
       </div>
     </div>
     <div class="peak-row" id="peakRow">
@@ -651,7 +690,7 @@
 const API_STATS = 'https://api.battleofnodes.com/stats';
 const API_TX_COUNT = 'https://api.battleofnodes.com/transactions/count?after=1773234000';
 const POLL_MS = 1000;
-const TPS_MAX = 120000;  // theoretical chain max
+const TPS_MAX = 100000;  // gauge scale — visual "expectations"
 const TPS_CAP = 120000;  // hard cap — never display above this
 const TPS_WINDOW = 6;    // rolling window size (samples) to smooth indexer batching
 const BILLION = 1_000_000_000;
@@ -668,6 +707,8 @@ let lastOdometerValue = '';
 const $tps = document.getElementById('tps');
 const $tpsGauge = document.getElementById('tpsGauge');
 const $tpsGlow = document.getElementById('tpsGlow');
+const $gaugeWrap = document.getElementById('gaugeWrap');
+const $overflowLabel = document.getElementById('overflowLabel');
 const $peak = document.getElementById('peak');
 const $peakRow = document.getElementById('peakRow');
 const $txCount = document.getElementById('txCount');
@@ -781,8 +822,13 @@ function animateTps() {
 
   $tps.classList.toggle('hot', display >= 50000);
 
+  const isOverflow = display > TPS_MAX;
   const pctFill = Math.min(display / TPS_MAX * 100, 100);
   $tpsGauge.style.width = pctFill + '%';
+  $gaugeWrap.classList.toggle('overflow', isOverflow);
+  if (isOverflow) {
+    $overflowLabel.textContent = fmt(display) + ' TPS';
+  }
 
   // Gauge glow: position at edge, intensity scales with TPS
   const glowScale = Math.min(display / 20000, 1); // ramps 0→1 over 0→20K TPS
