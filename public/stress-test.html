@@ -304,7 +304,8 @@
 </div>
 
 <script>
-const API = 'https://api.battleofnodes.com/stats';
+const API_STATS = 'https://api.battleofnodes.com/stats';
+const API_TX_COUNT = 'https://api.battleofnodes.com/transactions/count?after=1773234000'; // March 11 13:00 UTC
 const POLL_MS = 2000;
 const TPS_MAX = 100000;
 const BILLION = 1_000_000_000;
@@ -366,17 +367,21 @@ function triggerMilestone() {
 
 async function poll() {
   try {
-    const res = await fetch(API);
-    if (!res.ok) throw new Error(res.status);
-    const data = await res.json();
+    const [statsRes, txCountRes] = await Promise.all([
+      fetch(API_STATS),
+      fetch(API_TX_COUNT),
+    ]);
+    if (!statsRes.ok || !txCountRes.ok) throw new Error('fetch failed');
+    const stats = await statsRes.json();
+    const txSinceLaunch = parseInt(await txCountRes.text(), 10);
     $signal.classList.remove('visible');
 
-    const tx = data.transactions;
+    // TPS (derived from cumulative stats.transactions delta)
+    const rawTx = stats.transactions;
     const now = performance.now() / 1000;
 
-    // TPS
     if (prevTx !== null && prevTime !== null) {
-      const delta = tx - prevTx;
+      const delta = rawTx - prevTx;
       const elapsed = now - prevTime;
       if (delta >= 0 && elapsed > 0) {
         const tps = Math.round(delta / elapsed);
@@ -390,19 +395,19 @@ async function poll() {
       }
     }
 
-    prevTx = tx;
+    prevTx = rawTx;
     prevTime = now;
 
-    // Total transactions
-    updateTxDisplay(formatNumber(tx));
+    // Total transactions (since March 11 13:00 UTC)
+    updateTxDisplay(formatNumber(txSinceLaunch));
 
     // Progress to 1B
-    const pct = (tx / BILLION) * 100;
+    const pct = (txSinceLaunch / BILLION) * 100;
     $pct.textContent = pct.toFixed(2) + '%';
     $progressFill.style.width = Math.min(pct, 100) + '%';
 
     // Milestone
-    if (tx >= BILLION) triggerMilestone();
+    if (txSinceLaunch >= BILLION) triggerMilestone();
 
   } catch (e) {
     $signal.classList.add('visible');
