@@ -15,9 +15,12 @@
     --surface: #0D1420;
     --border: #1B2E45;
     --accent: #00D2C8;
+    --accent-bright: #00FFE0;
     --text: #FFFFFF;
     --muted: #6B8BA4;
     --peak: #FFB800;
+    --live: #00FF88;
+    --glow-intensity: 0;
   }
 
   body {
@@ -32,6 +35,13 @@
     position: relative;
   }
 
+  /* Star field canvas */
+  #stars {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+  }
+
   /* Scanline overlay */
   body::after {
     content: '';
@@ -41,11 +51,42 @@
       to bottom,
       transparent 0px,
       transparent 2px,
-      rgba(255,255,255,0.04) 2px,
-      rgba(255,255,255,0.04) 4px
+      rgba(255,255,255,0.03) 2px,
+      rgba(255,255,255,0.03) 4px
     );
     pointer-events: none;
     z-index: 100;
+  }
+
+  /* Brand anchor */
+  .brand {
+    position: fixed;
+    top: 32px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    z-index: 10;
+  }
+
+  .brand svg {
+    width: 32px;
+    height: 32px;
+    opacity: 0.35;
+    filter: drop-shadow(0 0 8px rgba(35, 247, 221, 0.3));
+    transition: opacity 0.6s ease;
+  }
+
+  .brand-label {
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.3em;
+    color: var(--muted);
+    text-transform: uppercase;
+    opacity: 0.6;
   }
 
   .container {
@@ -54,16 +95,26 @@
     padding: 0 32px;
     display: flex;
     flex-direction: column;
-    gap: 48px;
+    gap: 40px;
+    z-index: 10;
+    position: relative;
   }
 
   .panel {
-    background: var(--surface);
+    background: rgba(13, 20, 32, 0.85);
     border: 1px solid var(--border);
     border-radius: 4px;
-    padding: 40px 48px;
+    padding: 36px 48px;
+    backdrop-filter: blur(8px);
+    transition: border-color 0.6s ease, box-shadow 0.6s ease;
   }
 
+  .panel.pulse {
+    border-color: rgba(0, 210, 200, 0.3);
+    box-shadow: 0 0 20px rgba(0, 210, 200, 0.06), inset 0 0 20px rgba(0, 210, 200, 0.02);
+  }
+
+  /* Label with live indicator */
   .label {
     font-family: 'Rajdhani', sans-serif;
     font-size: 11px;
@@ -73,14 +124,48 @@
     text-transform: uppercase;
     text-align: center;
     margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
   }
 
+  .live-badge {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+
+  .live-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--live);
+    animation: livePulse 2s ease infinite;
+    flex-shrink: 0;
+  }
+
+  @keyframes livePulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(0, 255, 136, 0.5); transform: scale(1); }
+    50% { box-shadow: 0 0 6px 2px rgba(0, 255, 136, 0.3); transform: scale(1.3); }
+  }
+
+  .live-text {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 9px;
+    color: var(--live);
+    letter-spacing: 0.08em;
+  }
+
+  /* TPS number */
   .big-number {
     font-family: 'Share Tech Mono', monospace;
     font-size: 96px;
     text-align: center;
     line-height: 1.1;
-    transition: color 0.6s ease;
+    transition: color 0.6s ease, text-shadow 0.8s ease;
+    text-shadow: 0 0 calc(var(--glow-intensity) * 30px) rgba(0, 210, 200, calc(var(--glow-intensity) * 0.6)),
+                 0 0 calc(var(--glow-intensity) * 60px) rgba(0, 210, 200, calc(var(--glow-intensity) * 0.3));
   }
 
   .big-number.hot {
@@ -96,15 +181,34 @@
     background: rgba(255,255,255,0.05);
     border-radius: 3px;
     overflow: hidden;
+    position: relative;
   }
 
   .gauge-fill {
     height: 100%;
-    background: var(--accent);
+    background: linear-gradient(90deg, var(--accent), var(--accent-bright));
     border-radius: 3px;
     width: 0%;
     transition: width 0.6s ease;
-    box-shadow: 0 0 12px rgba(0,210,200,0.3);
+    box-shadow: 0 0 12px rgba(0, 210, 200, 0.4), 0 0 24px rgba(0, 210, 200, 0.15);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .gauge-fill::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.25), transparent);
+    animation: shimmer 2s ease infinite;
+  }
+
+  @keyframes shimmer {
+    0% { left: -100%; }
+    100% { left: 200%; }
   }
 
   .gauge-ticks {
@@ -123,8 +227,8 @@
     align-items: center;
     justify-content: center;
     gap: 10px;
-    background: rgba(255,184,0,0.04);
-    border: 1px solid rgba(255,184,0,0.12);
+    background: rgba(255, 184, 0, 0.04);
+    border: 1px solid rgba(255, 184, 0, 0.12);
     border-radius: 3px;
     padding: 6px 16px;
     width: fit-content;
@@ -147,25 +251,45 @@
     color: var(--peak);
   }
 
-  /* Panel 2 */
+  /* Panel 2: Transaction counter (odometer) */
   .tx-number {
     font-family: 'Share Tech Mono', monospace;
     font-size: 72px;
     text-align: center;
-    line-height: 1.1;
+    line-height: 1;
     overflow: hidden;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    text-shadow: 0 0 20px rgba(255, 255, 255, 0.08);
+    height: 1.15em;
   }
 
-  .tx-number .digit-slot {
+  .digit-slot {
     display: inline-block;
-    position: relative;
+    width: 0.62em;
+    height: 1.15em;
     overflow: hidden;
-    vertical-align: top;
+    position: relative;
+    text-align: center;
   }
 
-  .tx-number .digit-slot span {
+  .digit-slot.comma {
+    width: 0.32em;
+    overflow: visible;
+  }
+
+  .digit-strip {
+    display: flex;
+    flex-direction: column;
+    transition: transform 300ms cubic-bezier(0.23, 1, 0.32, 1);
+    will-change: transform;
+  }
+
+  .digit-strip span {
     display: block;
-    transition: transform 150ms ease, opacity 150ms ease;
+    height: 1.15em;
+    line-height: 1.15em;
   }
 
   /* Progress bar */
@@ -193,6 +317,10 @@
     color: var(--accent);
   }
 
+  .progress-track-container {
+    position: relative;
+  }
+
   .progress-track {
     width: 100%;
     height: 4px;
@@ -203,15 +331,44 @@
 
   .progress-fill {
     height: 100%;
-    background: var(--accent);
+    background: linear-gradient(90deg, var(--accent), var(--accent-bright));
     border-radius: 2px;
     width: 0%;
     transition: width 1s ease;
-    box-shadow: 0 0 8px rgba(0,210,200,0.25);
+    box-shadow: 0 0 8px rgba(0, 210, 200, 0.25);
   }
 
-  /* Signal lost */
-  .signal-lost {
+  .progress-ticks {
+    position: relative;
+    height: 16px;
+    margin-top: 4px;
+  }
+
+  .progress-tick {
+    position: absolute;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    transform: translateX(-50%);
+  }
+
+  .progress-tick::before {
+    content: '';
+    width: 1px;
+    height: 6px;
+    background: rgba(255, 255, 255, 0.1);
+  }
+
+  .progress-tick span {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 8px;
+    color: var(--muted);
+    opacity: 0.6;
+    margin-top: 2px;
+  }
+
+  /* Connection status */
+  .status-indicator {
     position: fixed;
     top: 16px;
     right: 20px;
@@ -219,19 +376,34 @@
     align-items: center;
     gap: 6px;
     font-family: 'Share Tech Mono', monospace;
-    font-size: 10px;
-    color: #FF4444;
-    opacity: 0;
-    transition: opacity 0.3s ease;
+    font-size: 9px;
     z-index: 50;
+    transition: opacity 0.3s ease;
   }
 
-  .signal-lost.visible { opacity: 1; }
-
-  .signal-dot {
-    width: 6px;
-    height: 6px;
+  .status-dot {
+    width: 5px;
+    height: 5px;
     border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .status-indicator.connected {
+    color: var(--muted);
+    opacity: 0.5;
+  }
+
+  .status-indicator.connected .status-dot {
+    background: var(--live);
+    animation: livePulse 3s ease infinite;
+  }
+
+  .status-indicator.disconnected {
+    color: #FF4444;
+    opacity: 1;
+  }
+
+  .status-indicator.disconnected .status-dot {
     background: #FF4444;
     animation: blink 1s infinite;
   }
@@ -255,13 +427,29 @@
     0% { opacity: 0.4; }
     100% { opacity: 0; }
   }
+
+  @keyframes slideIn {
+    from { transform: translateY(4px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+  }
 </style>
 </head>
 <body>
 
-<div class="signal-lost" id="signal">
-  <div class="signal-dot"></div>
-  SIGNAL LOST
+<canvas id="stars"></canvas>
+
+<!-- Brand anchor -->
+<div class="brand">
+  <svg viewBox="396 9 52 42" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M424.639 29.4626L446 17.9923L442.409 11.0547L422.849 19.0063C422.345 19.2114 421.787 19.2114 421.283 19.0063L401.723 11.0547L398.132 17.9923L419.493 29.4626L398.132 40.933L401.723 47.8706L421.283 39.9189C421.787 39.7139 422.345 39.7139 422.849 39.9189L442.409 47.8706L446 40.933L424.639 29.4626Z" fill="#23F7DD"/>
+  </svg>
+  <span class="brand-label">Critical Mass</span>
+</div>
+
+<!-- Connection status -->
+<div class="status-indicator connected" id="status">
+  <div class="status-dot"></div>
+  <span id="statusText">CONNECTED</span>
 </div>
 
 <div class="flash-overlay" id="flash"></div>
@@ -269,8 +457,14 @@
 <div class="container">
 
   <!-- Panel 1: TPS -->
-  <div class="panel">
-    <div class="label">Transactions Per Second</div>
+  <div class="panel" id="panel1">
+    <div class="label">
+      <div class="live-badge">
+        <div class="live-dot"></div>
+        <span class="live-text">LIVE</span>
+      </div>
+      Transactions Per Second
+    </div>
     <div class="big-number" id="tps">0</div>
     <div class="gauge">
       <div class="gauge-track">
@@ -287,16 +481,24 @@
   </div>
 
   <!-- Panel 2: Total Transactions -->
-  <div class="panel">
+  <div class="panel" id="panel2">
     <div class="label">Total Transactions</div>
-    <div class="tx-number" id="txCount">0</div>
+    <div class="tx-number" id="txCount"></div>
     <div class="progress">
       <div class="progress-labels">
         <span class="progress-label-left">To 1 Billion</span>
         <span class="progress-label-right" id="pct">0.00%</span>
       </div>
-      <div class="progress-track">
-        <div class="progress-fill" id="progressFill"></div>
+      <div class="progress-track-container">
+        <div class="progress-track">
+          <div class="progress-fill" id="progressFill"></div>
+        </div>
+        <div class="progress-ticks">
+          <div class="progress-tick" style="left:25%"><span>250M</span></div>
+          <div class="progress-tick" style="left:50%"><span>500M</span></div>
+          <div class="progress-tick" style="left:75%"><span>750M</span></div>
+          <div class="progress-tick" style="left:100%"><span>1B</span></div>
+        </div>
       </div>
     </div>
   </div>
@@ -304,67 +506,216 @@
 </div>
 
 <script>
+// ── Config ──────────────────────────────────────────
 const API_STATS = 'https://api.battleofnodes.com/stats';
-const API_TX_COUNT = 'https://api.battleofnodes.com/transactions/count?after=1773234000'; // March 11 13:00 UTC
+const API_TX_COUNT = 'https://api.battleofnodes.com/transactions/count?after=1773234000';
 const POLL_MS = 2000;
 const TPS_MAX = 100000;
 const BILLION = 1_000_000_000;
 
+// ── State ───────────────────────────────────────────
 let prevTx = null;
 let prevTime = null;
 let peakTps = 0;
-let lastDisplayedTx = '';
 let milestoneTriggered = false;
+let currentTps = 0;
+let targetTps = 0;
+let lastOdometerValue = '';
 
+// ── DOM refs ────────────────────────────────────────
 const $tps = document.getElementById('tps');
 const $tpsGauge = document.getElementById('tpsGauge');
 const $peak = document.getElementById('peak');
 const $txCount = document.getElementById('txCount');
 const $pct = document.getElementById('pct');
 const $progressFill = document.getElementById('progressFill');
-const $signal = document.getElementById('signal');
+const $status = document.getElementById('status');
+const $statusText = document.getElementById('statusText');
 const $flash = document.getElementById('flash');
+const $panel1 = document.getElementById('panel1');
+const $panel2 = document.getElementById('panel2');
 
-function formatNumber(n) {
-  return n.toLocaleString('en-US');
+// ── Star field ──────────────────────────────────────
+const canvas = document.getElementById('stars');
+const ctx = canvas.getContext('2d');
+let stars = [];
+let starPulse = 0; // 0 to 1, decays
+
+function resizeCanvas() {
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
 }
 
-function updateTxDisplay(newFormatted) {
-  if (newFormatted === lastDisplayedTx) return;
+function initStars() {
+  resizeCanvas();
+  stars = [];
+  for (let i = 0; i < 80; i++) {
+    stars.push({
+      x: Math.random() * canvas.width,
+      y: Math.random() * canvas.height,
+      r: Math.random() * 1.2 + 0.3,
+      baseAlpha: Math.random() * 0.3 + 0.15,
+      vx: (Math.random() - 0.5) * 0.15,
+      vy: (Math.random() - 0.5) * 0.15,
+      // For pulse scatter
+      scatterVx: 0,
+      scatterVy: 0,
+    });
+  }
+}
 
-  const oldChars = lastDisplayedTx.split('');
-  const newChars = newFormatted.split('');
+function triggerStarPulse() {
+  starPulse = 1;
+  const cx = canvas.width / 2;
+  const cy = canvas.height / 2;
+  for (const s of stars) {
+    const dx = s.x - cx;
+    const dy = s.y - cy;
+    const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+    s.scatterVx = (dx / dist) * 0.6;
+    s.scatterVy = (dy / dist) * 0.6;
+  }
+}
 
-  let html = '';
-  for (let i = 0; i < newChars.length; i++) {
-    const ch = newChars[i];
-    const changed = i >= oldChars.length || oldChars[i] !== ch;
+function drawStars() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  starPulse *= 0.96; // decay
+
+  for (const s of stars) {
+    // Move
+    s.x += s.vx + s.scatterVx;
+    s.y += s.vy + s.scatterVy;
+    s.scatterVx *= 0.95;
+    s.scatterVy *= 0.95;
+
+    // Wrap
+    if (s.x < 0) s.x = canvas.width;
+    if (s.x > canvas.width) s.x = 0;
+    if (s.y < 0) s.y = canvas.height;
+    if (s.y > canvas.height) s.y = 0;
+
+    // Color: white normally, teal during pulse
+    const alpha = s.baseAlpha + starPulse * 0.4;
+    const r = Math.round(255 - starPulse * 255);
+    const g = Math.round(255 - starPulse * 45);
+    const b = Math.round(255 - starPulse * 55);
+
+    ctx.beginPath();
+    ctx.arc(s.x, s.y, s.r + starPulse * 0.5, 0, Math.PI * 2);
+    ctx.fillStyle = `rgba(${r},${g},${b},${alpha})`;
+    ctx.fill();
+  }
+
+  requestAnimationFrame(drawStars);
+}
+
+window.addEventListener('resize', resizeCanvas);
+initStars();
+drawStars();
+
+// ── TPS interpolation ───────────────────────────────
+function animateTps() {
+  const diff = targetTps - currentTps;
+  currentTps += diff * 0.08; // lerp toward target
+
+  // Snap when close
+  if (Math.abs(diff) < 0.5) currentTps = targetTps;
+
+  const display = Math.round(currentTps);
+  $tps.textContent = display.toLocaleString('en-US');
+
+  // Glow intensity: 0 at 0 TPS, 1 at 50K+
+  const glowIntensity = Math.min(display / 50000, 1);
+  document.documentElement.style.setProperty('--glow-intensity', glowIntensity.toFixed(3));
+
+  $tps.classList.toggle('hot', display >= 50000);
+  $tpsGauge.style.width = Math.min(display / TPS_MAX * 100, 100) + '%';
+
+  requestAnimationFrame(animateTps);
+}
+
+animateTps();
+
+// ── Odometer ────────────────────────────────────────
+function buildOdometer(formatted) {
+  // Build once: create digit strips for each character position
+  $txCount.innerHTML = '';
+  for (const ch of formatted) {
     if (ch === ',') {
-      html += '<span class="digit-slot">,</span>';
+      const slot = document.createElement('div');
+      slot.className = 'digit-slot comma';
+      slot.textContent = ',';
+      $txCount.appendChild(slot);
     } else {
-      const style = changed
-        ? 'transform:translateY(0);opacity:1;animation:slideIn 150ms ease'
-        : '';
-      html += `<span class="digit-slot"><span style="${style}">${ch}</span></span>`;
+      const slot = document.createElement('div');
+      slot.className = 'digit-slot';
+      const strip = document.createElement('div');
+      strip.className = 'digit-strip';
+      for (let d = 0; d <= 9; d++) {
+        const s = document.createElement('span');
+        s.textContent = d;
+        strip.appendChild(s);
+      }
+      strip.style.transform = `translateY(-${parseInt(ch) * 1.15}em)`;
+      slot.appendChild(strip);
+      $txCount.appendChild(slot);
     }
   }
-  $txCount.innerHTML = html;
-  lastDisplayedTx = newFormatted;
+  lastOdometerValue = formatted;
 }
 
+function updateOdometer(formatted) {
+  if (formatted === lastOdometerValue) return;
+
+  // If length changed (new digit magnitude), rebuild
+  if (formatted.length !== lastOdometerValue.length) {
+    buildOdometer(formatted);
+    return;
+  }
+
+  const slots = $txCount.querySelectorAll('.digit-slot:not(.comma)');
+  const digits = formatted.replace(/,/g, '');
+  const oldDigits = lastOdometerValue.replace(/,/g, '');
+
+  slots.forEach((slot, i) => {
+    const newD = parseInt(digits[i]);
+    const oldD = parseInt(oldDigits[i]);
+    if (newD !== oldD) {
+      const strip = slot.querySelector('.digit-strip');
+      strip.style.transform = `translateY(-${newD * 1.15}em)`;
+    }
+  });
+
+  lastOdometerValue = formatted;
+}
+
+// ── Panel pulse ─────────────────────────────────────
+function pulsePanel(el) {
+  el.classList.add('pulse');
+  setTimeout(() => el.classList.remove('pulse'), 600);
+}
+
+// ── Milestone ───────────────────────────────────────
 function triggerMilestone() {
   if (milestoneTriggered) return;
   milestoneTriggered = true;
   let count = 0;
   const interval = setInterval(() => {
     $flash.style.animation = 'none';
-    $flash.offsetHeight; // reflow
+    $flash.offsetHeight;
     $flash.style.animation = 'milestone-flash 300ms ease forwards';
     count++;
     if (count >= 6) clearInterval(interval);
   }, 300);
 }
 
+// ── Format helper ───────────────────────────────────
+function fmt(n) {
+  return n.toLocaleString('en-US');
+}
+
+// ── Polling ─────────────────────────────────────────
 async function poll() {
   try {
     const [statsRes, txCountRes] = await Promise.all([
@@ -374,9 +725,12 @@ async function poll() {
     if (!statsRes.ok || !txCountRes.ok) throw new Error('fetch failed');
     const stats = await statsRes.json();
     const txSinceLaunch = parseInt(await txCountRes.text(), 10);
-    $signal.classList.remove('visible');
 
-    // TPS (derived from cumulative stats.transactions delta)
+    // Connection: OK
+    $status.className = 'status-indicator connected';
+    $statusText.textContent = 'CONNECTED';
+
+    // TPS delta
     const rawTx = stats.transactions;
     const now = performance.now() / 1000;
 
@@ -384,13 +738,10 @@ async function poll() {
       const delta = rawTx - prevTx;
       const elapsed = now - prevTime;
       if (delta >= 0 && elapsed > 0) {
-        const tps = Math.round(delta / elapsed);
-        $tps.textContent = formatNumber(tps);
-        $tps.classList.toggle('hot', tps >= 50000);
-        $tpsGauge.style.width = Math.min(tps / TPS_MAX * 100, 100) + '%';
-        if (tps > peakTps) {
-          peakTps = tps;
-          $peak.textContent = formatNumber(peakTps);
+        targetTps = Math.round(delta / elapsed);
+        if (targetTps > peakTps) {
+          peakTps = targetTps;
+          $peak.textContent = fmt(peakTps);
         }
       }
     }
@@ -398,8 +749,13 @@ async function poll() {
     prevTx = rawTx;
     prevTime = now;
 
-    // Total transactions (since March 11 13:00 UTC)
-    updateTxDisplay(formatNumber(txSinceLaunch));
+    // Total transactions odometer
+    const formatted = fmt(txSinceLaunch);
+    if (!lastOdometerValue) {
+      buildOdometer(formatted);
+    } else {
+      updateOdometer(formatted);
+    }
 
     // Progress to 1B
     const pct = (txSinceLaunch / BILLION) * 100;
@@ -409,15 +765,16 @@ async function poll() {
     // Milestone
     if (txSinceLaunch >= BILLION) triggerMilestone();
 
+    // Visual feedback: pulse panels and stars
+    pulsePanel($panel1);
+    pulsePanel($panel2);
+    triggerStarPulse();
+
   } catch (e) {
-    $signal.classList.add('visible');
+    $status.className = 'status-indicator disconnected';
+    $statusText.textContent = 'SIGNAL LOST';
   }
 }
-
-// Add slideIn keyframes dynamically
-const style = document.createElement('style');
-style.textContent = `@keyframes slideIn { from { transform: translateY(4px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }`;
-document.head.appendChild(style);
 
 poll();
 setInterval(poll, POLL_MS);
