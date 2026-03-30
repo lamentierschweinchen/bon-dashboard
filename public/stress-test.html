@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Critical Mass — Live Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --bg: #080C14;
+    --surface: #0D1420;
+    --border: #1B2E45;
+    --accent: #00D2C8;
+    --text: #FFFFFF;
+    --muted: #6B8BA4;
+    --peak: #FFB800;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Rajdhani', sans-serif;
+    height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    position: relative;
+  }
+
+  /* Scanline overlay */
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: repeating-linear-gradient(
+      to bottom,
+      transparent 0px,
+      transparent 2px,
+      rgba(255,255,255,0.04) 2px,
+      rgba(255,255,255,0.04) 4px
+    );
+    pointer-events: none;
+    z-index: 100;
+  }
+
+  .container {
+    width: 100%;
+    max-width: 960px;
+    padding: 0 32px;
+    display: flex;
+    flex-direction: column;
+    gap: 48px;
+  }
+
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 40px 48px;
+  }
+
+  .label {
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.18em;
+    color: var(--muted);
+    text-transform: uppercase;
+    text-align: center;
+    margin-bottom: 8px;
+  }
+
+  .big-number {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 96px;
+    text-align: center;
+    line-height: 1.1;
+    transition: color 0.6s ease;
+  }
+
+  .big-number.hot {
+    color: var(--accent);
+  }
+
+  /* Gauge */
+  .gauge { margin-top: 24px; }
+
+  .gauge-track {
+    width: 100%;
+    height: 6px;
+    background: rgba(255,255,255,0.05);
+    border-radius: 3px;
+    overflow: hidden;
+  }
+
+  .gauge-fill {
+    height: 100%;
+    background: var(--accent);
+    border-radius: 3px;
+    width: 0%;
+    transition: width 0.6s ease;
+    box-shadow: 0 0 12px rgba(0,210,200,0.3);
+  }
+
+  .gauge-ticks {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 6px;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 9px;
+    color: var(--muted);
+  }
+
+  /* Peak row */
+  .peak-row {
+    margin-top: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    background: rgba(255,184,0,0.04);
+    border: 1px solid rgba(255,184,0,0.12);
+    border-radius: 3px;
+    padding: 6px 16px;
+    width: fit-content;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  .peak-label {
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    color: var(--peak);
+    letter-spacing: 0.12em;
+  }
+
+  .peak-value {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 18px;
+    color: var(--peak);
+  }
+
+  /* Panel 2 */
+  .tx-number {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 72px;
+    text-align: center;
+    line-height: 1.1;
+    overflow: hidden;
+  }
+
+  .tx-number .digit-slot {
+    display: inline-block;
+    position: relative;
+    overflow: hidden;
+    vertical-align: top;
+  }
+
+  .tx-number .digit-slot span {
+    display: block;
+    transition: transform 150ms ease, opacity 150ms ease;
+  }
+
+  /* Progress bar */
+  .progress { margin-top: 24px; }
+
+  .progress-labels {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 6px;
+  }
+
+  .progress-label-left {
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    color: var(--muted);
+    letter-spacing: 0.12em;
+  }
+
+  .progress-label-right {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 10px;
+    color: var(--accent);
+  }
+
+  .progress-track {
+    width: 100%;
+    height: 4px;
+    background: rgba(255,255,255,0.05);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+
+  .progress-fill {
+    height: 100%;
+    background: var(--accent);
+    border-radius: 2px;
+    width: 0%;
+    transition: width 1s ease;
+    box-shadow: 0 0 8px rgba(0,210,200,0.25);
+  }
+
+  /* Signal lost */
+  .signal-lost {
+    position: fixed;
+    top: 16px;
+    right: 20px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 10px;
+    color: #FF4444;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    z-index: 50;
+  }
+
+  .signal-lost.visible { opacity: 1; }
+
+  .signal-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #FF4444;
+    animation: blink 1s infinite;
+  }
+
+  @keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+  }
+
+  /* Milestone flash */
+  .flash-overlay {
+    position: fixed;
+    inset: 0;
+    background: var(--accent);
+    opacity: 0;
+    pointer-events: none;
+    z-index: 90;
+  }
+
+  @keyframes milestone-flash {
+    0% { opacity: 0.4; }
+    100% { opacity: 0; }
+  }
+</style>
+</head>
+<body>
+
+<div class="signal-lost" id="signal">
+  <div class="signal-dot"></div>
+  SIGNAL LOST
+</div>
+
+<div class="flash-overlay" id="flash"></div>
+
+<div class="container">
+
+  <!-- Panel 1: TPS -->
+  <div class="panel">
+    <div class="label">Transactions Per Second</div>
+    <div class="big-number" id="tps">0</div>
+    <div class="gauge">
+      <div class="gauge-track">
+        <div class="gauge-fill" id="tpsGauge"></div>
+      </div>
+      <div class="gauge-ticks">
+        <span>0</span><span>25K</span><span>50K</span><span>75K</span><span>100K</span>
+      </div>
+    </div>
+    <div class="peak-row">
+      <span class="peak-label">Session Peak</span>
+      <span class="peak-value" id="peak">0</span>
+    </div>
+  </div>
+
+  <!-- Panel 2: Total Transactions -->
+  <div class="panel">
+    <div class="label">Total Transactions</div>
+    <div class="tx-number" id="txCount">0</div>
+    <div class="progress">
+      <div class="progress-labels">
+        <span class="progress-label-left">To 1 Billion</span>
+        <span class="progress-label-right" id="pct">0.00%</span>
+      </div>
+      <div class="progress-track">
+        <div class="progress-fill" id="progressFill"></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const API = 'https://api.battleofnodes.com/stats';
+const POLL_MS = 2000;
+const TPS_MAX = 100000;
+const BILLION = 1_000_000_000;
+
+let prevTx = null;
+let prevTime = null;
+let peakTps = 0;
+let lastDisplayedTx = '';
+let milestoneTriggered = false;
+
+const $tps = document.getElementById('tps');
+const $tpsGauge = document.getElementById('tpsGauge');
+const $peak = document.getElementById('peak');
+const $txCount = document.getElementById('txCount');
+const $pct = document.getElementById('pct');
+const $progressFill = document.getElementById('progressFill');
+const $signal = document.getElementById('signal');
+const $flash = document.getElementById('flash');
+
+function formatNumber(n) {
+  return n.toLocaleString('en-US');
+}
+
+function updateTxDisplay(newFormatted) {
+  if (newFormatted === lastDisplayedTx) return;
+
+  const oldChars = lastDisplayedTx.split('');
+  const newChars = newFormatted.split('');
+
+  let html = '';
+  for (let i = 0; i < newChars.length; i++) {
+    const ch = newChars[i];
+    const changed = i >= oldChars.length || oldChars[i] !== ch;
+    if (ch === ',') {
+      html += '<span class="digit-slot">,</span>';
+    } else {
+      const style = changed
+        ? 'transform:translateY(0);opacity:1;animation:slideIn 150ms ease'
+        : '';
+      html += `<span class="digit-slot"><span style="${style}">${ch}</span></span>`;
+    }
+  }
+  $txCount.innerHTML = html;
+  lastDisplayedTx = newFormatted;
+}
+
+function triggerMilestone() {
+  if (milestoneTriggered) return;
+  milestoneTriggered = true;
+  let count = 0;
+  const interval = setInterval(() => {
+    $flash.style.animation = 'none';
+    $flash.offsetHeight; // reflow
+    $flash.style.animation = 'milestone-flash 300ms ease forwards';
+    count++;
+    if (count >= 6) clearInterval(interval);
+  }, 300);
+}
+
+async function poll() {
+  try {
+    const res = await fetch(API);
+    if (!res.ok) throw new Error(res.status);
+    const data = await res.json();
+    $signal.classList.remove('visible');
+
+    const tx = data.transactions;
+    const now = performance.now() / 1000;
+
+    // TPS
+    if (prevTx !== null && prevTime !== null) {
+      const delta = tx - prevTx;
+      const elapsed = now - prevTime;
+      if (delta >= 0 && elapsed > 0) {
+        const tps = Math.round(delta / elapsed);
+        $tps.textContent = formatNumber(tps);
+        $tps.classList.toggle('hot', tps >= 50000);
+        $tpsGauge.style.width = Math.min(tps / TPS_MAX * 100, 100) + '%';
+        if (tps > peakTps) {
+          peakTps = tps;
+          $peak.textContent = formatNumber(peakTps);
+        }
+      }
+    }
+
+    prevTx = tx;
+    prevTime = now;
+
+    // Total transactions
+    updateTxDisplay(formatNumber(tx));
+
+    // Progress to 1B
+    const pct = (tx / BILLION) * 100;
+    $pct.textContent = pct.toFixed(2) + '%';
+    $progressFill.style.width = Math.min(pct, 100) + '%';
+
+    // Milestone
+    if (tx >= BILLION) triggerMilestone();
+
+  } catch (e) {
+    $signal.classList.add('visible');
+  }
+}
+
+// Add slideIn keyframes dynamically
+const style = document.createElement('style');
+style.textContent = `@keyframes slideIn { from { transform: translateY(4px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }`;
+document.head.appendChild(style);
+
+poll();
+setInterval(poll, POLL_MS);
+</script>
+</body>
+</html>
