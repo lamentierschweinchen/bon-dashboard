@@ -611,7 +611,7 @@
         <div class="gauge-glow" id="tpsGlow"></div>
       </div>
       <div class="gauge-ticks">
-        <span>0</span><span>25K</span><span>50K</span><span>75K</span><span>100K</span>
+        <span>0</span><span>30K</span><span>60K</span><span>90K</span><span>120K</span>
       </div>
     </div>
     <div class="peak-row" id="peakRow">
@@ -651,12 +651,13 @@
 const API_STATS = 'https://api.battleofnodes.com/stats';
 const API_TX_COUNT = 'https://api.battleofnodes.com/transactions/count?after=1773234000';
 const POLL_MS = 1000;
-const TPS_MAX = 100000;
+const TPS_MAX = 120000;  // theoretical chain max
+const TPS_CAP = 120000;  // hard cap — never display above this
+const TPS_WINDOW = 6;    // rolling window size (samples) to smooth indexer batching
 const BILLION = 1_000_000_000;
 
 // ── State ───────────────────────────────────────────
-let prevTx = null;
-let prevTime = null;
+const txSamples = []; // { count, time } circular buffer
 let peakTps = 0;
 let milestoneTriggered = false;
 let currentTps = 0;
@@ -903,14 +904,18 @@ async function poll() {
     // Meta line
     $meta.textContent = `BATTLENET_V2.0 :: EPOCH ${stats.epoch} :: BLK ${fmt(stats.blocks)} :: SHARDS ${stats.shards}`;
 
-    // TPS delta — derived from real-time /transactions/count, not stale /stats
+    // TPS — rolling window average to smooth indexer batch spikes
     const now = performance.now() / 1000;
+    txSamples.push({ count: txSinceLaunch, time: now });
+    if (txSamples.length > TPS_WINDOW) txSamples.shift();
 
-    if (prevTx !== null && prevTime !== null) {
-      const delta = txSinceLaunch - prevTx;
-      const elapsed = now - prevTime;
+    if (txSamples.length >= 2) {
+      const oldest = txSamples[0];
+      const newest = txSamples[txSamples.length - 1];
+      const delta = newest.count - oldest.count;
+      const elapsed = newest.time - oldest.time;
       if (delta >= 0 && elapsed > 0) {
-        const newTps = Math.round(delta / elapsed);
+        const newTps = Math.min(Math.round(delta / elapsed), TPS_CAP);
         targetTps = newTps;
         if (newTps > peakTps) {
           peakTps = newTps;
@@ -919,9 +924,6 @@ async function poll() {
         }
       }
     }
-
-    prevTx = txSinceLaunch;
-    prevTime = now;
 
     // Odometer
     const formatted = fmt(txSinceLaunch);
