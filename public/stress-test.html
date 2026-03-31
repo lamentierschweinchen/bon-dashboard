@@ -409,6 +409,19 @@
     opacity: 0.8;
   }
 
+  .tx-meta {
+    margin-top: 12px;
+    padding-top: 8px;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+  }
+
+  .tx-meta .peak-window,
+  .tx-meta .peak-request-link,
+  .tx-meta .peak-proof {
+    font-size: 9px;
+    opacity: 0.72;
+  }
+
   /* Panel 2: Transaction counter (odometer) */
   .tx-number {
     font-family: 'Share Tech Mono', monospace;
@@ -655,7 +668,7 @@
     .peak-row { padding: 4px 12px; }
     .peak-value { font-size: 14px; }
     .peak-window { font-size: 9px; }
-    .peak-request-link { font-size: 8px; }
+    .peak-request-link { font-size: 7px; }
     .peak-proof { font-size: 9px; }
     .peak-label { font-size: 9px; }
     .progress-ticks { display: none; }
@@ -724,9 +737,6 @@
       <span class="peak-label">Session Peak</span>
       <span class="peak-value" id="peak">0</span>
     </div>
-    <div class="peak-window" id="peakWindow">Peak window: --</div>
-    <a class="peak-request-link" id="peakRequestLink" href="#" target="_blank" rel="noopener noreferrer">Peak request: --</a>
-    <div class="peak-proof" id="peakProof">Peak proof: --</div>
   </div>
 
   <!-- Panel 2: Total Transactions -->
@@ -750,6 +760,11 @@
           <div class="progress-tick" style="left:100%"><span>1B</span></div>
         </div>
       </div>
+    </div>
+    <div class="tx-meta">
+      <div class="peak-window" id="peakWindow">Peak window: --</div>
+      <a class="peak-request-link" id="peakRequestLink" href="#" target="_blank" rel="noopener noreferrer">Peak request: --</a>
+      <div class="peak-proof" id="peakProof">Peak proof: --</div>
     </div>
   </div>
 
