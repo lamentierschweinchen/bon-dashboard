@@ -377,6 +377,38 @@
     text-shadow: 0 0 8px rgba(0, 210, 200, 0.3);
   }
 
+  .peak-window {
+    margin-top: 8px;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 10px;
+    color: var(--muted);
+    text-align: center;
+    opacity: 0.85;
+    letter-spacing: 0.02em;
+  }
+
+  .peak-request-link {
+    display: block;
+    margin-top: 6px;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 10px;
+    color: var(--accent);
+    text-align: center;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    opacity: 0.9;
+    word-break: break-all;
+  }
+
+  .peak-proof {
+    margin-top: 6px;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 10px;
+    color: var(--text);
+    text-align: center;
+    opacity: 0.8;
+  }
+
   /* Panel 2: Transaction counter (odometer) */
   .tx-number {
     font-family: 'Share Tech Mono', monospace;
@@ -622,6 +654,9 @@
     .gauge-ticks { font-size: 8px; }
     .peak-row { padding: 4px 12px; }
     .peak-value { font-size: 14px; }
+    .peak-window { font-size: 9px; }
+    .peak-request-link { font-size: 8px; }
+    .peak-proof { font-size: 9px; }
     .peak-label { font-size: 9px; }
     .progress-ticks { display: none; }
     .meta-line { font-size: 7px; }
@@ -689,6 +724,9 @@
       <span class="peak-label">Session Peak</span>
       <span class="peak-value" id="peak">0</span>
     </div>
+    <div class="peak-window" id="peakWindow">Peak window: --</div>
+    <a class="peak-request-link" id="peakRequestLink" href="#" target="_blank" rel="noopener noreferrer">Peak request: --</a>
+    <div class="peak-proof" id="peakProof">Peak proof: --</div>
   </div>
 
   <!-- Panel 2: Total Transactions -->
@@ -720,17 +758,17 @@
 <script>
 // ── Config ──────────────────────────────────────────
 const API_STATS = 'https://api.battleofnodes.com/stats';
+const API_TPS_COUNT = 'https://api.battleofnodes.com/transactions/c';
 const API_TX_COUNT = 'https://api.battleofnodes.com/transactions/count?after=1773234000';
-const POLL_MS = 1000;
+const POLL_MS = 600;
+const TPS_OFFSET_MS = 15000;
 const TPS_MAX = 100000;  // gauge scale — visual "expectations"
 const TPS_CAP = 121069;  // hard cap — never display above this
-const TPS_WINDOW = 6;    // rolling window size (samples) to smooth indexer batching
 const BILLION = 1_000_000_000;
 
 const IDLE_THRESHOLD_MS = 10000; // show IDLE after 10s of 0 TPS
 
 // ── State ───────────────────────────────────────────
-const txSamples = []; // { count, time } circular buffer
 let peakTps = 0;
 let peakTxCount = 0; // monotonic high-water mark — prevents odometer rollback
 let milestoneTriggered = false;
@@ -738,6 +776,7 @@ let currentTps = 0;
 let lastNonZeroTime = performance.now();
 let targetTps = 0;
 let lastOdometerValue = '';
+let timestampMsNow = Date.now();
 
 // ── DOM refs ────────────────────────────────────────
 const $tps = document.getElementById('tps');
@@ -747,6 +786,9 @@ const $gaugeWrap = document.getElementById('gaugeWrap');
 const $overflowLabel = document.getElementById('overflowLabel');
 const $peak = document.getElementById('peak');
 const $peakRow = document.getElementById('peakRow');
+const $peakWindow = document.getElementById('peakWindow');
+const $peakRequestLink = document.getElementById('peakRequestLink');
+const $peakProof = document.getElementById('peakProof');
 const $txCount = document.getElementById('txCount');
 const $pct = document.getElementById('pct');
 const $progressFill = document.getElementById('progressFill');
@@ -973,16 +1015,33 @@ function fmt(n) {
   return n.toLocaleString('en-US');
 }
 
+function fmtCompact(n) {
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
+  if (n >= 1_000) return `${(n / 1_000).toFixed(1)}k`;
+  return String(n);
+}
+
+function fmtWindowTime(ms) {
+  return new Date(ms).toISOString().slice(11, 23) + 'Z';
+}
+
 // ── Polling ─────────────────────────────────────────
 async function poll() {
+  const windowNowMs = timestampMsNow;
+  timestampMsNow += POLL_MS;
+  const beforeMs = windowNowMs - TPS_OFFSET_MS;
+  const afterMs = beforeMs - POLL_MS;
+
   try {
-    const [statsRes, txCountRes] = await Promise.all([
+    const [statsRes, txCountRes, tpsRes] = await Promise.all([
       fetch(API_STATS),
       fetch(API_TX_COUNT),
+      fetch(`${API_TPS_COUNT}?after=${afterMs}&before=${beforeMs}`),
     ]);
-    if (!statsRes.ok || !txCountRes.ok) throw new Error('fetch failed');
+    if (!statsRes.ok || !txCountRes.ok || !tpsRes.ok) throw new Error('fetch failed');
     const stats = await statsRes.json();
     let txSinceLaunch = parseInt(await txCountRes.text(), 10);
+    const txCountInWindow = parseInt(await tpsRes.text(), 10);
 
     // Monotonic safeguard — never let the counter roll backwards
     if (txSinceLaunch >= peakTxCount) {
@@ -998,24 +1057,22 @@ async function poll() {
     // Meta line
     $meta.textContent = `BATTLENET_V2.0 :: EPOCH ${stats.epoch} :: BLK ${fmt(stats.blocks)} :: SHARDS ${stats.shards}`;
 
-    // TPS — rolling window average to smooth indexer batch spikes
-    const now = performance.now() / 1000;
-    txSamples.push({ count: txSinceLaunch, time: now });
-    if (txSamples.length > TPS_WINDOW) txSamples.shift();
-
-    if (txSamples.length >= 2) {
-      const oldest = txSamples[0];
-      const newest = txSamples[txSamples.length - 1];
-      const delta = newest.count - oldest.count;
-      const elapsed = newest.time - oldest.time;
-      if (delta >= 0 && elapsed > 0) {
-        const newTps = Math.min(Math.round(delta / elapsed), TPS_CAP);
-        targetTps = newTps;
-        if (newTps > peakTps) {
-          peakTps = newTps;
-          $peak.textContent = fmt(peakTps);
-          flashPeak();
-        }
+    // TPS formula: tx count over a 600ms fixed window, offset by 5s from "now".
+    if (Number.isFinite(txCountInWindow) && txCountInWindow >= 0) {
+      const newTps = Math.min(
+        Math.round(txCountInWindow / (POLL_MS / 1000)),
+        TPS_CAP,
+      );
+      targetTps = newTps;
+      if (newTps > peakTps) {
+        peakTps = newTps;
+        $peak.textContent = fmt(peakTps);
+        $peakWindow.textContent = `Peak window: ${fmtWindowTime(afterMs)} -> ${fmtWindowTime(beforeMs)}`;
+        const peakRequestUrl = `${API_TPS_COUNT}?after=${afterMs}&before=${beforeMs}`;
+        $peakRequestLink.href = peakRequestUrl;
+        $peakRequestLink.textContent = `Peak request: ${peakRequestUrl}`;
+        $peakProof.textContent = `Peak proof: ${fmtCompact(txCountInWindow)} tx (${fmt(txCountInWindow)}) in ${POLL_MS}ms -> ${fmt(newTps)} TPS`;
+        flashPeak();
       }
     }
 
@@ -1051,13 +1108,6 @@ async function poll() {
 
 poll();
 setInterval(poll, POLL_MS);
-
-// ── Tab visibility: flush stale samples on return ───
-document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState === 'visible') {
-    txSamples.length = 0; // clear rolling window — avoids stale delta spike
-  }
-});
 </script>
 </body>
 </html>
