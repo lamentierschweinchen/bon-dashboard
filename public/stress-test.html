@@ -377,36 +377,32 @@
     text-shadow: 0 0 8px rgba(0, 210, 200, 0.3);
   }
 
-  .peak-window {
-    margin-top: 8px;
+  /* Panel 3: Receipts */
+  .receipts-panel {
+    padding: 16px 24px 18px;
+  }
+  .receipts-panel .label {
+    font-size: 9px;
+    margin-bottom: 10px;
+  }
+  .receipt-row {
     font-family: 'Share Tech Mono', monospace;
     font-size: 10px;
     color: var(--muted);
-    text-align: center;
-    opacity: 0.85;
     letter-spacing: 0.02em;
+    padding: 3px 0;
+    word-break: break-all;
   }
-
-  .peak-request-link {
+  .receipt-link {
     display: block;
-    margin-top: 6px;
-    font-family: 'Share Tech Mono', monospace;
-    font-size: 10px;
     color: var(--accent);
-    text-align: center;
     text-decoration: underline;
     text-underline-offset: 2px;
     opacity: 0.9;
-    word-break: break-all;
   }
-
-  .peak-proof {
-    margin-top: 6px;
-    font-family: 'Share Tech Mono', monospace;
-    font-size: 10px;
-    color: var(--text);
-    text-align: center;
-    opacity: 0.8;
+  .receipt-link:hover {
+    opacity: 1;
+    text-shadow: 0 0 6px rgba(35, 247, 221, 0.4);
   }
 
   /* Panel 2: Transaction counter (odometer) */
@@ -654,9 +650,8 @@
     .gauge-ticks { font-size: 8px; }
     .peak-row { padding: 4px 12px; }
     .peak-value { font-size: 14px; }
-    .peak-window { font-size: 9px; }
-    .peak-request-link { font-size: 8px; }
-    .peak-proof { font-size: 9px; }
+    .receipts-panel { padding: 12px 16px 14px; }
+    .receipt-row { font-size: 8px; }
     .peak-label { font-size: 9px; }
     .progress-ticks { display: none; }
     .meta-line { font-size: 7px; }
@@ -724,9 +719,6 @@
       <span class="peak-label">Session Peak</span>
       <span class="peak-value" id="peak">0</span>
     </div>
-    <div class="peak-window" id="peakWindow">Peak window: --</div>
-    <a class="peak-request-link" id="peakRequestLink" href="#" target="_blank" rel="noopener noreferrer">Peak request: --</a>
-    <div class="peak-proof" id="peakProof">Peak proof: --</div>
   </div>
 
   <!-- Panel 2: Total Transactions -->
@@ -751,6 +743,14 @@
         </div>
       </div>
     </div>
+  </div>
+
+  <!-- Panel 3: Receipts -->
+  <div class="panel receipts-panel" id="panel3">
+    <div class="label">Receipts</div>
+    <div class="receipt-row" id="peakWindow">Peak window: —</div>
+    <a class="receipt-row receipt-link" id="peakRequestLink" href="#" target="_blank" rel="noopener noreferrer">Peak request: —</a>
+    <div class="receipt-row" id="peakProof">Peak proof: —</div>
   </div>
 
 </div>
