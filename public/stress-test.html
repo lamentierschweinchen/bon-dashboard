@@ -723,7 +723,7 @@ const API_STATS = 'https://api.battleofnodes.com/stats';
 const API_TX_COUNT = 'https://api.battleofnodes.com/transactions/count?after=1773234000';
 const POLL_MS = 1000;
 const TPS_MAX = 100000;  // gauge scale — visual "expectations"
-const TPS_CAP = 120000;  // hard cap — never display above this
+const TPS_CAP = 121069;  // hard cap — never display above this
 const TPS_WINDOW = 6;    // rolling window size (samples) to smooth indexer batching
 const BILLION = 1_000_000_000;
 
@@ -732,6 +732,7 @@ const IDLE_THRESHOLD_MS = 10000; // show IDLE after 10s of 0 TPS
 // ── State ───────────────────────────────────────────
 const txSamples = []; // { count, time } circular buffer
 let peakTps = 0;
+let peakTxCount = 0; // monotonic high-water mark — prevents odometer rollback
 let milestoneTriggered = false;
 let currentTps = 0;
 let lastNonZeroTime = performance.now();
@@ -981,7 +982,14 @@ async function poll() {
     ]);
     if (!statsRes.ok || !txCountRes.ok) throw new Error('fetch failed');
     const stats = await statsRes.json();
-    const txSinceLaunch = parseInt(await txCountRes.text(), 10);
+    let txSinceLaunch = parseInt(await txCountRes.text(), 10);
+
+    // Monotonic safeguard — never let the counter roll backwards
+    if (txSinceLaunch >= peakTxCount) {
+      peakTxCount = txSinceLaunch;
+    } else {
+      txSinceLaunch = peakTxCount;
+    }
 
     // Connection OK
     $status.className = 'status-indicator connected';
