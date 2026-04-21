@@ -2,6 +2,7 @@
   "rewrites": [
     { "source": "/guild-wars", "destination": "/guild-wars.html" },
     { "source": "/agent-arena", "destination": "/agent-arena.html" },
-    { "source": "/stress-test", "destination": "/stress-test.html" }
+    { "source": "/stress-test", "destination": "/stress-test.html" },
+    { "source": "/perf-stats", "destination": "/perf-stats.html" }
   ]
 }
