@@ -73,6 +73,12 @@ export function Footer({ generatedAt }: Props) {
           bon.multiversx.com
         </a>
         <a
+          href="/perf-stats"
+          className="font-mono underline decoration-white/20 hover:text-white/50"
+        >
+          Performance Stats
+        </a>
+        <a
           href="https://api.battleofnodes.com/docs"
           target="_blank"
           rel="noopener noreferrer"

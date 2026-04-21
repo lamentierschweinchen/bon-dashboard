@@ -1,0 +1,861 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Performance Stats — Battle of Nodes</title>
+
+<!-- Favicon: MvX mark -->
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg viewBox='396 9 52 42' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M424.639 29.4626L446 17.9923L442.409 11.0547L422.849 19.0063C422.345 19.2114 421.787 19.2114 421.283 19.0063L401.723 11.0547L398.132 17.9923L419.493 29.4626L398.132 40.933L401.723 47.8706L421.283 39.9189C421.787 39.7139 422.345 39.7139 422.849 39.9189L442.409 47.8706L446 40.933L424.639 29.4626Z' fill='%2323F7DD'/%3E%3C/svg%3E">
+
+<!-- OG / Twitter -->
+<meta property="og:title" content="Performance Stats — Battle of Nodes">
+<meta property="og:description" content="Peak 11,122 TPS · 31.9M tx/hour · 192 stress test submissions. MultiversX Supernova testnet performance report.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://bon-dashboard.vercel.app/perf-stats">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Performance Stats — Battle of Nodes">
+<meta name="twitter:description" content="Peak 11,122 TPS · 31.9M tx/hour · 192 stress test submissions. MultiversX Supernova testnet.">
+<meta name="theme-color" content="#05080F">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;900&family=Barlow+Condensed:wght@300;400;500;600;700&family=Barlow:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #05080F;
+    --surface: #080E1C;
+    --surface-2: #0C1527;
+    --cyan: #23F3DD;
+    --cyan-dim: rgba(35, 243, 221, 0.12);
+    --cyan-mid: rgba(35, 243, 221, 0.35);
+    --purple: #A35CF6;
+    --purple-dim: rgba(163, 92, 246, 0.12);
+    --gold: #F5A623;
+    --red: #F04468;
+    --green: #22D98A;
+    --text: #E2E8F7;
+    --muted: rgba(226, 232, 247, 0.42);
+    --border: rgba(35, 243, 221, 0.13);
+    --border-purple: rgba(163, 92, 246, 0.18);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Barlow', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ─── Background Grid ─── */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(35,243,221,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(35,243,221,0.03) 1px, transparent 1px);
+    background-size: 48px 48px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* ─── Ambient Glows ─── */
+  .glow-orb {
+    position: fixed;
+    border-radius: 50%;
+    filter: blur(120px);
+    pointer-events: none;
+    z-index: 0;
+  }
+  .glow-orb.top-left {
+    width: 600px; height: 600px;
+    background: rgba(35, 243, 221, 0.06);
+    top: -200px; left: -200px;
+  }
+  .glow-orb.bottom-right {
+    width: 700px; height: 700px;
+    background: rgba(163, 92, 246, 0.07);
+    bottom: -300px; right: -200px;
+  }
+
+  /* ─── Layout ─── */
+  .container {
+    position: relative;
+    z-index: 1;
+    max-width: 1320px;
+    margin: 0 auto;
+    padding: 0 32px 80px;
+  }
+
+  /* ─── Header ─── */
+  header {
+    position: relative;
+    z-index: 1;
+    padding: 52px 32px 0;
+    max-width: 1320px;
+    margin: 0 auto 56px;
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+  }
+
+  .header-left {}
+
+  .bon-label {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    color: var(--cyan);
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .bon-label::before {
+    content: '';
+    display: block;
+    width: 24px;
+    height: 1px;
+    background: var(--cyan);
+  }
+
+  h1 {
+    font-family: 'Orbitron', sans-serif;
+    font-size: clamp(28px, 4vw, 48px);
+    font-weight: 900;
+    letter-spacing: -0.5px;
+    line-height: 1.05;
+    background: linear-gradient(135deg, #fff 30%, var(--cyan) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .header-meta {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 13px;
+    color: var(--muted);
+    letter-spacing: 1px;
+    text-align: right;
+    line-height: 1.8;
+  }
+  .header-meta strong {
+    color: var(--text);
+    font-weight: 600;
+  }
+
+  /* ─── Section Labels ─── */
+  .section-label {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .section-label::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  /* ─── Hero Stats ─── */
+  .hero-stats {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    margin-bottom: 56px;
+  }
+
+  .stat-card {
+    position: relative;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    padding: 28px 24px 24px;
+    overflow: hidden;
+    transition: border-color 0.3s;
+  }
+  .stat-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--cyan), transparent);
+    opacity: 0.6;
+  }
+  .stat-card.purple::before {
+    background: linear-gradient(90deg, transparent, var(--purple), transparent);
+  }
+  .stat-card:hover {
+    border-color: rgba(35, 243, 221, 0.3);
+  }
+  .stat-card.purple:hover {
+    border-color: rgba(163, 92, 246, 0.3);
+  }
+
+  .stat-card .corner {
+    position: absolute;
+    top: 0; right: 0;
+    width: 40px; height: 40px;
+    background: linear-gradient(225deg, var(--cyan-dim) 0%, transparent 70%);
+  }
+  .stat-card.purple .corner {
+    background: linear-gradient(225deg, var(--purple-dim) 0%, transparent 70%);
+  }
+
+  .stat-icon {
+    font-size: 11px;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 600;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--cyan);
+    margin-bottom: 16px;
+  }
+  .stat-card.purple .stat-icon { color: var(--purple); }
+
+  .stat-value {
+    font-family: 'Orbitron', sans-serif;
+    font-size: clamp(28px, 3.5vw, 42px);
+    font-weight: 700;
+    line-height: 1;
+    color: #fff;
+    margin-bottom: 6px;
+  }
+  .stat-value .unit {
+    font-size: 0.45em;
+    font-weight: 400;
+    color: var(--muted);
+    margin-left: 4px;
+    vertical-align: middle;
+  }
+
+  .stat-sub {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 12px;
+    color: var(--muted);
+    letter-spacing: 0.5px;
+    margin-top: 8px;
+  }
+  .stat-sub strong {
+    color: var(--cyan);
+    font-weight: 600;
+  }
+  .stat-card.purple .stat-sub strong { color: var(--purple); }
+
+  /* ─── Chart Cards ─── */
+  .chart-section {
+    margin-bottom: 48px;
+  }
+
+  .chart-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    padding: 32px 32px 28px;
+    position: relative;
+    overflow: hidden;
+  }
+  .chart-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, var(--cyan), transparent 60%);
+    opacity: 0.5;
+  }
+
+  .chart-title {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    color: var(--text);
+    margin-bottom: 4px;
+  }
+  .chart-subtitle {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 12px;
+    color: var(--muted);
+    letter-spacing: 0.5px;
+    margin-bottom: 28px;
+  }
+
+  .chart-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+
+  canvas, svg { display: block; }
+
+  /* ─── SVG Bar Charts ─── */
+  .bar-chart-wrap {
+    width: 100%;
+    overflow: hidden;
+  }
+
+  /* ─── Legend ─── */
+  .legend {
+    display: flex;
+    gap: 20px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+  }
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 12px;
+    color: var(--muted);
+    letter-spacing: 0.5px;
+  }
+  .legend-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 1px;
+    flex-shrink: 0;
+  }
+
+  /* ─── Footer ─── */
+  footer {
+    position: relative;
+    z-index: 1;
+    text-align: center;
+    padding: 0 32px 48px;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 12px;
+    color: var(--muted);
+    letter-spacing: 1px;
+  }
+
+  /* ─── Animations ─── */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .stat-card   { animation: fadeUp 0.5s ease both; }
+  .stat-card:nth-child(1) { animation-delay: 0.05s; }
+  .stat-card:nth-child(2) { animation-delay: 0.12s; }
+  .stat-card:nth-child(3) { animation-delay: 0.19s; }
+  .stat-card:nth-child(4) { animation-delay: 0.26s; }
+  .chart-card  { animation: fadeUp 0.6s ease 0.3s both; }
+
+  @keyframes barGrow {
+    from { transform: scaleX(0); }
+    to   { transform: scaleX(1); }
+  }
+</style>
+</head>
+<body>
+
+<div class="glow-orb top-left"></div>
+<div class="glow-orb bottom-right"></div>
+
+<header>
+  <div class="header-left">
+    <div class="bon-label">MultiversX Supernova Testnet</div>
+    <h1>BATTLE OF NODES<br>PERFORMANCE REPORT</h1>
+  </div>
+  <div class="header-meta">
+    <strong>Shards:</strong> shard0 · shard1 · shard2<br>
+    <strong>Period:</strong> Mar 11 – Apr 20, 2026<br>
+    <strong>Block time:</strong> 600ms
+  </div>
+</header>
+
+<div class="container">
+
+  <!-- ── Hero Stats ── -->
+  <div class="section-label">Peak performance</div>
+  <div class="hero-stats">
+
+    <div class="stat-card">
+      <div class="corner"></div>
+      <div class="stat-icon">Peak TPS · 30 min</div>
+      <div class="stat-value">11,122<span class="unit">TPS</span></div>
+      <div class="stat-sub">Mar 24 · 16:00 — <strong>20.0M tx</strong></div>
+    </div>
+
+    <div class="stat-card">
+      <div class="corner"></div>
+      <div class="stat-icon">Peak TPS · 60 min</div>
+      <div class="stat-value">8,875<span class="unit">TPS</span></div>
+      <div class="stat-sub">Mar 17 · 22:00 — <strong>31.9M tx</strong></div>
+    </div>
+
+    <div class="stat-card purple">
+      <div class="corner"></div>
+      <div class="stat-icon">Peak Pool Size</div>
+      <div class="stat-value">1.97<span class="unit">M tx</span></div>
+      <div class="stat-sub">Mar 16 · 17:00 across <strong>3 shards</strong></div>
+    </div>
+
+    <div class="stat-card purple">
+      <div class="corner"></div>
+      <div class="stat-icon">Bug Submissions</div>
+      <div class="stat-value">192<span class="unit">total</span></div>
+      <div class="stat-sub">Over <strong>41 days</strong> · 30+ submitters</div>
+    </div>
+
+  </div>
+
+  <!-- ── TPS Bar Charts ── -->
+  <div class="section-label">Throughput — top windows by block txs processed (shard0+1+2)</div>
+  <div class="chart-section">
+    <div class="chart-grid">
+
+      <div class="chart-card">
+        <div class="chart-title">TOP 10 · 60-MINUTE WINDOWS</div>
+        <div class="chart-subtitle">Block transactions processed · summed across shards</div>
+        <svg id="chart-60min" width="100%" style="overflow:visible"></svg>
+      </div>
+
+      <div class="chart-card">
+        <div class="chart-title">TOP 10 · 30-MINUTE WINDOWS</div>
+        <div class="chart-subtitle">Block transactions processed · summed across shards</div>
+        <svg id="chart-30min" width="100%" style="overflow:visible"></svg>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ── Submissions Timeline ── -->
+  <div class="section-label">Stress test submissions · daily activity</div>
+  <div class="chart-section">
+    <div class="chart-card">
+      <div class="chart-title">SUBMISSIONS PER DAY</div>
+      <div class="chart-subtitle">Total: 192 submissions across 41 active days · Mar 11 – Apr 20, 2026</div>
+      <svg id="chart-submissions" width="100%" style="overflow:visible"></svg>
+    </div>
+  </div>
+
+  <!-- ── Severity Breakdown ── -->
+  <div class="section-label">Submission severity · top contributors</div>
+  <div class="chart-section">
+    <div class="chart-card">
+      <div class="chart-title">SEVERITY BREAKDOWN PER SUBMITTER</div>
+      <div class="chart-subtitle">Top 8 submitters by volume — stacked by severity classification</div>
+      <div class="legend">
+        <div class="legend-item"><div class="legend-dot" style="background:var(--red)"></div>Critical</div>
+        <div class="legend-item"><div class="legend-dot" style="background:var(--gold)"></div>High</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#F0C040"></div>Medium</div>
+        <div class="legend-item"><div class="legend-dot" style="background:var(--green)"></div>Low</div>
+      </div>
+      <svg id="chart-severity" width="100%" style="overflow:visible"></svg>
+    </div>
+  </div>
+
+</div>
+
+<footer>
+  BATTLE OF NODES · MULTIVERSX SUPERNOVA TESTNET · GENERATED 2026-04-21
+</footer>
+
+<script>
+// ── Colour constants
+const C = {
+  cyan:    '#23F3DD',
+  cyanDim: 'rgba(35,243,221,0.18)',
+  cyanMid: 'rgba(35,243,221,0.5)',
+  purple:  '#A35CF6',
+  purpleDim:'rgba(163,92,246,0.18)',
+  text:    '#E2E8F7',
+  muted:   'rgba(226,232,247,0.42)',
+  border:  'rgba(35,243,221,0.1)',
+  red:     '#F04468',
+  gold:    '#F5A623',
+  yellow:  '#F0C040',
+  green:   '#22D98A',
+  surface2:'#0C1527',
+};
+
+// ── Helper: format numbers
+function fmtNum(n) {
+  if (n >= 1e6) return (n/1e6).toFixed(1) + 'M';
+  if (n >= 1e3) return (n/1e3).toFixed(0) + 'K';
+  return n.toString();
+}
+function fmtComma(n) {
+  return n.toLocaleString();
+}
+
+// ─────────────────────────────────────────────
+// Horizontal Bar Chart (60-min / 30-min)
+// ─────────────────────────────────────────────
+function drawHBar(svgId, data, accentColor, dimColor) {
+  const svg = document.getElementById(svgId);
+  const W = svg.parentElement.offsetWidth - 64; // account for card padding
+
+  const barH = 26;
+  const gap   = 10;
+  const labelW = 88;
+  const rightPad = 90;
+  const topPad = 8;
+
+  const totalH = topPad + data.length * (barH + gap);
+  svg.setAttribute('height', totalH);
+  svg.setAttribute('viewBox', `0 0 ${W} ${totalH}`);
+
+  const chartW = W - labelW - rightPad;
+  const maxVal = data[0].tx;
+
+  // Grid lines
+  for (let i = 0; i <= 4; i++) {
+    const x = labelW + (chartW * i / 4);
+    const line = document.createElementNS('http://www.w3.org/2000/svg','line');
+    line.setAttribute('x1', x); line.setAttribute('y1', topPad);
+    line.setAttribute('x2', x); line.setAttribute('y2', totalH);
+    line.setAttribute('stroke', C.border);
+    line.setAttribute('stroke-width', '1');
+    svg.appendChild(line);
+
+    const lbl = document.createElementNS('http://www.w3.org/2000/svg','text');
+    lbl.setAttribute('x', x);
+    lbl.setAttribute('y', topPad - 4);
+    lbl.setAttribute('text-anchor', 'middle');
+    lbl.setAttribute('fill', C.muted);
+    lbl.setAttribute('font-size', '9');
+    lbl.setAttribute('font-family', 'Barlow Condensed, sans-serif');
+    lbl.setAttribute('letter-spacing', '0.5');
+    lbl.textContent = fmtNum(maxVal * i / 4);
+    svg.appendChild(lbl);
+  }
+
+  data.forEach((d, i) => {
+    const y = topPad + i * (barH + gap);
+    const barW = (d.tx / maxVal) * chartW;
+    const isTop = i === 0;
+
+    // Time label
+    const lbl = document.createElementNS('http://www.w3.org/2000/svg','text');
+    lbl.setAttribute('x', labelW - 8);
+    lbl.setAttribute('y', y + barH/2 + 4);
+    lbl.setAttribute('text-anchor', 'end');
+    lbl.setAttribute('fill', isTop ? C.text : C.muted);
+    lbl.setAttribute('font-size', '11');
+    lbl.setAttribute('font-family', 'Barlow Condensed, sans-serif');
+    lbl.setAttribute('font-weight', isTop ? '600' : '400');
+    lbl.textContent = d.time;
+    svg.appendChild(lbl);
+
+    // Bar track
+    const track = document.createElementNS('http://www.w3.org/2000/svg','rect');
+    track.setAttribute('x', labelW);
+    track.setAttribute('y', y);
+    track.setAttribute('width', chartW);
+    track.setAttribute('height', barH);
+    track.setAttribute('fill', 'rgba(255,255,255,0.03)');
+    svg.appendChild(track);
+
+    // Bar fill
+    const bar = document.createElementNS('http://www.w3.org/2000/svg','rect');
+    bar.setAttribute('x', labelW);
+    bar.setAttribute('y', y);
+    bar.setAttribute('width', barW);
+    bar.setAttribute('height', barH);
+    bar.setAttribute('fill', isTop ? accentColor : dimColor);
+    svg.appendChild(bar);
+
+    // Top bar glow overlay
+    if (isTop) {
+      const glow = document.createElementNS('http://www.w3.org/2000/svg','rect');
+      glow.setAttribute('x', labelW);
+      glow.setAttribute('y', y);
+      glow.setAttribute('width', barW);
+      glow.setAttribute('height', barH);
+      glow.setAttribute('fill', 'none');
+      glow.setAttribute('stroke', accentColor);
+      glow.setAttribute('stroke-width', '1');
+      glow.setAttribute('opacity', '0.6');
+      svg.appendChild(glow);
+    }
+
+    // TPS label
+    const tpsLbl = document.createElementNS('http://www.w3.org/2000/svg','text');
+    tpsLbl.setAttribute('x', labelW + barW + 8);
+    tpsLbl.setAttribute('y', y + barH/2 - 3);
+    tpsLbl.setAttribute('fill', isTop ? accentColor : C.muted);
+    tpsLbl.setAttribute('font-size', '11');
+    tpsLbl.setAttribute('font-family', 'Orbitron, sans-serif');
+    tpsLbl.setAttribute('font-weight', isTop ? '600' : '400');
+    tpsLbl.textContent = d.tps.toLocaleString();
+    svg.appendChild(tpsLbl);
+
+    const tpsUnit = document.createElementNS('http://www.w3.org/2000/svg','text');
+    tpsUnit.setAttribute('x', labelW + barW + 8);
+    tpsUnit.setAttribute('y', y + barH/2 + 9);
+    tpsUnit.setAttribute('fill', C.muted);
+    tpsUnit.setAttribute('font-size', '9');
+    tpsUnit.setAttribute('font-family', 'Barlow Condensed, sans-serif');
+    tpsUnit.setAttribute('letter-spacing', '1');
+    tpsUnit.textContent = 'TPS';
+    svg.appendChild(tpsUnit);
+  });
+}
+
+// ─────────────────────────────────────────────
+// Submissions Timeline (vertical bars)
+// ─────────────────────────────────────────────
+function drawSubmissions(svgId, data) {
+  const svg = document.getElementById(svgId);
+  const W = svg.parentElement.offsetWidth - 64;
+  const H = 180;
+  const bottomPad = 36;
+  const topPad = 20;
+  const chartH = H - topPad - bottomPad;
+  const n = data.length;
+  const maxVal = Math.max(...data.map(d => d[1]));
+  const barW = Math.max(2, (W / n) - 2);
+  const gap = (W - n * barW) / (n - 1);
+
+  svg.setAttribute('height', H);
+  svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+
+  // Baseline
+  const base = document.createElementNS('http://www.w3.org/2000/svg','line');
+  base.setAttribute('x1',0); base.setAttribute('y1', H - bottomPad);
+  base.setAttribute('x2',W); base.setAttribute('y2', H - bottomPad);
+  base.setAttribute('stroke', C.border); base.setAttribute('stroke-width','1');
+  svg.appendChild(base);
+
+  // Grid lines
+  [5,10,15,20,25].forEach(v => {
+    if (v > maxVal) return;
+    const y = topPad + chartH - (v / maxVal) * chartH;
+    const gl = document.createElementNS('http://www.w3.org/2000/svg','line');
+    gl.setAttribute('x1',0); gl.setAttribute('y1',y);
+    gl.setAttribute('x2',W); gl.setAttribute('y2',y);
+    gl.setAttribute('stroke','rgba(35,243,221,0.06)');
+    gl.setAttribute('stroke-width','1');
+    gl.setAttribute('stroke-dasharray','4 4');
+    svg.appendChild(gl);
+    const gl2 = document.createElementNS('http://www.w3.org/2000/svg','text');
+    gl2.setAttribute('x','2'); gl2.setAttribute('y',y-3);
+    gl2.setAttribute('fill',C.muted); gl2.setAttribute('font-size','9');
+    gl2.setAttribute('font-family','Barlow Condensed, sans-serif');
+    gl2.textContent = v;
+    svg.appendChild(gl2);
+  });
+
+  data.forEach((d, i) => {
+    const x = i * (barW + gap);
+    const val = d[1];
+    if (val === 0) return;
+    const bH = (val / maxVal) * chartH;
+    const y = topPad + chartH - bH;
+    const isTop = val >= 20;
+    const isHigh = val >= 10;
+
+    // Bar
+    const bar = document.createElementNS('http://www.w3.org/2000/svg','rect');
+    bar.setAttribute('x', x);
+    bar.setAttribute('y', y);
+    bar.setAttribute('width', barW);
+    bar.setAttribute('height', bH);
+    bar.setAttribute('fill', isTop ? C.cyan : isHigh ? C.cyanMid : C.cyanDim);
+    svg.appendChild(bar);
+
+    // Value on top for notable bars
+    if (val >= 6) {
+      const lbl = document.createElementNS('http://www.w3.org/2000/svg','text');
+      lbl.setAttribute('x', x + barW/2);
+      lbl.setAttribute('y', y - 4);
+      lbl.setAttribute('text-anchor', 'middle');
+      lbl.setAttribute('fill', isTop ? C.cyan : C.muted);
+      lbl.setAttribute('font-size', '10');
+      lbl.setAttribute('font-family', 'Barlow Condensed, sans-serif');
+      lbl.setAttribute('font-weight', '600');
+      lbl.textContent = val;
+      svg.appendChild(lbl);
+    }
+
+    // Date label every ~7 days
+    if (i % 7 === 0 || i === data.length - 1) {
+      const dateLbl = document.createElementNS('http://www.w3.org/2000/svg','text');
+      dateLbl.setAttribute('x', x + barW/2);
+      dateLbl.setAttribute('y', H - bottomPad + 14);
+      dateLbl.setAttribute('text-anchor', 'middle');
+      dateLbl.setAttribute('fill', C.muted);
+      dateLbl.setAttribute('font-size', '9');
+      dateLbl.setAttribute('font-family', 'Barlow Condensed, sans-serif');
+      dateLbl.setAttribute('letter-spacing', '0.5');
+      dateLbl.textContent = d[0];
+      svg.appendChild(dateLbl);
+    }
+  });
+}
+
+// ─────────────────────────────────────────────
+// Severity Stacked Bar Chart
+// ─────────────────────────────────────────────
+function drawSeverity(svgId, data) {
+  const svg = document.getElementById(svgId);
+  const W = svg.parentElement.offsetWidth - 64;
+  const H = 220;
+  const bottomPad = 52;
+  const topPad = 24;
+  const chartH = H - topPad - bottomPad;
+  const n = data.length;
+  const maxTotal = Math.max(...data.map(d => d.total));
+  const barW = Math.min(64, (W - 40) / n - 12);
+  const totalBarArea = n * barW + (n-1) * 12;
+  const startX = (W - totalBarArea) / 2;
+
+  svg.setAttribute('height', H);
+  svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+
+  // Grid
+  [10,20,30,40].forEach(v => {
+    if (v > maxTotal + 2) return;
+    const y = topPad + chartH - (v / maxTotal) * chartH;
+    const gl = document.createElementNS('http://www.w3.org/2000/svg','line');
+    gl.setAttribute('x1',0); gl.setAttribute('y1',y);
+    gl.setAttribute('x2',W); gl.setAttribute('y2',y);
+    gl.setAttribute('stroke','rgba(255,255,255,0.04)');
+    gl.setAttribute('stroke-width','1');
+    gl.setAttribute('stroke-dasharray','4 4');
+    svg.appendChild(gl);
+    const glLbl = document.createElementNS('http://www.w3.org/2000/svg','text');
+    glLbl.setAttribute('x','2'); glLbl.setAttribute('y',y-3);
+    glLbl.setAttribute('fill',C.muted); glLbl.setAttribute('font-size','9');
+    glLbl.setAttribute('font-family','Barlow Condensed, sans-serif');
+    glLbl.textContent = v;
+    svg.appendChild(glLbl);
+  });
+
+  const COLORS = [C.red, C.gold, C.yellow, C.green];
+
+  data.forEach((d, i) => {
+    const x = startX + i * (barW + 12);
+    let stackY = topPad + chartH;
+
+    // Draw stacks bottom-to-top: critical, high, medium, low
+    const segs = [d.critical, d.high, d.medium, d.low];
+    segs.forEach((seg, si) => {
+      if (seg <= 0) return;
+      const segH = (seg / maxTotal) * chartH;
+      stackY -= segH;
+      const rect = document.createElementNS('http://www.w3.org/2000/svg','rect');
+      rect.setAttribute('x', x);
+      rect.setAttribute('y', stackY);
+      rect.setAttribute('width', barW);
+      rect.setAttribute('height', segH);
+      rect.setAttribute('fill', COLORS[si]);
+      rect.setAttribute('opacity', si === 0 ? '0.95' : '0.8');
+      svg.appendChild(rect);
+    });
+
+    // Total label on top
+    const totalLbl = document.createElementNS('http://www.w3.org/2000/svg','text');
+    totalLbl.setAttribute('x', x + barW/2);
+    totalLbl.setAttribute('y', stackY - 5);
+    totalLbl.setAttribute('text-anchor','middle');
+    totalLbl.setAttribute('fill', C.text);
+    totalLbl.setAttribute('font-size','12');
+    totalLbl.setAttribute('font-family','Orbitron, sans-serif');
+    totalLbl.setAttribute('font-weight','600');
+    totalLbl.textContent = d.total;
+    svg.appendChild(totalLbl);
+
+    // Address label
+    const addrLbl = document.createElementNS('http://www.w3.org/2000/svg','text');
+    addrLbl.setAttribute('x', x + barW/2);
+    addrLbl.setAttribute('y', H - bottomPad + 14);
+    addrLbl.setAttribute('text-anchor','middle');
+    addrLbl.setAttribute('fill', C.muted);
+    addrLbl.setAttribute('font-size','9.5');
+    addrLbl.setAttribute('font-family','Barlow Condensed, sans-serif');
+    addrLbl.setAttribute('letter-spacing','0.3');
+    addrLbl.textContent = d.addr;
+    svg.appendChild(addrLbl);
+
+    // Second line of addr
+    const addrLbl2 = document.createElementNS('http://www.w3.org/2000/svg','text');
+    addrLbl2.setAttribute('x', x + barW/2);
+    addrLbl2.setAttribute('y', H - bottomPad + 26);
+    addrLbl2.setAttribute('text-anchor','middle');
+    addrLbl2.setAttribute('fill','rgba(226,232,247,0.25)');
+    addrLbl2.setAttribute('font-size','8.5');
+    addrLbl2.setAttribute('font-family','Barlow Condensed, sans-serif');
+    addrLbl2.textContent = d.addr2;
+    svg.appendChild(addrLbl2);
+  });
+}
+
+// ─────────────────────────────────────────────
+// Data
+// ─────────────────────────────────────────────
+const data60 = [
+  { time: 'Mar 17 22:00', tps: 8875, tx: 31951638 },
+  { time: 'Mar 24 13:00', tps: 8786, tx: 31628493 },
+  { time: 'Mar 24 11:00', tps: 7712, tx: 27764825 },
+  { time: 'Mar 18 06:00', tps: 7692, tx: 27691495 },
+  { time: 'Mar 18 07:00', tps: 7612, tx: 27401697 },
+  { time: 'Mar 17 21:00', tps: 7595, tx: 27341270 },
+  { time: 'Mar 17 20:00', tps: 7563, tx: 27226390 },
+  { time: 'Mar 17 18:00', tps: 7478, tx: 26919324 },
+  { time: 'Mar 17 23:00', tps: 7315, tx: 26334478 },
+  { time: 'Mar 24 14:00', tps: 7076, tx: 25472244 },
+];
+
+const data30 = [
+  { time: 'Mar 24 16:00', tps: 11122, tx: 20020300 },
+  { time: 'Mar 17 21:30', tps: 10819, tx: 19473784 },
+  { time: 'Mar 17 23:30', tps: 10343, tx: 18617771 },
+  { time: 'Mar 24 11:00', tps: 10240, tx: 18432461 },
+  { time: 'Mar 18 08:00', tps: 10237, tx: 18427272 },
+  { time: 'Mar 15 16:00', tps:  9926, tx: 17866884 },
+  { time: 'Mar 24 17:00', tps:  9878, tx: 17779815 },
+  { time: 'Mar 15 17:00', tps:  9555, tx: 17198390 },
+  { time: 'Mar 16 17:00', tps:  9515, tx: 17127273 },
+  { time: 'Mar 16 16:00', tps:  9464, tx: 17036070 },
+];
+
+const dataSubs = [
+  ['Mar 11',5],['Mar 12',3],['Mar 13',2],['Mar 14',0],
+  ['Mar 15',7],['Mar 16',5],['Mar 17',1],['Mar 18',3],
+  ['Mar 19',1],['Mar 20',1],['Mar 21',1],['Mar 22',1],
+  ['Mar 23',1],['Mar 24',14],['Mar 25',17],['Mar 26',6],
+  ['Mar 27',7],['Mar 28',5],['Mar 29',6],['Mar 30',8],
+  ['Mar 31',3],['Apr 01',3],['Apr 02',5],['Apr 03',1],
+  ['Apr 04',2],['Apr 05',0],['Apr 06',13],['Apr 07',2],
+  ['Apr 08',3],['Apr 09',8],['Apr 10',2],['Apr 11',6],
+  ['Apr 12',1],['Apr 13',7],['Apr 14',1],['Apr 15',9],
+  ['Apr 16',0],['Apr 17',2],['Apr 18',1],['Apr 19',6],
+  ['Apr 20',25],
+];
+
+const dataSeverity = [
+  { addr:'erd168emr', addr2:'...p008', total:40, critical:13, high:12, medium:8,  low:7  },
+  { addr:'erd15kkg4', addr2:'...g66r', total:36, critical:1,  high:14, medium:10, low:11 },
+  { addr:'erd1yd8zy', addr2:'...lg8l', total:31, critical:20, high:9,  medium:2,  low:0  },
+  { addr:'erd1xnwsh', addr2:'...zqt7', total:11, critical:6,  high:4,  medium:1,  low:0  },
+  { addr:'erd1ld6xs', addr2:'...wenz', total:11, critical:4,  high:1,  medium:6,  low:0  },
+  { addr:'erd1nyxuw', addr2:'...zywk', total:11, critical:4,  high:0,  medium:7,  low:0  },
+  { addr:'erd1x45vn', addr2:'...ewlm', total:7,  critical:3,  high:1,  medium:3,  low:0  },
+  { addr:'erd1s5mxe', addr2:'...2fjv', total:7,  critical:1,  high:0,  medium:6,  low:0  },
+];
+
+// ─── Render after DOM is ready
+window.addEventListener('load', () => {
+  drawHBar('chart-60min', data60, C.cyan,   'rgba(35,243,221,0.28)');
+  drawHBar('chart-30min', data30, C.purple, 'rgba(163,92,246,0.28)');
+  drawSubmissions('chart-submissions', dataSubs);
+  drawSeverity('chart-severity', dataSeverity);
+});
+</script>
+</body>
+</html>
