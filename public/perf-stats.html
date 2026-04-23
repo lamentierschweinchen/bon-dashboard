@@ -10,7 +10,7 @@
 
 <!-- OG / Twitter -->
 <meta property="og:title" content="Performance Stats — Battle of Nodes">
-<meta property="og:description" content="Peak 11,122 TPS · 31.9M tx/hour · 192 stress test submissions. MultiversX Supernova testnet performance report.">
+<meta property="og:description" content="Peak 120,000 TPS recorded on MultiversX Supernova Testnet. 31.9M tx/hour · 192 stress test submissions. Battle of Nodes performance report.">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://bon-dashboard.vercel.app/perf-stats">
 <meta name="twitter:card" content="summary">
@@ -572,6 +572,93 @@
     letter-spacing: 1px;
   }
 
+  /* ─── Peak TPS Hero ─── */
+  .peak-tps-hero {
+    position: relative;
+    text-align: center;
+    padding: 56px 32px 64px;
+    margin-bottom: 56px;
+    border: 1px solid rgba(35, 243, 221, 0.10);
+    border-radius: 4px;
+    background: linear-gradient(180deg, rgba(35,243,221,0.04) 0%, transparent 60%);
+    overflow: hidden;
+  }
+  .peak-tps-hero::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse 70% 60% at 50% 0%, rgba(35,243,221,0.07) 0%, transparent 70%);
+    pointer-events: none;
+  }
+  .peak-tps-label {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 6px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 28px;
+  }
+  .peak-tps-number {
+    font-family: 'Orbitron', sans-serif;
+    font-size: clamp(72px, 12vw, 140px);
+    font-weight: 900;
+    letter-spacing: -2px;
+    line-height: 1;
+    color: #fff;
+    text-shadow:
+      0 0 40px rgba(35, 243, 221, 0.5),
+      0 0 80px rgba(35, 243, 221, 0.2);
+    background: linear-gradient(135deg, #fff 20%, var(--cyan) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 8px;
+    animation: tpsPulse 4s ease-in-out infinite;
+  }
+  .peak-tps-unit {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: clamp(20px, 3vw, 32px);
+    font-weight: 400;
+    letter-spacing: 4px;
+    color: var(--cyan);
+    opacity: 0.7;
+    margin-left: 8px;
+  }
+  .peak-tps-meta {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 13px;
+    color: var(--muted);
+    letter-spacing: 2px;
+    margin-top: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+  }
+  .peak-tps-meta span {
+    color: rgba(226, 232, 247, 0.65);
+  }
+  .peak-tps-meta .dot {
+    width: 3px; height: 3px;
+    border-radius: 50%;
+    background: var(--muted);
+    display: inline-block;
+    opacity: 0.4;
+  }
+  .peak-tps-note {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 11px;
+    letter-spacing: 1.5px;
+    color: var(--muted);
+    opacity: 0.5;
+    margin-top: 10px;
+  }
+  @keyframes tpsPulse {
+    0%, 100% { filter: drop-shadow(0 0 0px rgba(35,243,221,0)); }
+    50%       { filter: drop-shadow(0 0 24px rgba(35,243,221,0.25)); }
+  }
+
   /* ─── Animations ─── */
   @keyframes fadeUp {
     from { opacity: 0; transform: translateY(20px); }
@@ -608,6 +695,20 @@
 </header>
 
 <div class="container">
+
+  <!-- ── Peak TPS Headline ── -->
+  <div class="peak-tps-hero">
+    <div class="peak-tps-label">Peak Recorded TPS</div>
+    <div class="peak-tps-number">120,000<span class="peak-tps-unit">TPS</span></div>
+    <div class="peak-tps-meta">
+      <span>Mar 31, 2026</span>
+      <span class="dot"></span>
+      <span>Round 31,769,984</span>
+      <span class="dot"></span>
+      <span>Reached multiple times</span>
+    </div>
+    <div class="peak-tps-note">Live on MultiversX Supernova Testnet · Explorer record archived</div>
+  </div>
 
   <!-- ── Hero Stats ── -->
   <div class="section-label">Peak performance</div>
