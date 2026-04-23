@@ -329,6 +329,200 @@
     flex-shrink: 0;
   }
 
+  /* ─── Section Divider ─── */
+  .section-divider {
+    border: none;
+    border-top: 1px solid rgba(255,255,255,0.06);
+    margin: 16px 0 48px;
+  }
+
+  /* ─── Guild Bar Chart ─── */
+  .guild-bar-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 10px;
+  }
+  .guild-bar-name {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 12px;
+    color: var(--muted);
+    width: 106px;
+    flex-shrink: 0;
+    text-align: right;
+  }
+  .guild-bar-track {
+    flex: 1;
+    height: 22px;
+    background: rgba(255,255,255,0.03);
+    position: relative;
+    overflow: hidden;
+  }
+  .guild-bar-fill {
+    height: 100%;
+    transition: width 0.8s ease;
+  }
+  .guild-bar-val {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 10px;
+    color: var(--muted);
+    width: 56px;
+    flex-shrink: 0;
+    text-align: right;
+  }
+  .guild-bar-row.top .guild-bar-name { color: var(--text); font-weight: 600; }
+  .guild-bar-row.top .guild-bar-val  { color: var(--cyan); }
+
+  /* ─── Challenge breakdown ─── */
+  .challenge-breakdown {
+    display: flex;
+    height: 36px;
+    border-radius: 2px;
+    overflow: hidden;
+    margin-bottom: 16px;
+  }
+  .ch-seg {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    color: rgba(0,0,0,0.7);
+    overflow: hidden;
+    white-space: nowrap;
+    transition: opacity 0.2s;
+  }
+  .ch-seg:hover { opacity: 0.85; }
+  .challenge-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    margin-top: 12px;
+  }
+  .ch-leg-item {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 11px;
+    color: var(--muted);
+  }
+  .ch-leg-dot {
+    width: 10px; height: 10px;
+    border-radius: 1px;
+    flex-shrink: 0;
+  }
+  .ch-leg-item strong {
+    color: var(--text);
+    margin-left: 2px;
+  }
+
+  /* ─── Winners Grid ─── */
+  .winners-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+  }
+  .winner-card {
+    background: var(--surface-2);
+    border: 1px solid rgba(255,255,255,0.07);
+    border-radius: 2px;
+    padding: 16px 18px;
+    position: relative;
+    overflow: hidden;
+  }
+  .winner-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 1px;
+  }
+  .winner-card.gold::before   { background: linear-gradient(90deg, #F5A623, transparent); }
+  .winner-card.silver::before { background: linear-gradient(90deg, #94A3B8, transparent); }
+  .winner-card.bronze::before { background: linear-gradient(90deg, #CD7F32, transparent); }
+
+  .winner-track {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+  .winner-track.defi   { color: var(--cyan); }
+  .winner-track.infra  { color: var(--purple); }
+  .winner-track.gaming { color: var(--gold); }
+
+  .winner-place {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    margin-bottom: 6px;
+  }
+  .winner-place.gold   { color: #F5A623; }
+  .winner-place.silver { color: #94A3B8; }
+  .winner-place.bronze { color: #CD7F32; }
+
+  .winner-name {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 4px;
+    line-height: 1.2;
+  }
+  .winner-team {
+    font-family: 'Barlow', sans-serif;
+    font-size: 11px;
+    color: var(--muted);
+    line-height: 1.4;
+  }
+  .winner-github {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 10px;
+    color: rgba(226,232,247,0.3);
+    text-decoration: none;
+    margin-top: 8px;
+    letter-spacing: 0.3px;
+    transition: color 0.2s;
+  }
+  .winner-github:hover { color: var(--cyan); }
+
+  /* ─── Content Stats Row ─── */
+  .content-stats {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    margin-bottom: 32px;
+  }
+  .content-stat {
+    background: var(--surface-2);
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 2px;
+    padding: 16px 18px;
+    text-align: center;
+  }
+  .content-stat-val {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 4px;
+  }
+  .content-stat-label {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+
   /* ─── Footer ─── */
   footer {
     position: relative;
@@ -455,6 +649,212 @@
         <div class="legend-item"><div class="legend-dot" style="background:var(--green)"></div>Low</div>
       </div>
       <svg id="chart-severity" width="100%" style="overflow:visible"></svg>
+    </div>
+  </div>
+
+  <hr class="section-divider">
+
+  <!-- ── Guild Wars ── -->
+  <div class="section-label">Guild Wars · community challenge results</div>
+
+  <div class="hero-stats" style="margin-bottom:32px">
+    <div class="stat-card">
+      <div class="corner"></div>
+      <div class="stat-icon">Total Operations</div>
+      <div class="stat-value">76.2<span class="unit">M</span></div>
+      <div class="stat-sub">Across <strong>5 challenges</strong> · 17 guilds</div>
+    </div>
+    <div class="stat-card">
+      <div class="corner"></div>
+      <div class="stat-icon">Top Guild</div>
+      <div class="stat-value" style="font-size:22px;padding-top:6px">RosettaStake</div>
+      <div class="stat-sub"><strong>27.8M</strong> operations · won 4/5 challenges</div>
+    </div>
+    <div class="stat-card purple">
+      <div class="corner"></div>
+      <div class="stat-icon">AI Agent Calls</div>
+      <div class="stat-value">2.0<span class="unit">M</span></div>
+      <div class="stat-sub">Challenge 5 · <strong>Agent Arena</strong></div>
+    </div>
+    <div class="stat-card purple">
+      <div class="corner"></div>
+      <div class="stat-icon">SC Calls</div>
+      <div class="stat-value">146<span class="unit">K</span></div>
+      <div class="stat-sub">Challenge 4 · <strong>Contract Storm</strong></div>
+    </div>
+  </div>
+
+  <!-- Challenge Breakdown -->
+  <div class="chart-section" style="margin-bottom:32px">
+    <div class="chart-card">
+      <div class="chart-title">OPERATIONS BY CHALLENGE</div>
+      <div class="chart-subtitle">76.2M total operations distributed across 5 challenges</div>
+      <div class="challenge-breakdown">
+        <div class="ch-seg" style="width:44.36%;background:#23F3DD">C1 · 44%</div>
+        <div class="ch-seg" style="width:29.27%;background:#A35CF6">C2 · 29%</div>
+        <div class="ch-seg" style="width:23.53%;background:#F5A623">C3 · 24%</div>
+        <div class="ch-seg" style="width:2.65%;background:#22D98A;font-size:8px">C5</div>
+        <div class="ch-seg" style="width:0.19%;background:#F04468"></div>
+      </div>
+      <div class="challenge-legend">
+        <div class="ch-leg-item"><div class="ch-leg-dot" style="background:#23F3DD"></div>C1 Transaction Sprint<strong>33.8M tx</strong></div>
+        <div class="ch-leg-item"><div class="ch-leg-dot" style="background:#A35CF6"></div>C2 Supernova Surge<strong>22.3M tx</strong></div>
+        <div class="ch-leg-item"><div class="ch-leg-dot" style="background:#F5A623"></div>C3 Crossover (cross-shard)<strong>17.9M tx</strong></div>
+        <div class="ch-leg-item"><div class="ch-leg-dot" style="background:#22D98A"></div>C5 Agent Arena<strong>2.0M calls</strong></div>
+        <div class="ch-leg-item"><div class="ch-leg-dot" style="background:#F04468"></div>C4 Contract Storm<strong>146K SC calls</strong></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Guild Leaderboard -->
+  <div class="chart-section" style="margin-bottom:32px">
+    <div class="chart-grid">
+      <div class="chart-card">
+        <div class="chart-title">GUILD LEADERBOARD · TOTAL OPERATIONS</div>
+        <div class="chart-subtitle">All 5 challenges combined</div>
+        <div id="guild-bars"></div>
+      </div>
+
+      <div class="chart-card">
+        <div class="chart-title">COMMUNITY OUTPUT</div>
+        <div class="chart-subtitle">Content & code produced during Guild Wars</div>
+        <div class="content-stats" style="grid-template-columns:repeat(2,1fr);margin-top:8px">
+          <div class="content-stat">
+            <div class="content-stat-val" style="color:var(--cyan)">281</div>
+            <div class="content-stat-label">Twitter / X Posts</div>
+          </div>
+          <div class="content-stat">
+            <div class="content-stat-val" style="color:var(--purple)">19</div>
+            <div class="content-stat-label">YouTube Videos</div>
+          </div>
+          <div class="content-stat">
+            <div class="content-stat-val">30</div>
+            <div class="content-stat-label">Reddit Posts</div>
+          </div>
+          <div class="content-stat">
+            <div class="content-stat-val">9</div>
+            <div class="content-stat-label">GitHub Orgs</div>
+          </div>
+        </div>
+        <div style="margin-top:20px;padding-top:16px;border-top:1px solid rgba(255,255,255,0.05)">
+          <div style="font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:var(--muted);margin-bottom:12px">Notable Highlights</div>
+          <ul style="list-style:none;display:flex;flex-direction:column;gap:8px">
+            <li style="font-family:'Barlow',sans-serif;font-size:12px;color:var(--muted);padding-left:12px;border-left:2px solid var(--cyan);line-height:1.5">RosettaStake accumulated <span style="color:var(--text)">27.8M operations</span> — more than the next two guilds combined</li>
+            <li style="font-family:'Barlow',sans-serif;font-size:12px;color:var(--muted);padding-left:12px;border-left:2px solid var(--purple);line-height:1.5">Disruptive Dots swept <span style="color:var(--text)">all 3 Agent Arena milestone spots</span>, earning +22 bonus points</li>
+            <li style="font-family:'Barlow',sans-serif;font-size:12px;color:var(--muted);padding-left:12px;border-left:2px solid #F5A623;line-height:1.5">Challenge 3 pushed guilds to <span style="color:var(--text)">17.9M cross-shard transactions</span> — only 3 cleared the 1M milestone</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <hr class="section-divider">
+
+  <!-- ── Build Wars Hackathon ── -->
+  <div class="section-label">Build Wars Hackathon · project submissions</div>
+
+  <div class="hero-stats" style="margin-bottom:32px">
+    <div class="stat-card">
+      <div class="corner"></div>
+      <div class="stat-icon">Total Submissions</div>
+      <div class="stat-value">23<span class="unit">projects</span></div>
+      <div class="stat-sub">Across <strong>3 tracks</strong></div>
+    </div>
+    <div class="stat-card">
+      <div class="corner"></div>
+      <div class="stat-icon">DeFi Track</div>
+      <div class="stat-value">8<span class="unit">projects</span></div>
+      <div class="stat-sub">Largest track by <strong>submissions</strong></div>
+    </div>
+    <div class="stat-card purple">
+      <div class="corner"></div>
+      <div class="stat-icon">Infra &amp; Tools</div>
+      <div class="stat-value">5<span class="unit">projects</span></div>
+      <div class="stat-sub">Including <strong>AI agents</strong> &amp; integrations</div>
+    </div>
+    <div class="stat-card purple">
+      <div class="corner"></div>
+      <div class="stat-icon">Gaming Track</div>
+      <div class="stat-value">2<span class="unit">projects</span></div>
+      <div class="stat-sub">On-chain games built <strong>from scratch</strong></div>
+    </div>
+  </div>
+
+  <div class="chart-section">
+    <div class="chart-card">
+      <div class="chart-title">WINNERS BY TRACK</div>
+      <div class="chart-subtitle">9 winning projects across DeFi, Infrastructure &amp; Tools, and Gaming</div>
+      <div class="winners-grid">
+
+        <!-- DeFi -->
+        <div class="winner-card gold">
+          <div class="winner-track defi">DeFi</div>
+          <div class="winner-place gold">🥇 1st Place</div>
+          <div class="winner-name">DCAi</div>
+          <div class="winner-team">Konstantinos Lepidas<br>SC · FE · Python Bot</div>
+          <a class="winner-github" href="https://github.com/klepi21/dcai" target="_blank">↗ github.com/klepi21/dcai</a>
+        </div>
+        <div class="winner-card silver">
+          <div class="winner-track defi">DeFi</div>
+          <div class="winner-place silver">🥈 2nd Place</div>
+          <div class="winner-name">Price Prediction Market</div>
+          <div class="winner-team">Javier</div>
+          <a class="winner-github" href="https://github.com/javier-nft/price-prediction-market-sc" target="_blank">↗ github/price-prediction</a>
+        </div>
+        <div class="winner-card bronze">
+          <div class="winner-track defi">DeFi</div>
+          <div class="winner-place bronze">🥉 3rd Place</div>
+          <div class="winner-name">Liquorix</div>
+          <div class="winner-team">Kostas Tzoumpas<br>Software Engineer</div>
+          <a class="winner-github" href="https://github.com/0xk0stas/liquorix" target="_blank">↗ github/0xk0stas/liquorix</a>
+        </div>
+
+        <!-- Infra & Tools -->
+        <div class="winner-card gold">
+          <div class="winner-track infra">Infra &amp; Tools</div>
+          <div class="winner-place gold">🥇 1st Place</div>
+          <div class="winner-name">ChatApps</div>
+          <div class="winner-team">MultiversX in ChatGPT, Claude, Cursor &amp; more<br>vLeap · Micha Vie</div>
+          <a class="winner-github" href="https://github.com/JoAiHQ/chatapps" target="_blank">↗ github/JoAiHQ/chatapps</a>
+        </div>
+        <div class="winner-card silver">
+          <div class="winner-track infra">Infra &amp; Tools</div>
+          <div class="winner-place silver">🥈 2nd Place</div>
+          <div class="winner-name">MVX Webhook Service</div>
+          <div class="winner-team">Bubu · Developer<br>LuckyBirdsLabs</div>
+          <a class="winner-github" href="https://github.com/LuckyBirdsLabs/mvx-webhook-service" target="_blank">↗ github/LuckyBirdsLabs</a>
+        </div>
+        <div class="winner-card bronze">
+          <div class="winner-track infra">Infra &amp; Tools</div>
+          <div class="winner-place bronze">🥉 3rd Place</div>
+          <div class="winner-name">Victor Protocol</div>
+          <div class="winner-team">Dinescu Valentin<br>Founder &amp; CEO</div>
+          <a class="winner-github" href="https://github.com/dnsv123/VP-POL-GOV" target="_blank">↗ github/dnsv123/VP-POL-GOV</a>
+        </div>
+
+        <!-- Gaming -->
+        <div class="winner-card gold">
+          <div class="winner-track gaming">Gaming</div>
+          <div class="winner-place gold">🥇 1st Place</div>
+          <div class="winner-name">xArcade</div>
+          <div class="winner-team">Marinov · DrTranzoc · Cuget<br>Backed by Project X</div>
+          <a class="winner-github" href="https://github.com/xarcade-gg" target="_blank">↗ github/xarcade-gg</a>
+        </div>
+        <div class="winner-card silver">
+          <div class="winner-track gaming">Gaming</div>
+          <div class="winner-place silver">🥈 2nd Place</div>
+          <div class="winner-name">First Class Citizen</div>
+          <div class="winner-team">Tikapo · CTO</div>
+        </div>
+        <div class="winner-card bronze">
+          <div class="winner-track gaming">Gaming</div>
+          <div class="winner-place bronze">🥉 3rd Place</div>
+          <div class="winner-name">Boogas</div>
+          <div class="winner-team">Joaquim · Alexander Leak · James<br>Boogas Team</div>
+          <a class="winner-github" href="https://github.com/Jotenks66/Boogas-Clash-App" target="_blank">↗ github/Jotenks66/Boogas</a>
+        </div>
+
+      </div>
     </div>
   </div>
 
@@ -849,12 +1249,48 @@ const dataSeverity = [
   { addr:'erd1s5mxe', addr2:'...2fjv', total:7,  critical:1,  high:0,  medium:6,  low:0  },
 ];
 
+// ─────────────────────────────────────────────
+// Guild Leaderboard (horizontal CSS bars)
+// ─────────────────────────────────────────────
+const guildData = [
+  { name: 'RosettaStake',   ops: 27804645 },
+  { name: 'DinoVox',        ops: 11845600 },
+  { name: 'Last Resort',    ops:  7104779 },
+  { name: 'Disruptive Dots',ops:  7000942 },
+  { name: 'Superrarebears', ops:  5530248 },
+  { name: 'OpenHeart',      ops:  4627361 },
+  { name: 'TOMMY',          ops:  3470044 },
+  { name: 'SomeGuild',      ops:  2540388 },
+];
+
+function drawGuildBars() {
+  const container = document.getElementById('guild-bars');
+  if (!container) return;
+  const max = guildData[0].ops;
+  guildData.forEach((g, i) => {
+    const pct = (g.ops / max * 100).toFixed(1);
+    const isTop = i === 0;
+    const color = i === 0 ? C.cyan : i < 3 ? 'rgba(35,243,221,0.45)' : 'rgba(35,243,221,0.2)';
+    const val = g.ops >= 1e6 ? (g.ops/1e6).toFixed(1)+'M' : (g.ops/1e3).toFixed(0)+'K';
+    const row = document.createElement('div');
+    row.className = 'guild-bar-row' + (isTop ? ' top' : '');
+    row.innerHTML = `
+      <div class="guild-bar-name">${g.name}</div>
+      <div class="guild-bar-track">
+        <div class="guild-bar-fill" style="width:${pct}%;background:${color}"></div>
+      </div>
+      <div class="guild-bar-val">${val}</div>`;
+    container.appendChild(row);
+  });
+}
+
 // ─── Render after DOM is ready
 window.addEventListener('load', () => {
   drawHBar('chart-60min', data60, C.cyan,   'rgba(35,243,221,0.28)');
   drawHBar('chart-30min', data30, C.purple, 'rgba(163,92,246,0.28)');
   drawSubmissions('chart-submissions', dataSubs);
   drawSeverity('chart-severity', dataSeverity);
+  drawGuildBars();
 });
 </script>
 </body>
