@@ -429,9 +429,11 @@
     background: var(--surface-2);
     border: 1px solid rgba(255,255,255,0.07);
     border-radius: 2px;
-    padding: 16px 18px;
+    padding: 18px 20px;
     position: relative;
     overflow: hidden;
+    display: flex;
+    flex-direction: column;
   }
   .winner-card::before {
     content: '';
@@ -456,43 +458,78 @@
   .winner-track.gaming { color: var(--gold); }
 
   .winner-place {
-    font-family: 'Orbitron', sans-serif;
+    font-family: 'Barlow Condensed', sans-serif;
     font-size: 10px;
-    font-weight: 700;
-    letter-spacing: 1px;
-    margin-bottom: 6px;
+    font-weight: 600;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 8px;
   }
   .winner-place.gold   { color: #F5A623; }
   .winner-place.silver { color: #94A3B8; }
   .winner-place.bronze { color: #CD7F32; }
 
   .winner-name {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 6px;
+    line-height: 1.2;
+  }
+  .winner-tagline {
+    font-family: 'Barlow', sans-serif;
+    font-size: 12px;
+    color: var(--muted);
+    line-height: 1.5;
+    flex: 1;
+  }
+  .winner-prize {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    margin-top: 12px;
+    padding-top: 10px;
+    border-top: 1px solid rgba(255,255,255,0.06);
+  }
+  .winner-card.gold   .winner-prize { color: #F5A623; }
+  .winner-card.silver .winner-prize { color: #94A3B8; }
+  .winner-card.bronze .winner-prize { color: #CD7F32; }
+
+  /* ─── Special Prizes ─── */
+  .special-prizes {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 10px;
+    margin-top: 16px;
+  }
+  .sp-card {
+    background: var(--surface-2);
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 2px;
+    padding: 14px 16px;
+  }
+  .sp-partner {
     font-family: 'Barlow Condensed', sans-serif;
-    font-size: 16px;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 2.5px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 6px;
+  }
+  .sp-amount {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 14px;
     font-weight: 700;
     color: var(--text);
     margin-bottom: 4px;
-    line-height: 1.2;
   }
-  .winner-team {
-    font-family: 'Barlow', sans-serif;
+  .sp-winner {
+    font-family: 'Barlow Condensed', sans-serif;
     font-size: 11px;
     color: var(--muted);
-    line-height: 1.4;
   }
-  .winner-github {
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    font-family: 'Barlow Condensed', sans-serif;
-    font-size: 10px;
-    color: rgba(226,232,247,0.3);
-    text-decoration: none;
-    margin-top: 8px;
-    letter-spacing: 0.3px;
-    transition: color 0.2s;
-  }
-  .winner-github:hover { color: var(--cyan); }
 
   /* ─── Content Stats Row ─── */
   .content-stats {
@@ -751,110 +788,144 @@
   <hr class="section-divider">
 
   <!-- ── Build Wars Hackathon ── -->
-  <div class="section-label">Build Wars Hackathon · project submissions</div>
+  <div class="section-label">Build Wars Hackathon · Dec 16, 2025 – Jan 13, 2026</div>
 
   <div class="hero-stats" style="margin-bottom:32px">
     <div class="stat-card">
       <div class="corner"></div>
-      <div class="stat-icon">Total Submissions</div>
-      <div class="stat-value">23<span class="unit">projects</span></div>
-      <div class="stat-sub">Across <strong>3 tracks</strong></div>
+      <div class="stat-icon">Prize Pool</div>
+      <div class="stat-value">$60<span class="unit">K+</span></div>
+      <div class="stat-sub">Across tracks &amp; <strong>ecosystem partners</strong></div>
     </div>
     <div class="stat-card">
       <div class="corner"></div>
-      <div class="stat-icon">DeFi Track</div>
-      <div class="stat-value">8<span class="unit">projects</span></div>
-      <div class="stat-sub">Largest track by <strong>submissions</strong></div>
+      <div class="stat-icon">Official Tracks</div>
+      <div class="stat-value">3<span class="unit">tracks</span></div>
+      <div class="stat-sub">DeFi · Gaming · <strong>Infra &amp; Tools</strong></div>
     </div>
     <div class="stat-card purple">
       <div class="corner"></div>
-      <div class="stat-icon">Infra &amp; Tools</div>
-      <div class="stat-value">5<span class="unit">projects</span></div>
-      <div class="stat-sub">Including <strong>AI agents</strong> &amp; integrations</div>
+      <div class="stat-icon">Special Prizes</div>
+      <div class="stat-value">10<span class="unit">awards</span></div>
+      <div class="stat-sub">From <strong>ecosystem partners</strong> · Tencent, CertiK &amp; more</div>
     </div>
     <div class="stat-card purple">
       <div class="corner"></div>
-      <div class="stat-icon">Gaming Track</div>
-      <div class="stat-value">2<span class="unit">projects</span></div>
-      <div class="stat-sub">On-chain games built <strong>from scratch</strong></div>
+      <div class="stat-icon">Winners Announced</div>
+      <div class="stat-value">9<span class="unit">projects</span></div>
+      <div class="stat-sub">3 winners per track · <strong>judged by MultiversX Labs</strong></div>
     </div>
   </div>
 
   <div class="chart-section">
     <div class="chart-card">
-      <div class="chart-title">WINNERS BY TRACK</div>
-      <div class="chart-subtitle">9 winning projects across DeFi, Infrastructure &amp; Tools, and Gaming</div>
+      <div class="chart-title">TRACK WINNERS</div>
+      <div class="chart-subtitle">$3,000 prize pool per track · 3 placements each</div>
       <div class="winners-grid">
 
         <!-- DeFi -->
         <div class="winner-card gold">
           <div class="winner-track defi">DeFi</div>
-          <div class="winner-place gold">🥇 1st Place</div>
+          <div class="winner-place gold">1st Place</div>
           <div class="winner-name">DCAi</div>
-          <div class="winner-team">Konstantinos Lepidas<br>SC · FE · Python Bot</div>
-          <a class="winner-github" href="https://github.com/klepi21/dcai" target="_blank">↗ github.com/klepi21/dcai</a>
+          <div class="winner-tagline">AI-validated onchain dollar-cost averaging.</div>
+          <div class="winner-prize">$1,500</div>
         </div>
         <div class="winner-card silver">
           <div class="winner-track defi">DeFi</div>
-          <div class="winner-place silver">🥈 2nd Place</div>
-          <div class="winner-name">Price Prediction Market</div>
-          <div class="winner-team">Javier</div>
-          <a class="winner-github" href="https://github.com/javier-nft/price-prediction-market-sc" target="_blank">↗ github/price-prediction</a>
+          <div class="winner-place silver">2nd Place</div>
+          <div class="winner-name">Liquorix</div>
+          <div class="winner-tagline">Automated liquidation protection for leveraged staking.</div>
+          <div class="winner-prize">$1,000</div>
         </div>
         <div class="winner-card bronze">
           <div class="winner-track defi">DeFi</div>
-          <div class="winner-place bronze">🥉 3rd Place</div>
-          <div class="winner-name">Liquorix</div>
-          <div class="winner-team">Kostas Tzoumpas<br>Software Engineer</div>
-          <a class="winner-github" href="https://github.com/0xk0stas/liquorix" target="_blank">↗ github/0xk0stas/liquorix</a>
+          <div class="winner-place bronze">3rd Place</div>
+          <div class="winner-name">Price Prediction Market</div>
+          <div class="winner-tagline">Trustless onchain price prediction market.</div>
+          <div class="winner-prize">$500</div>
         </div>
 
         <!-- Infra & Tools -->
         <div class="winner-card gold">
           <div class="winner-track infra">Infra &amp; Tools</div>
-          <div class="winner-place gold">🥇 1st Place</div>
+          <div class="winner-place gold">1st Place</div>
           <div class="winner-name">ChatApps</div>
-          <div class="winner-team">MultiversX in ChatGPT, Claude, Cursor &amp; more<br>vLeap · Micha Vie</div>
-          <a class="winner-github" href="https://github.com/JoAiHQ/chatapps" target="_blank">↗ github/JoAiHQ/chatapps</a>
+          <div class="winner-tagline">MultiversX integrated into ChatGPT, Claude, Cursor &amp; more.</div>
+          <div class="winner-prize">$1,500</div>
         </div>
         <div class="winner-card silver">
           <div class="winner-track infra">Infra &amp; Tools</div>
-          <div class="winner-place silver">🥈 2nd Place</div>
+          <div class="winner-place silver">2nd Place</div>
           <div class="winner-name">MVX Webhook Service</div>
-          <div class="winner-team">Bubu · Developer<br>LuckyBirdsLabs</div>
-          <a class="winner-github" href="https://github.com/LuckyBirdsLabs/mvx-webhook-service" target="_blank">↗ github/LuckyBirdsLabs</a>
+          <div class="winner-tagline">Real-time blockchain event webhooks for MultiversX.</div>
+          <div class="winner-prize">$1,000</div>
         </div>
         <div class="winner-card bronze">
           <div class="winner-track infra">Infra &amp; Tools</div>
-          <div class="winner-place bronze">🥉 3rd Place</div>
+          <div class="winner-place bronze">3rd Place</div>
           <div class="winner-name">Victor Protocol</div>
-          <div class="winner-team">Dinescu Valentin<br>Founder &amp; CEO</div>
-          <a class="winner-github" href="https://github.com/dnsv123/VP-POL-GOV" target="_blank">↗ github/dnsv123/VP-POL-GOV</a>
+          <div class="winner-tagline">On-chain governance and policy tooling.</div>
+          <div class="winner-prize">$500</div>
         </div>
 
         <!-- Gaming -->
         <div class="winner-card gold">
           <div class="winner-track gaming">Gaming</div>
-          <div class="winner-place gold">🥇 1st Place</div>
+          <div class="winner-place gold">1st Place</div>
           <div class="winner-name">xArcade</div>
-          <div class="winner-team">Marinov · DrTranzoc · Cuget<br>Backed by Project X</div>
-          <a class="winner-github" href="https://github.com/xarcade-gg" target="_blank">↗ github/xarcade-gg</a>
+          <div class="winner-tagline">Shared onchain platform for composable games.</div>
+          <div class="winner-prize">$1,500</div>
         </div>
         <div class="winner-card silver">
           <div class="winner-track gaming">Gaming</div>
-          <div class="winner-place silver">🥈 2nd Place</div>
+          <div class="winner-place silver">2nd Place</div>
           <div class="winner-name">First Class Citizen</div>
-          <div class="winner-team">Tikapo · CTO</div>
+          <div class="winner-tagline">Onchain aviation management game with token utility.</div>
+          <div class="winner-prize">$1,000</div>
         </div>
         <div class="winner-card bronze">
           <div class="winner-track gaming">Gaming</div>
-          <div class="winner-place bronze">🥉 3rd Place</div>
+          <div class="winner-place bronze">3rd Place</div>
           <div class="winner-name">Boogas</div>
-          <div class="winner-team">Joaquim · Alexander Leak · James<br>Boogas Team</div>
-          <a class="winner-github" href="https://github.com/Jotenks66/Boogas-Clash-App" target="_blank">↗ github/Jotenks66/Boogas</a>
+          <div class="winner-tagline">Walletless onchain game with account abstraction.</div>
+          <div class="winner-prize">$500</div>
         </div>
 
       </div>
+
+      <!-- Special Prizes -->
+      <div style="margin-top:28px;padding-top:24px;border-top:1px solid rgba(255,255,255,0.06)">
+        <div style="font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:var(--muted);margin-bottom:14px">Special Prizes · Ecosystem Partners</div>
+        <div class="special-prizes">
+          <div class="sp-card">
+            <div class="sp-partner">Tencent</div>
+            <div class="sp-amount">$30,000</div>
+            <div class="sp-winner">DCAi · xArcade · ChatApps</div>
+          </div>
+          <div class="sp-card">
+            <div class="sp-partner">CertiK</div>
+            <div class="sp-amount">$8,000</div>
+            <div class="sp-winner">Audit Credits · Grand Prize</div>
+          </div>
+          <div class="sp-card">
+            <div class="sp-partner">TRBE</div>
+            <div class="sp-amount">$5,000</div>
+            <div class="sp-winner">Advisory Credits · xArcade</div>
+          </div>
+          <div class="sp-card">
+            <div class="sp-partner">xExchange</div>
+            <div class="sp-amount">$1,000</div>
+            <div class="sp-winner">DeFi Integration · DCAi</div>
+          </div>
+          <div class="sp-card">
+            <div class="sp-partner">XOXNO · FOXSY · AI Nexus</div>
+            <div class="sp-amount">$4,000+</div>
+            <div class="sp-winner">Innovation &amp; integration prizes</div>
+          </div>
+        </div>
+      </div>
+
     </div>
   </div>
 
