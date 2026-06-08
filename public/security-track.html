@@ -1,0 +1,348 @@
+<!doctype html>
+<!--
+  bon-security-track.html
+  EXPLAINS: How the Battle of Nodes "Security" track converted adversarial bug reports
+            into a $50,000 reward pool, scored by impact and paid pro-rata by points.
+  AUDIENCE: MultiversX team + program participants. A results / highlights graphic.
+  SOURCES:  GENERAL_SUBMISSION_SUMMARY_UPDATED.md (finalized after the 2026-06-05 platform
+            reconciliation) and the verified payout workbook security-track-payouts.xlsx.
+            All figures source-grounded. Severity bands per the BoN Bug Reporting & Scoring Policy
+            (Low 10-79, Medium 80-249, High 250-699, Critical 700-1000).
+  LOGO:     real brand asset, inlined from media-kit/MultiversX Logo/multiversx-light.svg + x-mint.svg.
+  FONT:     Roobert PRO (SemiBold 600 workhorse) via @font-face.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Battle of Nodes — Security Track Results</title>
+<style>
+  @font-face { font-family:"Roobert PRO"; src:url("/fonts/RoobertPRO-Regular.otf") format("opentype"); font-weight:400; font-display:swap; }
+  @font-face { font-family:"Roobert PRO"; src:url("/fonts/RoobertPRO-Medium.otf") format("opentype"); font-weight:500; font-display:swap; }
+  @font-face { font-family:"Roobert PRO"; src:url("/fonts/RoobertPRO-SemiBold.otf") format("opentype"); font-weight:600; font-display:swap; }
+  @font-face { font-family:"Roobert PRO"; src:url("/fonts/RoobertPRO-Bold.otf") format("opentype"); font-weight:700; font-display:swap; }
+  @font-face { font-family:"Roobert PRO"; src:url("/fonts/RoobertPRO-Heavy.otf") format("opentype"); font-weight:900; font-display:swap; }
+
+  :root{
+    --bg:#06070A; --surface:#0E1117; --surface-2:#141821; --surface-3:#1a1f2b;
+    --border:#1E2330; --border-soft:#161B25;
+    --mint:#23F7DD; --mint-dim:#1ec8b4;
+    --text:#F4F6FA; --text-dim:#9BA3B4; --text-faint:#6B7385;
+    --crit:#FF6B9D; --high:#F5B544; --med:#5B8DEF; --low:#A78BFA;
+    --mono:"SF Mono",ui-monospace,"Roboto Mono",Menlo,monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    background:#000; color:var(--text);
+    font-family:"Roobert PRO",-apple-system,BlinkMacSystemFont,sans-serif;
+    -webkit-font-smoothing:antialiased; line-height:1.5;
+    display:flex; flex-direction:column; align-items:center; gap:14px; padding:40px 20px 70px;
+  }
+  .cap{font-family:var(--mono);font-size:12px;color:#5b6273;letter-spacing:.4px;margin-top:26px}
+  .cap:first-of-type{margin-top:0}
+
+  /* ============ artboard shell ============ */
+  .art{position:relative; overflow:hidden; background:var(--bg); border:1px solid #11141c}
+  .art .glowA,.art .glowB{position:absolute;border-radius:50%;pointer-events:none}
+  .art .glowA{background:radial-gradient(circle,rgba(35,247,221,.13) 0%,rgba(35,247,221,0) 62%)}
+  .art .glowB{background:radial-gradient(circle,rgba(91,141,239,.09) 0%,rgba(91,141,239,0) 62%)}
+  .stars{position:absolute;inset:0;pointer-events:none;opacity:.5}
+  .stars i{position:absolute;width:2px;height:2px;border-radius:50%;background:#fff;opacity:0;animation:tw 4s ease-in-out infinite}
+  @keyframes tw{0%,100%{opacity:.06}50%{opacity:.32}}
+  .xmark-bg{position:absolute;pointer-events:none;opacity:.05;z-index:1}
+  .pad{position:relative;z-index:2;height:100%;display:flex;flex-direction:column}
+
+  /* ============ atoms ============ */
+  .eyebrow{font-size:12px;letter-spacing:2.6px;text-transform:uppercase;color:var(--mint);font-weight:600;display:flex;align-items:center;gap:10px}
+  .eyebrow svg{height:15px;width:auto;display:block}
+  .h1{font-weight:900;letter-spacing:-1.6px;line-height:1.02;color:var(--text)}
+  .h1 .m{color:var(--mint)}
+  .sub{color:var(--text-dim);line-height:1.5}
+  .seclabel{font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--text-faint);font-weight:600}
+
+  /* stat tiles */
+  .tiles{display:grid;gap:1px;background:var(--border);border:1px solid var(--border);border-radius:14px;overflow:hidden}
+  .tile{background:var(--surface);padding:18px 20px 16px;position:relative}
+  .tile .n{font-weight:900;letter-spacing:-1.5px;line-height:1;display:flex;align-items:baseline;gap:4px;color:var(--text)}
+  .tile .n .u{font-size:.44em;font-weight:600;letter-spacing:0;color:var(--text-dim)}
+  .tile .l{font-size:13px;color:var(--text-dim);margin-top:9px;font-weight:500}
+  .tile.hero{background:linear-gradient(160deg,rgba(35,247,221,.07),var(--surface))}
+  .tile.hero .n{color:var(--mint)}
+  .tile.hero::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--mint)}
+
+  /* severity bars */
+  .sev{display:grid;grid-template-columns:auto 1fr;gap:6px 16px;align-items:center}
+  .sev-l{display:flex;align-items:center;gap:9px;font-weight:600;font-size:16px}
+  .sev-l .dot{width:9px;height:9px;border-radius:50%}
+  .sev-l .rng{font-family:var(--mono);font-size:10px;color:var(--text-faint);font-weight:400;letter-spacing:.3px}
+  .sev-track{height:14px;border-radius:7px;background:var(--surface-2);position:relative;overflow:hidden;border:1px solid var(--border)}
+  .sev-fill{position:absolute;left:0;top:0;bottom:0;border-radius:7px}
+  .sev-meta{grid-column:2;display:flex;gap:7px;align-items:baseline;font-size:13px;color:var(--text-dim);margin-top:-1px}
+  .sev-meta .f{color:var(--text);font-weight:600}
+  .sev-meta .p{margin-left:auto;font-family:var(--mono);font-size:12px;color:var(--text-faint)}
+  .c-crit{background:var(--crit)} .c-high{background:var(--high)} .c-med{background:var(--med)} .c-low{background:var(--low)}
+  .sev-fill.c-crit{box-shadow:0 0 14px rgba(255,107,157,.45)}
+  .sev-fill.c-high{box-shadow:0 0 14px rgba(245,181,68,.4)}
+  .sev-fill.c-med{box-shadow:0 0 14px rgba(91,141,239,.4)}
+  .sev-fill.c-low{box-shadow:0 0 14px rgba(167,139,250,.4)}
+
+  /* outcome funnel bar */
+  .funnel{display:flex;height:26px;border-radius:8px;overflow:hidden;border:1px solid var(--border)}
+  .funnel span{display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;color:#06070A;white-space:nowrap}
+  .f-find{background:var(--mint)} .f-part{background:var(--mint-dim)} .f-dup{background:#39414f;color:var(--text-dim)} .f-rej{background:var(--surface-2);color:var(--text-faint)}
+  .leg{display:flex;flex-wrap:wrap;gap:7px 16px;font-size:12px;color:var(--text-dim)}
+  .leg i{display:inline-flex;align-items:center;gap:7px}
+  .leg i b{width:9px;height:9px;border-radius:2px;display:inline-block}
+  .leg i strong{color:var(--text);font-weight:600}
+
+  /* leaderboard + top findings (wide) */
+  .lb{display:flex;flex-direction:column;gap:7px}
+  .lbrow{display:grid;grid-template-columns:20px 1fr auto;align-items:center;gap:11px;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px 13px}
+  .lbrow .rk{font-family:var(--mono);font-size:12px;color:var(--text-faint)}
+  .lbrow .nm{font-weight:600;font-size:14px;color:var(--text)}
+  .lbrow .nm .ad{font-family:var(--mono);font-size:11px;color:var(--text-faint);font-weight:400}
+  .lbrow .pay{font-weight:700;font-size:15px;color:var(--mint);letter-spacing:-.3px}
+  .lbrow .pay .pt{display:block;font-family:var(--mono);font-size:10px;color:var(--text-faint);font-weight:400;text-align:right;letter-spacing:0}
+  .lbrow:first-child{border-color:rgba(35,247,221,.32);background:linear-gradient(160deg,rgba(35,247,221,.06),var(--surface))}
+
+  .callout{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:15px 17px}
+  .callout .big{font-weight:900;font-size:34px;letter-spacing:-1px;color:var(--mint);line-height:1}
+  .callout .cl{font-size:12.5px;color:var(--text-dim);margin-top:7px;line-height:1.45}
+  .callout .cl b{color:var(--text);font-weight:600}
+
+  .foot{display:flex;justify-content:space-between;align-items:flex-end;border-top:1px solid var(--border-soft);padding-top:15px;margin-top:auto}
+  .brand{display:flex;align-items:center;gap:11px}
+  .brand .logo svg{height:22px;width:auto;display:block}
+  .brand .tag{font-size:11px;color:var(--text-faint);font-weight:500;border-left:1px solid var(--border);padding-left:11px}
+  .src{font-family:var(--mono);font-size:10.5px;color:var(--text-faint);text-align:right;line-height:1.55}
+
+  /* ===================== SQUARE 1080 ===================== */
+  #sq{width:1080px;height:1080px}
+  #sq .glowA{width:740px;height:740px;top:-330px;right:-220px}
+  #sq .glowB{width:600px;height:600px;bottom:-280px;left:-200px}
+  #sq .xmark-bg{width:520px;bottom:-90px;right:-120px}
+  #sq .pad{padding:62px 64px 52px}
+  #sq .h1{font-size:60px;margin:16px 0 14px}
+  #sq .sub{font-size:20px;max-width:840px}
+  #sq .tiles{grid-template-columns:repeat(4,1fr);margin:30px 0 6px}
+  #sq .tile .n{font-size:42px}
+  #sq .sevwrap{margin-top:30px;display:flex;flex-direction:column;gap:19px}
+  #sq .sevhead{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:3px}
+  #sq .partnote{font-size:12.5px;color:var(--text-faint);margin-top:3px}
+  #sq .partnote b{color:var(--text-dim);font-weight:600}
+  #sq .fwrap{margin-top:26px;display:flex;flex-direction:column;gap:11px}
+
+  /* ===================== WIDE 1600×900 ===================== */
+  #wide{width:1600px;height:900px}
+  #wide .glowA{width:680px;height:680px;top:-320px;right:-160px}
+  #wide .glowB{width:560px;height:560px;bottom:-280px;left:-180px}
+  #wide .xmark-bg{width:440px;top:-70px;right:-90px}
+  #wide .pad{padding:54px 58px 46px}
+  #wide .grid{display:grid;grid-template-columns:1fr 1.18fr;gap:46px;flex:1;min-height:0}
+  #wide .colL{display:flex;flex-direction:column}
+  #wide .colR{display:flex;flex-direction:column}
+  #wide .h1{font-size:50px;margin:15px 0 13px}
+  #wide .sub{font-size:18px;max-width:560px}
+  #wide .tiles{grid-template-columns:1fr 1fr;margin:26px 0}
+  #wide .tile .n{font-size:40px}
+  #wide .fwrap{margin-top:6px;display:flex;flex-direction:column;gap:10px}
+  #wide .seclabel.r{margin-bottom:16px}
+  #wide .sevwrap{display:flex;flex-direction:column;gap:17px;margin-bottom:22px}
+  #wide .partnote{font-size:12px;color:var(--text-faint);margin-top:-7px;margin-bottom:4px}
+  #wide .partnote b{color:var(--text-dim);font-weight:600}
+  #wide .splitR{display:grid;grid-template-columns:1.25fr 1fr;gap:18px;flex:1;min-height:0}
+</style>
+</head>
+<body>
+
+<!-- ========================= SQUARE ========================= -->
+<div class="cap">bon-security-track · 1080 × 1080 · X / square</div>
+<div class="art" id="sq">
+  <div class="glowA"></div><div class="glowB"></div>
+  <svg class="xmark-bg" viewBox="0 0 192 148" xmlns="http://www.w3.org/2000/svg"><path fill="#23F7DD" d="M106.4,74L192,28L177.6,0.2L99.2,32.1c-2,0.8-4.3,0.8-6.3,0L14.5,0.2L0.1,28l85.6,46l-85.6,46l14.4,27.8l78.4-31.9c2-0.8,4.3-0.8,6.3,0l78.4,31.9l14.4-27.8L106.4,74z"/></svg>
+  <div class="stars">
+    <i style="top:8%;left:14%"></i><i style="top:16%;left:80%;animation-delay:1.2s"></i>
+    <i style="top:30%;left:46%;animation-delay:2s"></i><i style="top:60%;left:7%;animation-delay:.6s"></i>
+    <i style="top:73%;left:90%;animation-delay:1.7s"></i><i style="top:86%;left:30%;animation-delay:2.6s"></i>
+    <i style="top:44%;left:95%;animation-delay:.3s"></i><i style="top:11%;left:58%;animation-delay:3.1s"></i>
+  </div>
+  <div class="pad">
+    <div class="eyebrow">
+      <svg viewBox="0 0 192 148" xmlns="http://www.w3.org/2000/svg"><path fill="#23F7DD" d="M106.4,74L192,28L177.6,0.2L99.2,32.1c-2,0.8-4.3,0.8-6.3,0L14.5,0.2L0.1,28l85.6,46l-85.6,46l14.4,27.8l78.4-31.9c2-0.8,4.3-0.8,6.3,0l78.4,31.9l14.4-27.8L106.4,74z"/></svg>
+      Battle of Nodes · Security track
+    </div>
+    <h1 class="h1">From 192 reports<br>to <span class="m">$50,000</span> in rewards.</h1>
+    <p class="sub">Adversarial testers probed the Supernova upgrade. Every report was scored by validated impact, then a fixed pool paid out pro-rata by points.</p>
+
+    <div class="tiles">
+      <div class="tile hero"><div class="n"><span class="u">$</span>50,000</div><div class="l">Security pool</div></div>
+      <div class="tile"><div class="n">69</div><div class="l">Findings accepted</div></div>
+      <div class="tile"><div class="n">11</div><div class="l">Researchers paid</div></div>
+      <div class="tile"><div class="n">26,794</div><div class="l">Points awarded</div></div>
+    </div>
+
+    <div class="sevwrap">
+      <div class="sevhead">
+        <span class="seclabel">Accepted findings by assessed severity</span>
+        <span class="seclabel" style="color:var(--text-faint)">share of points pool</span>
+      </div>
+      <div class="sev">
+        <div class="sev-l"><span class="dot c-crit"></span>Critical <span class="rng">700-1000</span></div>
+        <div class="sev-track"><div class="sev-fill c-crit" style="width:55.1%"></div></div>
+        <div class="sev-meta"><span class="f">16</span> findings<span>·</span><span class="f">14,764</span> pts<span class="p">55.1%</span></div>
+      </div>
+      <div class="sev">
+        <div class="sev-l"><span class="dot c-high"></span>High <span class="rng">250-699</span></div>
+        <div class="sev-track"><div class="sev-fill c-high" style="width:28.0%"></div></div>
+        <div class="sev-meta"><span class="f">13</span> findings<span>·</span><span class="f">7,497</span> pts<span class="p">28.0%</span></div>
+      </div>
+      <div class="sev">
+        <div class="sev-l"><span class="dot c-med"></span>Medium <span class="rng">80-249</span></div>
+        <div class="sev-track"><div class="sev-fill c-med" style="width:11.4%"></div></div>
+        <div class="sev-meta"><span class="f">17</span> findings<span>·</span><span class="f">3,060</span> pts<span class="p">11.4%</span></div>
+      </div>
+      <div class="sev">
+        <div class="sev-l"><span class="dot c-low"></span>Low <span class="rng">10-79</span></div>
+        <div class="sev-track"><div class="sev-fill c-low" style="width:3.9%"></div></div>
+        <div class="sev-meta"><span class="f">23</span> findings<span>·</span><span class="f">1,050</span> pts<span class="p">3.9%</span></div>
+      </div>
+      <div class="partnote">Plus <b>8 partial-credit duplicates</b> worth 423 pts. 16 Critical findings carried more than half the pool.</div>
+    </div>
+
+    <div class="fwrap">
+      <span class="seclabel">192 submissions, by outcome</span>
+      <div class="funnel">
+        <span class="f-find" style="width:35.9%">69 findings</span>
+        <span class="f-part" style="width:4.2%"></span>
+        <span class="f-dup" style="width:10.9%">21 dup</span>
+        <span class="f-rej" style="width:49.0%">94 rejected / invalid</span>
+      </div>
+      <div class="leg">
+        <i><b class="c-mint" style="background:var(--mint)"></b>Accepted finding <strong>69</strong></i>
+        <i><b style="background:var(--mint-dim)"></b>Partial-credit dup <strong>8</strong></i>
+        <i><b style="background:#39414f"></b>Duplicate, no credit <strong>21</strong></i>
+        <i><b style="background:var(--surface-2)"></b>Rejected / invalid <strong>94</strong></i>
+      </div>
+    </div>
+
+    <div class="foot">
+      <div class="brand">
+        <span class="logo"><svg width="446" height="73" viewBox="0 0 446 73" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M31.0235 58.8142L48.5197 16.6455H61.5653V71.6255H52.965V25.0571L33.6348 71.9192H27.4487L8.31016 25.3508V71.6255H0V16.6455H13.6258L31.0235 58.8142V58.8142Z" fill="white"/><path d="M108.65 62.7266C106.811 66.6387 101.501 72.7064 92.7033 72.7064C80.8129 72.7064 72.6943 63.6077 72.6943 51.0845V23.3008H81.5848V49.4221C81.5848 58.5208 86.7088 64.4887 94.8274 64.4887C102.946 64.4887 108.65 58.3269 108.65 49.4221V23.3008H117.448V71.6314H108.65V62.7266V62.7266Z" fill="white"/><path d="M181.619 71.6251H170.309C159.19 71.6251 153.59 66.2446 153.59 55.4835V31.3182H143.096V23.2945H153.59V11.1094H162.388V23.2945H181.619V31.3182H162.388V53.4277C162.388 60.4706 164.61 63.4075 172.247 63.4075H181.625V71.6251H181.619Z" fill="white"/><path d="M232.575 72.5069H225.519L202.997 23.3008H212.856L229.285 60.5711L245.621 23.3008H254.703L232.57 72.5069H232.575Z" fill="white"/><path d="M303.326 48.541H263.604C264.086 57.54 270.469 64.5884 279.841 64.5884C289.213 64.5884 293.275 59.4018 294.047 57.8392H302.746C301.974 62.045 295.881 72.806 279.841 72.806C265.055 72.806 254.708 61.6515 254.708 47.466C254.708 33.2805 265.049 22.126 278.965 22.126C292.881 22.126 303.321 32.6931 303.321 48.541H303.326ZM264.184 41.1047H293.565C291.343 33.7681 286.219 29.7562 278.971 29.7562C271.241 29.7562 266.018 34.0618 264.184 41.1047V41.1047Z" fill="white"/><path d="M320.651 71.625H311.854V23.3H320.651V32.2047C322.003 28.6805 326.065 22.9121 337.277 22.9121H342.434V31.8169H337.085C324.811 31.8169 320.656 35.729 320.656 44.34V71.6361L320.651 71.625Z" fill="white"/><path d="M361.784 50.3969C352.603 49.3219 346.127 44.9166 346.127 36.0174C346.127 27.1182 354.054 21.9316 365.747 21.9316C381.891 21.9316 387.109 30.3432 388.652 35.2361H379.275C378.213 33.9616 374.638 29.5619 365.742 29.5619C358.494 29.5619 354.82 32.2051 354.82 35.7238C354.82 39.2424 357.24 41.2982 362.939 41.9853C366.705 42.473 369.027 42.6724 373.182 43.1601C384.492 44.6285 389.32 49.5159 389.32 58.4206C389.32 66.5441 381.974 72.9996 368.446 72.9996C351.629 72.9996 345.733 62.5322 344.671 58.1325H354.049C354.53 59.6951 358.395 65.1754 368.452 65.1754C376.57 65.1754 380.534 62.2385 380.534 58.4262C380.534 54.6138 378.503 52.3585 372.027 51.5772L361.784 50.4025V50.3969Z" fill="white"/><path d="M188.197 0H197.378V13.9916H188.197V0ZM188.389 23.2842H197.186V71.6148H188.389V23.2842Z" fill="white"/><path d="M128.578 8.43945H137.376V71.615H128.578V8.43945Z" fill="white"/><path d="M424.639 29.4626L446 17.9923L442.409 11.0547L422.849 19.0063C422.345 19.2114 421.787 19.2114 421.283 19.0063L401.723 11.0547L398.132 17.9923L419.493 29.4626L398.132 40.933L401.723 47.8706L421.283 39.9189C421.787 39.7139 422.345 39.7139 422.849 39.9189L442.409 47.8706L446 40.933L424.639 29.4626Z" fill="#23F7DD"/></svg></span>
+        <span class="tag">Battle of Nodes</span>
+      </div>
+      <div class="src">Source: BoN security review, finalized Jun 2026<br>Scored by validated impact. Pool pro-rata by points.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ========================= WIDE 16:9 ========================= -->
+<div class="cap">bon-security-track · 1600 × 900 · 16:9</div>
+<div class="art" id="wide">
+  <div class="glowA"></div><div class="glowB"></div>
+  <svg class="xmark-bg" viewBox="0 0 192 148" xmlns="http://www.w3.org/2000/svg"><path fill="#23F7DD" d="M106.4,74L192,28L177.6,0.2L99.2,32.1c-2,0.8-4.3,0.8-6.3,0L14.5,0.2L0.1,28l85.6,46l-85.6,46l14.4,27.8l78.4-31.9c2-0.8,4.3-0.8,6.3,0l78.4,31.9l14.4-27.8L106.4,74z"/></svg>
+  <div class="stars">
+    <i style="top:10%;left:20%"></i><i style="top:22%;left:85%;animation-delay:1.2s"></i>
+    <i style="top:40%;left:52%;animation-delay:2s"></i><i style="top:70%;left:12%;animation-delay:.6s"></i>
+    <i style="top:80%;left:78%;animation-delay:1.7s"></i><i style="top:30%;left:67%;animation-delay:3.1s"></i>
+  </div>
+  <div class="pad">
+    <div class="grid">
+      <!-- LEFT -->
+      <div class="colL">
+        <div class="eyebrow">
+          <svg viewBox="0 0 192 148" xmlns="http://www.w3.org/2000/svg"><path fill="#23F7DD" d="M106.4,74L192,28L177.6,0.2L99.2,32.1c-2,0.8-4.3,0.8-6.3,0L14.5,0.2L0.1,28l85.6,46l-85.6,46l14.4,27.8l78.4-31.9c2-0.8,4.3-0.8,6.3,0l78.4,31.9l14.4-27.8L106.4,74z"/></svg>
+          Battle of Nodes · Security track
+        </div>
+        <h1 class="h1">The $50,000<br>security payout.</h1>
+        <p class="sub">Reports were scored 1 to 1000 by validated impact. A fixed pool paid out pro-rata by points, residual to the top earner so it ties out exactly.</p>
+
+        <div class="tiles">
+          <div class="tile hero"><div class="n"><span class="u">$</span>50,000</div><div class="l">Security pool</div></div>
+          <div class="tile"><div class="n">26,794</div><div class="l">Points awarded</div></div>
+          <div class="tile"><div class="n">69</div><div class="l">Distinct findings</div></div>
+          <div class="tile"><div class="n">11<span class="u" style="font-size:.5em"> / 25</span></div><div class="l">Researchers paid</div></div>
+        </div>
+
+        <div class="fwrap">
+          <span class="seclabel">192 submissions, by outcome</span>
+          <div class="funnel">
+            <span class="f-find" style="width:35.9%">69 findings</span>
+            <span class="f-part" style="width:4.2%"></span>
+            <span class="f-dup" style="width:10.9%">21 dup</span>
+            <span class="f-rej" style="width:49.0%">94 rejected / invalid</span>
+          </div>
+          <div class="leg">
+            <i><b style="background:var(--mint)"></b>Finding <strong>69</strong></i>
+            <i><b style="background:var(--mint-dim)"></b>Partial dup <strong>8</strong></i>
+            <i><b style="background:#39414f"></b>No-credit dup <strong>21</strong></i>
+            <i><b style="background:var(--surface-2)"></b>Rejected <strong>94</strong></i>
+          </div>
+        </div>
+      </div>
+
+      <!-- RIGHT -->
+      <div class="colR">
+        <span class="seclabel r">Accepted findings by assessed severity</span>
+        <div class="sevwrap">
+          <div class="sev">
+            <div class="sev-l"><span class="dot c-crit"></span>Critical <span class="rng">700-1000 pts</span></div>
+            <div class="sev-track"><div class="sev-fill c-crit" style="width:55.1%"></div></div>
+            <div class="sev-meta"><span class="f">16</span> findings<span>·</span><span class="f">14,764</span> pts<span class="p">55.1%</span></div>
+          </div>
+          <div class="sev">
+            <div class="sev-l"><span class="dot c-high"></span>High <span class="rng">250-699 pts</span></div>
+            <div class="sev-track"><div class="sev-fill c-high" style="width:28.0%"></div></div>
+            <div class="sev-meta"><span class="f">13</span> findings<span>·</span><span class="f">7,497</span> pts<span class="p">28.0%</span></div>
+          </div>
+          <div class="sev">
+            <div class="sev-l"><span class="dot c-med"></span>Medium <span class="rng">80-249 pts</span></div>
+            <div class="sev-track"><div class="sev-fill c-med" style="width:11.4%"></div></div>
+            <div class="sev-meta"><span class="f">17</span> findings<span>·</span><span class="f">3,060</span> pts<span class="p">11.4%</span></div>
+          </div>
+          <div class="sev">
+            <div class="sev-l"><span class="dot c-low"></span>Low <span class="rng">10-79 pts</span></div>
+            <div class="sev-track"><div class="sev-fill c-low" style="width:3.9%"></div></div>
+            <div class="sev-meta"><span class="f">23</span> findings<span>·</span><span class="f">1,050</span> pts<span class="p">3.9%</span></div>
+          </div>
+        </div>
+        <div class="partnote">Plus <b>8 partial-credit duplicates</b> (423 pts). Reviewer reassessed claimed severity on most reports: 11 up, 25 down, 33 unchanged.</div>
+
+        <div class="splitR">
+          <div>
+            <span class="seclabel">Top earners</span>
+            <div class="lb" style="margin-top:14px">
+              <div class="lbrow"><span class="rk">1</span><span class="nm">RosettaStake</span><span class="pay">$24,865.64<span class="pt">13,325 pts</span></span></div>
+              <div class="lbrow"><span class="rk">2</span><span class="nm">LazyCompany</span><span class="pay">$11,080.84<span class="pt">5,938 pts</span></span></div>
+              <div class="lbrow"><span class="rk">3</span><span class="nm"><span class="ad">erd1x45v…ewlm</span></span><span class="pay">$5,208.26<span class="pt">2,791 pts</span></span></div>
+              <div class="lbrow"><span class="rk">4</span><span class="nm"><span class="ad">erd1rpzg…76m0</span></span><span class="pay">$3,329.10<span class="pt">1,784 pts</span></span></div>
+              <div class="lbrow"><span class="rk">5</span><span class="nm"><span class="ad">erd1nyxu…zywk</span></span><span class="pay">$1,843.70<span class="pt">988 pts</span></span></div>
+              <div class="lbrow"><span class="rk">6+</span><span class="nm">6 more wallets <span class="ad">incl. XcronProtocol</span></span><span class="pay">$3,672.46<span class="pt">1,968 pts</span></span></div>
+            </div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:14px">
+            <span class="seclabel">Concentration</span>
+            <div class="callout">
+              <div class="big">82.3%</div>
+              <div class="cl">of the pool went to the <b>top 3 researchers</b>. The single top earner took <b>49.7%</b>.</div>
+            </div>
+            <div class="callout">
+              <div class="big">985</div>
+              <div class="cl">highest finding score. <b>16 Critical</b> findings, each in the 700 to 1000 band.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="foot">
+      <div class="brand">
+        <span class="logo"><svg width="446" height="73" viewBox="0 0 446 73" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M31.0235 58.8142L48.5197 16.6455H61.5653V71.6255H52.965V25.0571L33.6348 71.9192H27.4487L8.31016 25.3508V71.6255H0V16.6455H13.6258L31.0235 58.8142V58.8142Z" fill="white"/><path d="M108.65 62.7266C106.811 66.6387 101.501 72.7064 92.7033 72.7064C80.8129 72.7064 72.6943 63.6077 72.6943 51.0845V23.3008H81.5848V49.4221C81.5848 58.5208 86.7088 64.4887 94.8274 64.4887C102.946 64.4887 108.65 58.3269 108.65 49.4221V23.3008H117.448V71.6314H108.65V62.7266V62.7266Z" fill="white"/><path d="M181.619 71.6251H170.309C159.19 71.6251 153.59 66.2446 153.59 55.4835V31.3182H143.096V23.2945H153.59V11.1094H162.388V23.2945H181.619V31.3182H162.388V53.4277C162.388 60.4706 164.61 63.4075 172.247 63.4075H181.625V71.6251H181.619Z" fill="white"/><path d="M232.575 72.5069H225.519L202.997 23.3008H212.856L229.285 60.5711L245.621 23.3008H254.703L232.57 72.5069H232.575Z" fill="white"/><path d="M303.326 48.541H263.604C264.086 57.54 270.469 64.5884 279.841 64.5884C289.213 64.5884 293.275 59.4018 294.047 57.8392H302.746C301.974 62.045 295.881 72.806 279.841 72.806C265.055 72.806 254.708 61.6515 254.708 47.466C254.708 33.2805 265.049 22.126 278.965 22.126C292.881 22.126 303.321 32.6931 303.321 48.541H303.326ZM264.184 41.1047H293.565C291.343 33.7681 286.219 29.7562 278.971 29.7562C271.241 29.7562 266.018 34.0618 264.184 41.1047V41.1047Z" fill="white"/><path d="M320.651 71.625H311.854V23.3H320.651V32.2047C322.003 28.6805 326.065 22.9121 337.277 22.9121H342.434V31.8169H337.085C324.811 31.8169 320.656 35.729 320.656 44.34V71.6361L320.651 71.625Z" fill="white"/><path d="M361.784 50.3969C352.603 49.3219 346.127 44.9166 346.127 36.0174C346.127 27.1182 354.054 21.9316 365.747 21.9316C381.891 21.9316 387.109 30.3432 388.652 35.2361H379.275C378.213 33.9616 374.638 29.5619 365.742 29.5619C358.494 29.5619 354.82 32.2051 354.82 35.7238C354.82 39.2424 357.24 41.2982 362.939 41.9853C366.705 42.473 369.027 42.6724 373.182 43.1601C384.492 44.6285 389.32 49.5159 389.32 58.4206C389.32 66.5441 381.974 72.9996 368.446 72.9996C351.629 72.9996 345.733 62.5322 344.671 58.1325H354.049C354.53 59.6951 358.395 65.1754 368.452 65.1754C376.57 65.1754 380.534 62.2385 380.534 58.4262C380.534 54.6138 378.503 52.3585 372.027 51.5772L361.784 50.4025V50.3969Z" fill="white"/><path d="M188.197 0H197.378V13.9916H188.197V0ZM188.389 23.2842H197.186V71.6148H188.389V23.2842Z" fill="white"/><path d="M128.578 8.43945H137.376V71.615H128.578V8.43945Z" fill="white"/><path d="M424.639 29.4626L446 17.9923L442.409 11.0547L422.849 19.0063C422.345 19.2114 421.787 19.2114 421.283 19.0063L401.723 11.0547L398.132 17.9923L419.493 29.4626L398.132 40.933L401.723 47.8706L421.283 39.9189C421.787 39.7139 422.345 39.7139 422.849 39.9189L442.409 47.8706L446 40.933L424.639 29.4626Z" fill="#23F7DD"/></svg></span>
+        <span class="tag">Battle of Nodes · Security track</span>
+      </div>
+      <div class="src">Source: GENERAL_SUBMISSION_SUMMARY (rev. 2026-06-05) · security-track-payouts.xlsx<br>Severity bands: Low 10-79 · Medium 80-249 · High 250-699 · Critical 700-1000.</div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>
