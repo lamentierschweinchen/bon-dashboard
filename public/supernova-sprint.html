@@ -1845,11 +1845,12 @@ async function ocSubmit(){
     //    misses it: the relayed tx needs a moment to finalize and index. Stop once
     //    the board renders rows (or after a bounded number of tries).
     (async function(){
-      for(var i=0;i<10;i++){
+      // Poll several times so the just-submitted entry finalizes, indexes, and
+      // shows. Do NOT break on the first non-empty read: an already-populated
+      // board would stop before the player's own new entry lands.
+      for(var i=0;i<9;i++){
         await new Promise(function(r){ setTimeout(r, 1500); });
         await ocLoadLeaderboard();
-        var lbRows = document.getElementById('lbRows');
-        if(lbRows && !lbRows.querySelector('.lb-empty')) break;
       }
     })();
 
