@@ -644,10 +644,7 @@ h1.title{
   <section class="screen active" id="start">
     <div class="top">
       <div class="brand-row">
-        <span class="logo-x" aria-hidden="true">
-          <svg viewBox="0 0 32 32" fill="none"><path d="M6 6 L16 16 L6 26 M26 6 L16 16 L26 26" stroke="#23F7DD" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        </span>
-        <span class="brand-name">MultiversX</span>
+        <img class="brand-logo" src="/mvx-wordmark.svg" alt="MultiversX" style="height:24px;width:auto;display:block;" />
       </div>
     </div>
     <div class="mid">
@@ -707,7 +704,7 @@ h1.title{
     <div class="reveal-head">
       <div class="reveal-kicker">In 30 seconds you sent</div>
       <div class="reveal-score" id="revealScore">0</div>
-      <div class="reveal-score-sub">transactions submitted</div>
+      <div class="reveal-score-sub">transactions</div>
       <div class="reveal-pb" id="revealPb"></div>
     </div>
 
@@ -796,7 +793,7 @@ h1.title{
         <span class="rc-logo" aria-hidden="true">
           <svg viewBox="0 0 32 32" fill="none"><path d="M6 6 L16 16 L6 26 M26 6 L16 16 L26 26" stroke="#23F7DD" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
         </span>
-        <span class="rc-brand">MultiversX</span>
+        <img class="rc-brand" src="/mvx-wordmark.svg" alt="MultiversX" style="height:18px;width:auto;" />
         <span class="rc-kicker-tag">Finality Frenzy</span>
       </div>
       <div class="rc-headline">In 30 seconds I sent</div>
@@ -1374,6 +1371,16 @@ function replayLane(lane){
       finN.textContent = exactFin;
       incN.textContent = Math.max(0, state.score - exactFin); // rest still "in block"
       animateNumber(finBig, 0, exactFin, 650);
+      // settle the DOTS to match the honest counts: the share that finalized within
+      // the window lands in "final", the rest stay in "in block". Without this, the
+      // replay's tail finalizes every MvX dot on screen, leaving "in block" showing a
+      // count with no dots beneath it.
+      var finalDots = Math.round((exactFin/Math.max(1,state.score)) * dots.length);
+      dots.forEach(function(o, i){
+        var isFin = i < finalDots;
+        o.el.style.left = xFor(isFin?2:1, 1, o.jx).toFixed(2)+'%';
+        o.el.className = 'dot-tx ' + (isFin?'dot-fin':'dot-inc');
+      });
     }
   }
   lane._raf=requestAnimationFrame(frame);
