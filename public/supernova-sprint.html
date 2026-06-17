@@ -506,6 +506,35 @@ h1.title{
 .lb-lock{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;text-align:center;background:linear-gradient(180deg,rgba(14,17,23,.2),rgba(14,17,23,.72));}
 .lb-lock .ll-t{font-size:12px;font-weight:600;color:var(--text);}
 .lb-lock .ll-s{font-size:10.5px;color:var(--text-faint);max-width:240px;line-height:1.4;}
+/* leaderboard panel reveals its live rows once data loads */
+.lb-panel.live .lb-blur{filter:none;opacity:1;}
+.lb-panel.live .lb-lock{display:none;}
+.lb-empty{padding:16px 14px;text-align:center;font-size:11.5px;color:var(--text-faint);line-height:1.5;}
+
+/* handle input on the onchain card */
+.onchain-handle{
+  width:100%;font-family:inherit;font-size:14px;color:var(--text);
+  background:var(--surface-2);border:1px solid var(--border);border-radius:11px;
+  padding:12px 14px;margin-bottom:10px;outline:none;
+  transition:border-color .18s, box-shadow .18s;-webkit-user-select:text;user-select:text;
+}
+.onchain-handle::placeholder{color:var(--text-faint);}
+.onchain-handle:focus{border-color:var(--mint-dim);box-shadow:0 0 0 3px rgba(35,247,221,.08);}
+
+/* submit button busy/disabled state */
+.onchain-submit[disabled]{opacity:.6;cursor:default;transform:none;}
+.onchain-submit .spin{width:15px;height:15px;border:2px solid rgba(35,247,221,.3);border-top-color:var(--mint);border-radius:50%;display:inline-block;animation:ocspin .7s linear infinite;}
+@keyframes ocspin{to{transform:rotate(360deg);}}
+
+/* status / result line */
+.onchain-status{margin-top:11px;font-size:12px;line-height:1.5;border-radius:11px;padding:11px 13px;border:1px solid var(--border-soft);background:var(--surface-2);color:var(--text-dim);}
+.onchain-status.ok{border-color:rgba(35,247,221,.35);background:rgba(35,247,221,.05);color:var(--text);}
+.onchain-status.err{border-color:rgba(245,181,68,.35);background:rgba(245,181,68,.05);color:var(--text-dim);}
+.onchain-status a{color:var(--mint);text-decoration:none;border-bottom:1px solid transparent;word-break:break-all;font-family:var(--mono);font-size:11px;}
+.onchain-status a:hover{border-bottom-color:var(--mint-dim);}
+.onchain-status .st-t{font-weight:600;color:var(--text);display:block;margin-bottom:3px;}
+.onchain-status .st-hash{display:flex;align-items:baseline;gap:6px;margin-top:5px;}
+.onchain-status .st-lbl{font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--text-faint);flex:0 0 auto;}
 
 .reveal-actions{flex:0 0 auto;display:flex;flex-direction:column;gap:10px;padding:16px 6px 8px;}
 .reveal-actions .row{display:flex;gap:10px;}
@@ -731,39 +760,48 @@ h1.title{
          see onchain-leaderboard-BRIEF.md) replaces the no-op handlers here
          with: build+sign+send the score tx, show the real tx hash + devnet
          explorer link, and read+render the live leaderboard into .lb-panel. -->
-    <div class="onchain-block" id="onchainBlock" data-onchain-placeholder="true">
+    <div class="onchain-block" id="onchainBlock">
       <div class="onchain-card">
         <div class="onchain-head">
           <span class="oc-ic" aria-hidden="true">
             <svg viewBox="0 0 24 24" fill="none"><path d="M12 2 L20 6.5 V15 L12 22 L4 15 V6.5 Z" stroke="#23F7DD" stroke-width="1.6" stroke-linejoin="round"/><path d="M9 12 l2.2 2.2 L15 9.5" stroke="#23F7DD" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
           </span>
           <span class="oc-t">Put your score onchain</span>
-          <span class="onchain-soon">Soon</span>
+          <span class="onchain-soon" id="onchainNet">Testnet</span>
         </div>
         <div class="onchain-copy">Do not just play a game about MultiversX speed. <b>Transact on MultiversX.</b> Submit your run as a real transaction and land on a leaderboard read live from the chain. Gasless, no wallet needed.</div>
+
+        <!-- handle input: who you are on the leaderboard -->
+        <input class="onchain-handle" id="onchainHandle" type="text" maxlength="20" autocomplete="off" spellcheck="false" placeholder="Pick a handle (e.g. novapilot)" />
+
         <button class="onchain-submit" id="onchainSubmitBtn" type="button" data-onchain-hook="submit">
-          <span class="lock" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><rect x="5" y="11" width="14" height="9" rx="2" stroke="#23F7DD" stroke-width="1.6"/><path d="M8 11 V8 a4 4 0 0 1 8 0 v3" stroke="#23F7DD" stroke-width="1.6" stroke-linecap="round"/></svg></span>
-          Submit onchain
+          <span class="lock" id="onchainSubmitIcon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M5 12 h14 M13 6 l6 6 -6 6" stroke="#23F7DD" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+          <span id="onchainSubmitLabel">Submit onchain</span>
         </button>
-        <!-- leaderboard panel placeholder: rows are sample/blurred + locked -->
+
+        <!-- live status / result line (tx hash + explorer link, or error) -->
+        <div class="onchain-status" id="onchainStatus" hidden></div>
+
+        <!-- leaderboard panel: rows read live from the testnet contract -->
         <div class="lb-panel" id="lbPanel" data-onchain-hook="leaderboard">
           <div class="lb-head">
             <span class="lb-t">
               <span aria-hidden="true" style="width:7px;height:7px;border-radius:50%;background:var(--mint);box-shadow:0 0 7px var(--mint);display:inline-block;"></span>
               Onchain leaderboard
             </span>
-            <span class="lb-net">Devnet</span>
+            <span class="lb-net">Testnet</span>
           </div>
-          <div class="lb-rows">
-            <div class="lb-blur" aria-hidden="true">
+          <div class="lb-rows" id="lbRows">
+            <!-- sample/blurred rows shown until live data loads or onchain is unavailable -->
+            <div class="lb-blur" id="lbBlur" aria-hidden="true">
               <div class="lb-row"><span class="lb-rank">1</span><span class="lb-handle">novapilot</span><span class="lb-score">312</span></div>
               <div class="lb-row"><span class="lb-rank">2</span><span class="lb-handle">shardrunner</span><span class="lb-score">298</span></div>
               <div class="lb-row you"><span class="lb-rank">3</span><span class="lb-handle">you</span><span class="lb-score" id="lbYouScore">0</span></div>
               <div class="lb-row"><span class="lb-rank">4</span><span class="lb-handle">blocktempo</span><span class="lb-score">241</span></div>
             </div>
-            <div class="lb-lock">
-              <div class="ll-t">Live leaderboard, coming soon</div>
-              <div class="ll-s">Submit onchain to claim your spot. Reads live from a MultiversX devnet contract.</div>
+            <div class="lb-lock" id="lbLock">
+              <div class="ll-t">Live leaderboard</div>
+              <div class="ll-s">Submit onchain to claim your spot. Reads live from a MultiversX testnet contract.</div>
             </div>
           </div>
         </div>
@@ -1549,17 +1587,413 @@ $('whyRevealBtn').addEventListener('click', openWhy);
 $('whyClose').addEventListener('click', closeWhy);
 $('whyPanel').addEventListener('click', function(e){ if(e.target===$('whyPanel')) closeWhy(); });
 
-/* ---- ONCHAIN PLACEHOLDERS (inert no-ops; the onchain build replaces these) ----
-   For now, both the Submit button and the leaderboard panel open the explainer
-   and nudge that the onchain round-trip is coming. No chain calls happen here. */
-function onchainComingSoon(){
-  // The onchain agent swaps this for: generate ephemeral key, build score tx,
-  // relay via Relayed v3 (/api/relay), show tx hash + devnet explorer link,
-  // then read + render the live leaderboard. See onchain-leaderboard-BRIEF.md.
-  openWhy();
+/* ============================================================================
+   ONCHAIN LEADERBOARD  (testnet, gasless via Relayed v3)
+   ============================================================================
+   Replaces the old inert no-op. The full round-trip:
+     1. Generate an ephemeral ed25519 keypair in the browser (no wallet, no
+        funds). Grind it into the relayer's shard (Relayed v3 needs sender and
+        relayer in the same shard).
+     2. Build a submitScore(handle, score) transaction, sender = ephemeral key,
+        relayer = the hosted relayer. Sign it with the ephemeral key.
+     3. POST the signed tx to /api/relay. The relayer adds its signature and
+        pays testnet gas, so the player pays nothing.
+     4. Show the real tx hash + a testnet explorer link.
+     5. Read the leaderboard live from the contract and render it.
+
+   HONEST CAVEAT: the score is computed in the browser (a tap count) and is
+   therefore spoofable. Acceptable for a fun community leaderboard on a test
+   network. Integrity (server-side replay attestation) is a separate later
+   phase, deliberately not built here.
+
+   TESTNET: the public network currently on Supernova (600ms rounds), so the
+   submission finalizes on the Supernova clock. Testnet can be reset, which
+   would clear the leaderboard.
+
+   FAIL-SOFT: every onchain path is wrapped so a failure (CDN down, no relayer
+   key, network error) never blocks the game. The card just shows an
+   unavailable / error state; play and reveal always work.
+   ============================================================================ */
+var OC = {
+  // must match src/lib/onchain/leaderboard.config.ts
+  contract: 'erd1qqqqqqqqqqqqqpgqpy7j8ha5pkudun8qleh7l0zjdxnnjnulenwsynzhhf',
+  relayer:  'erd1ru08dt4u5e0psfrwth38u0dfed0hw8289xqdd9yghl3ec24uppuq6hgphm',
+  api:      'https://testnet-api.multiversx.com',
+  explorer: 'https://testnet-explorer.multiversx.com',
+  chainID:  'T',
+  gasLimit: 10000000,
+  gasPrice: 1000000000,
+  numShards: 3,
+  submitted: false,   // one onchain submit per run
+  libs: null          // lazily-loaded { ed, bech32 }
+};
+
+/* ---- tiny helpers ---- */
+function ocBytesToHex(bytes){
+  var h=''; for(var i=0;i<bytes.length;i++){ h += bytes[i].toString(16).padStart(2,'0'); } return h;
 }
-$('onchainSubmitBtn').addEventListener('click', onchainComingSoon);
-$('lbPanel').addEventListener('click', onchainComingSoon);
+function ocUtf8ToHex(str){
+  var enc = new TextEncoder().encode(str);
+  return ocBytesToHex(enc);
+}
+function ocU64ToHex(n){
+  // minimal even-length big-endian hex for a non-negative integer
+  var h = BigInt(n).toString(16);
+  if(h.length % 2) h = '0' + h;
+  return h;
+}
+/* bech32 needs the pubkey words; the address shard comes straight off the
+   last byte of the 32-byte pubkey (matches sdk-core AddressComputer). */
+function ocShardOfPubkey(pub){
+  var last = pub[31];
+  var shard = last & 3;          // maskHigh = 0b11
+  if(shard > OC.numShards - 1){ shard = last & 1; } // maskLow = 0b01
+  return shard;
+}
+var OC_RELAYER_SHARD = 0; // erd1ru08... is in shard 0 (verified); fallback grind handles any value
+
+/* Lazy-load the crypto libs from a CDN. Resolves to null on any failure so the
+   caller fails soft. */
+function ocLoadLibs(){
+  if(OC.libs) return Promise.resolve(OC.libs);
+  return Promise.all([
+    import('https://esm.sh/@noble/ed25519@2.1.0'),
+    import('https://esm.sh/@scure/base@1.1.6')
+  ]).then(function(mods){
+    var ed = mods[0];
+    var base = mods[1];
+    var bech32 = base.bech32;
+    OC.libs = { ed: ed, bech32: bech32 };
+    return OC.libs;
+  }).catch(function(err){
+    console.warn('[onchain] crypto libs failed to load:', err);
+    return null;
+  });
+}
+
+/* Build an erd1 bech32 address from a 32-byte public key. */
+function ocAddressFromPubkey(bech32, pub){
+  var words = bech32.toWords(pub);
+  return bech32.encode('erd', words, 256);
+}
+
+/* Generate an ephemeral keypair whose address lands in the relayer's shard. */
+async function ocGenerateEphemeral(libs){
+  var ed = libs.ed, bech32 = libs.bech32;
+  for(var tries=0; tries<200; tries++){
+    var priv = ed.utils.randomPrivateKey();           // 32 bytes
+    var pub = await ed.getPublicKeyAsync(priv);        // 32 bytes
+    if(ocShardOfPubkey(pub) === OC_RELAYER_SHARD){
+      return { priv: priv, pub: pub, address: ocAddressFromPubkey(bech32, pub) };
+    }
+  }
+  throw new Error('could not derive a key in the relayer shard');
+}
+
+/* Canonical signing bytes for the transaction. Field ORDER and encoding match
+   sdk-core TransactionComputer.computeBytesForSigning exactly:
+   nonce, value, receiver, sender, gasPrice, gasLimit, data(base64), chainID,
+   version, relayer. */
+function ocSigningString(tx){
+  return JSON.stringify({
+    nonce: tx.nonce,
+    value: tx.value,
+    receiver: tx.receiver,
+    sender: tx.sender,
+    gasPrice: tx.gasPrice,
+    gasLimit: tx.gasLimit,
+    data: tx.dataB64,
+    chainID: tx.chainID,
+    version: tx.version,
+    relayer: tx.relayer
+  });
+}
+
+/* The status line under the submit button. */
+function ocStatus(kind, html){
+  var el = $('onchainStatus');
+  if(!el) return;
+  el.hidden = false;
+  el.className = 'onchain-status' + (kind ? (' '+kind) : '');
+  el.innerHTML = html;
+}
+function ocSetSubmitting(on){
+  var btn = $('onchainSubmitBtn');
+  var label = $('onchainSubmitLabel');
+  var icon = $('onchainSubmitIcon');
+  if(!btn) return;
+  btn.disabled = on;
+  if(on){
+    if(icon) icon.innerHTML = '<span class="spin"></span>';
+    if(label) label.textContent = 'Submitting to testnet...';
+  } else {
+    if(icon) icon.innerHTML = '<svg viewBox="0 0 24 24" fill="none"><path d="M5 12 h14 M13 6 l6 6 -6 6" stroke="#23F7DD" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+    if(label) label.textContent = 'Submit onchain';
+  }
+}
+
+/* The main submit flow. */
+async function ocSubmit(){
+  if(OC.submitted) return;
+
+  var score = (lastResult && lastResult.score) ? lastResult.score : state.score;
+  if(!score || score <= 0){
+    ocStatus('err', 'Play a run first, then submit your score.');
+    return;
+  }
+
+  var handle = ($('onchainHandle').value || '').trim();
+  if(!handle){
+    ocStatus('err', 'Pick a handle so you show up on the leaderboard.');
+    $('onchainHandle').focus();
+    return;
+  }
+  // keep handle within the contract's 32-byte cap (UTF-8)
+  if(new TextEncoder().encode(handle).length > 32){
+    ocStatus('err', 'That handle is a bit long. Keep it under 32 characters.');
+    return;
+  }
+
+  ocSetSubmitting(true);
+  ocStatus('', 'Preparing your transaction...');
+
+  try {
+    var libs = await ocLoadLibs();
+    if(!libs){ throw new Error('crypto-unavailable'); }
+
+    // 1. ephemeral key in the relayer's shard
+    var key = await ocGenerateEphemeral(libs);
+
+    // 2. fetch the ephemeral account's nonce (fresh key => 0, but be correct)
+    var nonce = 0;
+    try {
+      var accRes = await fetch(OC.api + '/accounts/' + key.address);
+      if(accRes.ok){ var accJson = await accRes.json(); nonce = accJson.nonce || 0; }
+    } catch(e){ /* fresh key, nonce stays 0 */ }
+
+    // 3. build the submitScore tx
+    var dataStr = 'submitScore@' + ocUtf8ToHex(handle) + '@' + ocU64ToHex(score);
+    var dataB64 = btoa(dataStr);
+    var txForSign = {
+      nonce: nonce,
+      value: '0',
+      receiver: OC.contract,
+      sender: key.address,
+      gasPrice: OC.gasPrice,
+      gasLimit: OC.gasLimit,
+      dataB64: dataB64,
+      chainID: OC.chainID,
+      version: 2,
+      relayer: OC.relayer
+    };
+
+    // 4. sign with the ephemeral key
+    var signBytes = new TextEncoder().encode(ocSigningString(txForSign));
+    var sigBytes = await libs.ed.signAsync(signBytes, key.priv);
+    var signatureHex = ocBytesToHex(sigBytes);
+
+    // 5. assemble the plain tx object the relayer expects
+    var plainTx = {
+      nonce: nonce,
+      value: '0',
+      receiver: OC.contract,
+      sender: key.address,
+      senderUsername: undefined,
+      receiverUsername: undefined,
+      gasPrice: OC.gasPrice,
+      gasLimit: OC.gasLimit,
+      data: dataB64,
+      chainID: OC.chainID,
+      version: 2,
+      relayer: OC.relayer,
+      signature: signatureHex
+    };
+
+    ocStatus('', 'Relaying (gasless) and waiting for finality...');
+
+    // 6. send to the relayer
+    var res = await fetch('/api/relay', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ transaction: plainTx })
+    });
+    var out = await res.json();
+
+    if(!res.ok || out.error){
+      var msg = ocRelayerErrorMessage(out, res.status);
+      ocStatus('err', msg);
+      ocSetSubmitting(false);
+      return;
+    }
+
+    // 7. success: show the real tx hash + explorer link
+    OC.submitted = true;
+    var hash = out.txHash;
+    var url = out.explorerUrl || (OC.explorer + '/transactions/' + hash);
+    ocStatus('ok',
+      '<span class="st-t">Submitted onchain on MultiversX testnet.</span>' +
+      'Your score is now a real transaction, finalizing on the Supernova clock.' +
+      '<div class="st-hash"><span class="st-lbl">Tx</span>' +
+      '<a href="' + url + '" target="_blank" rel="noopener">' + hash + '</a></div>'
+    );
+    var label = $('onchainSubmitLabel');
+    var btn = $('onchainSubmitBtn');
+    if(label) label.textContent = 'Submitted';
+    if(btn) btn.disabled = true;
+
+    // 8. refresh the live leaderboard (give the chain a moment to finalize)
+    setTimeout(function(){ ocLoadLeaderboard(); }, 1200);
+
+  } catch(err){
+    console.warn('[onchain] submit failed:', err);
+    if(err && err.message === 'crypto-unavailable'){
+      ocStatus('err', 'The onchain libraries could not load. Your score still counts in this game; the onchain submission is just unavailable right now.');
+    } else {
+      ocStatus('err', 'Could not submit onchain right now. Your run still counts here. ' + (err && err.message ? '('+err.message+')' : ''));
+    }
+    ocSetSubmitting(false);
+  }
+}
+
+/* Map relayer error codes to friendly, honest messages. */
+function ocRelayerErrorMessage(out, status){
+  var code = out && out.error;
+  if(code === 'relayer_unavailable'){
+    return 'The gasless relayer is not switched on yet. Your score still counts in this game; onchain submission goes live once the relayer key is set.';
+  }
+  if(code === 'relayer_misconfigured'){
+    return 'The relayer is misconfigured. Flagged for the team. Your run still counts here.';
+  }
+  if(code === 'broadcast_failed'){
+    return 'The network did not accept the transaction. Testnet can be busy or resetting. Try again in a moment.';
+  }
+  if(code === 'rate_limited'){
+    return 'Easy, speedrunner. Too many submissions in a short window. Try again in a minute.';
+  }
+  return 'Onchain submission is unavailable right now (' + (code || ('HTTP '+status)) + '). Your run still counts in this game.';
+}
+
+/* ---- read the leaderboard live from the contract ---- */
+
+/* Decode one base64 ScoreEntry struct: address(32) + handleLen(4 BE) +
+   handle(utf8) + score(u64 BE) + timestamp(u64 BE). */
+function ocDecodeEntry(b64, bech32){
+  var bin = atob(b64);
+  var bytes = new Uint8Array(bin.length);
+  for(var i=0;i<bin.length;i++){ bytes[i] = bin.charCodeAt(i); }
+  if(bytes.length < 32 + 4 + 8 + 8) return null;
+  var off = 0;
+  var pub = bytes.slice(off, off+32); off += 32;
+  var hlen = (bytes[off]<<24) | (bytes[off+1]<<16) | (bytes[off+2]<<8) | bytes[off+3]; off += 4;
+  var handle = new TextDecoder().decode(bytes.slice(off, off+hlen)); off += hlen;
+  var score = 0n;
+  for(var s=0;s<8;s++){ score = (score<<8n) | BigInt(bytes[off+s]); } off += 8;
+  var ts = 0n;
+  for(var t=0;t<8;t++){ ts = (ts<<8n) | BigInt(bytes[off+t]); } off += 8;
+  var address = '';
+  try { address = ocAddressFromPubkey(bech32, pub); } catch(e){}
+  return { address: address, handle: handle, score: Number(score), timestamp: Number(ts) };
+}
+
+/* Query getTopScores(n) via the testnet API vm-values endpoint. */
+async function ocLoadLeaderboard(){
+  try {
+    var libs = await ocLoadLibs();
+    if(!libs) return; // leave the sample/locked state in place
+
+    // getTopScores(10): arg is a u32 => 8-hex (4 bytes BE), but minimal hex also works
+    var nHex = (10).toString(16).padStart(2,'0');
+    var body = {
+      scAddress: OC.contract,
+      funcName: 'getTopScores',
+      args: [nHex]
+    };
+    var res = await fetch(OC.api + '/vm-values/query', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+    if(!res.ok) return;
+    var json = await res.json();
+    var data = json && json.data && json.data.data ? json.data.data : null;
+    if(!data || data.returnCode !== 'ok') return;
+    var parts = data.returnData || [];
+    var entries = [];
+    for(var i=0;i<parts.length;i++){
+      if(!parts[i]) continue;
+      var e = ocDecodeEntry(parts[i], libs.bech32);
+      if(e) entries.push(e);
+    }
+    ocRenderLeaderboard(entries);
+  } catch(err){
+    console.warn('[onchain] leaderboard read failed:', err);
+    // leave the existing panel state; never throw
+  }
+}
+
+/* Render live rows into #lbRows, marking the player's own row. */
+function ocRenderLeaderboard(entries){
+  var rows = $('lbRows');
+  var panel = $('lbPanel');
+  if(!rows || !panel) return;
+
+  if(!entries || entries.length === 0){
+    rows.innerHTML = '<div class="lb-empty">No scores onchain yet. Submit yours to be first.</div>';
+    panel.classList.add('live');
+    return;
+  }
+
+  var myHandle = ($('onchainHandle').value || '').trim();
+  var html = '';
+  for(var i=0;i<entries.length;i++){
+    var e = entries[i];
+    var mine = (OC.submitted && myHandle && e.handle === myHandle);
+    var safeHandle = ocEscape(e.handle);
+    html += '<div class="lb-row' + (mine?' you':'') + '">' +
+      '<span class="lb-rank">' + (i+1) + '</span>' +
+      '<span class="lb-handle">' + safeHandle + '</span>' +
+      '<span class="lb-score">' + e.score + '</span>' +
+    '</div>';
+  }
+  rows.innerHTML = html;
+  panel.classList.add('live');
+}
+
+function ocEscape(s){
+  return String(s).replace(/[&<>"']/g, function(c){
+    return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c];
+  });
+}
+
+/* prefill the handle with the player's local best-known handle if any */
+(function(){
+  try {
+    var saved = localStorage.getItem('mvx_supernova_handle');
+    if(saved && $('onchainHandle')){ $('onchainHandle').value = saved; }
+  } catch(e){}
+})();
+
+/* wire the submit button */
+$('onchainSubmitBtn').addEventListener('click', function(){
+  try { localStorage.setItem('mvx_supernova_handle', ($('onchainHandle').value||'').trim()); } catch(e){}
+  ocSubmit();
+});
+
+/* reset the per-run submit lock + load the live board whenever a reveal is built.
+   Hook into buildReveal without rewriting it. */
+(function(){
+  var _origBuildReveal = buildReveal;
+  buildReveal = function(){
+    _origBuildReveal.apply(this, arguments);
+    OC.submitted = false;
+    var st = $('onchainStatus'); if(st){ st.hidden = true; st.innerHTML=''; }
+    ocSetSubmitting(false);
+    var label = $('onchainSubmitLabel'); if(label) label.textContent = 'Submit onchain';
+    var btn = $('onchainSubmitBtn'); if(btn) btn.disabled = false;
+    // load the live leaderboard (fail-soft; leaves sample state if unavailable)
+    ocLoadLeaderboard();
+  };
+})();
 
 // prevent context menu long-press on mobile tap zone
 tapZone.addEventListener('contextmenu', function(e){ e.preventDefault(); });
