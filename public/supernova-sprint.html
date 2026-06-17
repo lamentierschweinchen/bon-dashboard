@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-<title>Supernova Sprint - MultiversX finality showcase</title>
+<title>Finality Frenzy - MultiversX finality showcase</title>
 <!--
 ====================================================================================
   SUPERNOVA SPRINT  -  a MultiversX Supernova finality showcase game
@@ -651,9 +651,9 @@ h1.title{
       </div>
     </div>
     <div class="mid">
-      <div class="kicker">Supernova Sprint</div>
-      <h1 class="title">How fast<br/>can you<br/>finalize?</h1>
-      <p class="subtitle">Tap to fire a transaction. <b>How many can you send in 30 seconds?</b> Then watch your burst run through five chains, in parallel.</p>
+      <div class="kicker">Finality Frenzy</div>
+      <h1 class="title">How many<br/>transactions<br/>can you fire?</h1>
+      <p class="subtitle">Tap as fast as you can for 30 seconds. Then watch your burst hit five blockchains at once, and <b>see which ones keep up.</b></p>
       <div class="start-meta">
         <span class="chip"><span class="dot"></span>30 seconds &nbsp;&middot;&nbsp; tap &middot; click &middot; spacebar</span>
         <div class="pb-line" id="pbLine"></div>
@@ -797,7 +797,7 @@ h1.title{
           <svg viewBox="0 0 32 32" fill="none"><path d="M6 6 L16 16 L6 26 M26 6 L16 16 L26 26" stroke="#23F7DD" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
         </span>
         <span class="rc-brand">MultiversX</span>
-        <span class="rc-kicker-tag">Supernova Sprint</span>
+        <span class="rc-kicker-tag">Finality Frenzy</span>
       </div>
       <div class="rc-headline">In 30 seconds I sent</div>
       <div class="rc-score" id="rcScore">0</div>
@@ -806,7 +806,7 @@ h1.title{
       <div class="rc-finlabel">Finalized within the window</div>
       <div class="rc-rows" id="rcRows"><!-- injected --></div>
       <div class="rc-foot">
-        <div class="rc-challenge">Beat my number. <span>Supernova Sprint</span></div>
+        <div class="rc-challenge">Beat my number. <span>Finality Frenzy</span></div>
       </div>
       <div class="rc-note" id="rcNote"></div>
     </div>
@@ -824,7 +824,7 @@ h1.title{
 <div class="why-panel" id="whyPanel">
   <div class="why-card">
     <button class="why-close" id="whyClose" aria-label="Close">&times;</button>
-    <div class="why-kicker">Supernova &middot; scheduled to activate</div>
+    <div class="why-kicker">Supernova &middot; coming to MultiversX</div>
     <h2>Why is it this fast?</h2>
     <p>Most blockchains work in sequence. Propose a block, vote on it, then run the transactions inside it, each step strictly after the last. That ordering is where the seconds go.</p>
     <p><b>Supernova overlaps the steps.</b> The network votes and executes at the same time, so a block that used to take about six seconds now targets around 600 milliseconds, and intra-shard finality targets around 250 milliseconds. About the length of a blink.</p>
@@ -834,11 +834,11 @@ h1.title{
       <div class="why-step"><span class="ws-n">3</span><span class="ws-t"><b>Final.</b> Irreversible. Gated by the chain's finality. This is where slow chains fall behind your thumb.</span></div>
     </div>
     <p>The hard part was doing this without breaking the rule that a payment crossing between shards either completes on both sides or does not happen at all. A cross-shard transfer settles end-to-end across about three blocks, near 1.8 seconds. Supernova keeps that guarantee intact and runs the clock roughly ten times faster. Use the toggle on the MultiversX lane to compare the intra-shard and cross-shard targets.</p>
-    <p><span class="scheduled">Supernova is scheduled to activate.</span></p>
+    <p><span class="scheduled">Supernova is coming to MultiversX.</span></p>
     <!-- Canonical Supernova explainer, verified live 2026-06-17 (changed from agent-architecture, an AI-agent post that only mentions Supernova; see top-of-file CANONICAL-URL CHECK) -->
     <a class="why-cta" href="https://multiversx.com/blog/supernova-decoupling-consensus-and-execution" target="_blank" rel="noopener">How it works &rarr;</a>
     <div class="why-src">
-      <b>Honest numbers.</b> This is a latency comparison of block time and finality, not a throughput claim. MultiversX figures show Supernova finality targets, scheduled to activate, never stated as live: 250ms intra-shard and about 1.8s cross-shard end-to-end (~88ms finality demonstrated under load on the Battle of Nodes public test network). Competitor figures (Ethereum, Solana, Bitcoin, Tron) use each chain's current live behavior, from that chain's own documentation. Sources listed at the foot of the result.
+      <b>Honest numbers.</b> This is a latency comparison of block time and finality, not a throughput claim. MultiversX figures are Supernova finality targets, ahead of its mainnet launch: 250ms intra-shard and about 1.8s cross-shard end-to-end (~88ms finality demonstrated under load on the Battle of Nodes public test network). Competitor figures (Ethereum, Solana, Bitcoin, Tron) use each chain's current live behavior, from that chain's own documentation. Sources listed at the foot of the result.
     </div>
   </div>
 </div>
@@ -866,7 +866,7 @@ var CHAINS = [
     blockMs:600,                       // ~600ms Supernova block target
     finalityMs:MVX_INTRA_FINALITY_MS,  // 250ms intra-shard finality target (default)
     spec:'~600ms block · 250ms intra-shard final',
-    tag:'Supernova intra-shard finality · target (scheduled)',
+    tag:'Supernova · intra-shard finality',
     isMvx:true,
     mvxMode:'intra'                    // 'intra' | 'cross' (set by the lane toggle)
   },
@@ -923,11 +923,11 @@ function setMvxMode(mode){
   if(mode==='cross'){
     c.finalityMs = MVX_CROSS_FINALITY_MS;
     c.spec = '~600ms block · ~1.8s cross-shard final';
-    c.tag = 'Supernova cross-shard finality · target (scheduled)';
+    c.tag = 'Supernova · cross-shard finality';
   } else {
     c.finalityMs = MVX_INTRA_FINALITY_MS;
     c.spec = '~600ms block · 250ms intra-shard final';
-    c.tag = 'Supernova intra-shard finality · target (scheduled)';
+    c.tag = 'Supernova · intra-shard finality';
   }
 }
 
@@ -1191,7 +1191,7 @@ function buildReveal(){
 
   // footnote with sources + supernova label
   $('footnote').innerHTML =
-    '<b>Supernova is scheduled to activate</b>, not live. A latency comparison of block time and finality, not throughput. '+
+    '<b>Supernova is the upgrade bringing this to MultiversX.</b> A latency comparison of block time and finality, not throughput.'+
     'Sources: ethereum.org, solana.com, Bitcoin Wiki, Tron DPoS docs, MultiversX Supernova (Battle of Nodes telemetry).';
 
   // reflect the score on the (placeholder) leaderboard "you" row
@@ -1454,7 +1454,7 @@ function openResultCard(){
 
   var modeWord = CHAINS[0].mvxMode==='cross' ? 'cross-shard' : 'intra-shard';
   $('rcNote').textContent =
-    'Finalized within the 30s window. MultiversX shows Supernova '+modeWord+' finality, scheduled to activate. '+
+    'Finalized within the 30s window. MultiversX shows Supernova '+modeWord+' finality. '+
     'A latency comparison, not throughput.';
 
   $('cardModal').classList.add('open');
@@ -1477,7 +1477,7 @@ function buildShare(){
     'Bitcoin '+fin.btc,
     'Tron '+fin.trx,
     '',
-    'Beat my number. Supernova Sprint:'
+    'Beat my number. Finality Frenzy:'
   ];
   var text = lines.join('\n');
   var url = 'https://twitter.com/intent/tweet?text='+encodeURIComponent(text);
