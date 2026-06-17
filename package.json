@@ -9,8 +9,12 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@multiversx/sdk-core": "15.4.1",
+    "axios": "1.18.0",
+    "bignumber.js": "9.3.1",
     "framer-motion": "^12.36.0",
     "next": "16.1.6",
+    "protobufjs": "7.6.4",
     "react": "19.2.3",
     "react-dom": "19.2.3"
   },
