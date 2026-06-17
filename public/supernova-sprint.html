@@ -714,9 +714,9 @@ h1.title{
     <div class="lanes-title">
       <span class="t">Finalized within the window</span>
       <span class="legend">
-        <span class="tip" data-tip="Your tap. Instant on every chain. Nothing is settled yet."><i class="lg-dot lg-sub"></i><span class="tip-underline">sent</span></span>
-        <span class="tip" data-tip="Landed in a block, but not yet irreversible. It can still be reorged."><i class="lg-dot lg-inc"></i><span class="tip-underline">in block</span></span>
-        <span class="tip" data-tip="Irreversible. The number that matters for money."><i class="lg-dot lg-fin"></i><span class="tip-underline">final</span></span>
+        <span class="tip" data-tip="Sent. Instant on every chain."><i class="lg-dot lg-sub"></i><span class="tip-underline">sent</span></span>
+        <span class="tip" data-tip="Landed in a block. Still reversible."><i class="lg-dot lg-inc"></i><span class="tip-underline">in block</span></span>
+        <span class="tip" data-tip="Irreversible. The number that matters."><i class="lg-dot lg-fin"></i><span class="tip-underline">final</span></span>
       </span>
     </div>
     <!-- persistent plain-language legend: reads without hovering -->
@@ -1221,8 +1221,8 @@ function makeLane(chain, finalized, score){
   var tagTip = '';
   if(chain.isMvx){
     tagTip = chain.mvxMode==='cross'
-      ? 'Cross-shard: a transfer between shards, settled end to end across about three blocks. Supernova target, scheduled.'
-      : 'Intra-shard: sender and receiver on the same shard. Supernova target, scheduled.';
+      ? 'Cross-shard: between shards. Settled across about three blocks.'
+      : 'Intra-shard: sender and receiver on the same shard.';
   }
   var tagHtml = chain.tag
     ? '<span class="lane-tag tip" data-tip="'+tagTip+'"><span class="tip-underline">'+chain.tag+'</span></span>'
@@ -1257,8 +1257,8 @@ function makeLane(chain, finalized, score){
     '<div class="track">'+
       '<div class="final-zone"></div>'+
       '<div class="seg-labels">'+
-        '<div class="tip tip-left" data-tip="Your tap. Instant on every chain.">Submitted</div>'+
-        '<div class="tip" data-tip="Landed in a block, not yet irreversible.">In block</div>'+
+        '<div class="tip tip-left" data-tip="Sent. Instant on every chain.">Submitted</div>'+
+        '<div class="tip" data-tip="Landed in a block. Still reversible.">In block</div>'+
         '<div class="tip" data-tip="Irreversible. The number that matters.">Final</div>'+
       '</div>'+
     '</div>'+
@@ -1401,6 +1401,7 @@ function onMvxModeToggle(mode){
   var oldLane = document.querySelector('.lane[data-key="mvx"]');
   if(oldLane){
     var newLane = makeLane(mvxChain, finalized, score);
+    newLane.classList.add('in'); // show immediately; an in-place swap has no staged drop-in
     oldLane.parentNode.replaceChild(newLane, oldLane);
     replayLane(newLane);
   }
