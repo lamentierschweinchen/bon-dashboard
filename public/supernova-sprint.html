@@ -769,7 +769,7 @@ h1.title{
           <span class="oc-t">Put your score onchain</span>
           <span class="onchain-soon" id="onchainNet">Testnet</span>
         </div>
-        <div class="onchain-copy">Do not just play a game about MultiversX speed. <b>Transact on MultiversX.</b> Submit your run as a real transaction and land on a leaderboard read live from the chain. Gasless, no wallet needed.</div>
+        <div class="onchain-copy">That was a game. This part is real. <b>Transact on MultiversX:</b> submit your score as a live transaction and land on a leaderboard read straight from the chain. Gasless, no wallet needed.</div>
 
         <!-- handle input: who you are on the leaderboard -->
         <input class="onchain-handle" id="onchainHandle" type="text" maxlength="20" autocomplete="off" spellcheck="false" placeholder="Pick a handle (e.g. novapilot)" />
@@ -1841,8 +1841,17 @@ async function ocSubmit(){
     if(label) label.textContent = 'Submitted';
     if(btn) btn.disabled = true;
 
-    // 8. refresh the live leaderboard (give the chain a moment to finalize)
-    setTimeout(function(){ ocLoadLeaderboard(); }, 1200);
+    // 8. poll the live leaderboard until the new entry lands. A single early read
+    //    misses it: the relayed tx needs a moment to finalize and index. Stop once
+    //    the board renders rows (or after a bounded number of tries).
+    (async function(){
+      for(var i=0;i<10;i++){
+        await new Promise(function(r){ setTimeout(r, 1500); });
+        await ocLoadLeaderboard();
+        var lbRows = document.getElementById('lbRows');
+        if(lbRows && !lbRows.querySelector('.lb-empty')) break;
+      }
+    })();
 
   } catch(err){
     console.warn('[onchain] submit failed:', err);
