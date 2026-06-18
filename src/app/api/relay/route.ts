@@ -1,19 +1,23 @@
 // src/app/api/relay/route.ts
 //
-// Gasless relayer for the Supernova Sprint onchain leaderboard (Relayed v3).
+// Gasless relayer for the Supernova Sprint onchain demos (Relayed v3).
 //
-// The player builds and signs a `submitScore` transaction in the browser with an
-// ephemeral keypair (no wallet, no funds). They POST the signed transaction
-// here. This route adds the RELAYER signature (Relayed v3) and broadcasts it,
-// so the RELAYER pays the testnet gas and the player pays nothing.
+// The player builds and signs a transaction in the browser with an ephemeral
+// keypair (no wallet, no funds). They POST the signed transaction here. This
+// route adds the RELAYER signature (Relayed v3) and broadcasts it, so the
+// RELAYER pays the testnet gas and the player pays nothing.
+//
+// Two operations are relayed (additively; each pins its own receiver + caps):
+//   - `submitScore` -> the leaderboard contract  (the /supernova-sprint game)
+//   - `recordTaps`  -> the tap-counter contract   (the /onchain experiment)
 //
 // TRUST MODEL: the relayer is a trusted component. It pays gas and can refuse or
-// rate-limit. It only signs transactions that (a) call `submitScore` on the
-// known leaderboard contract, (b) name THIS relayer in the `relayer` field,
-// (c) carry no EGLD value, and (d) ask for gas within a sane cap. It does not
-// validate the SCORE itself: v1 scores are client-computed and spoofable by
-// design (see the contract + the brief). That is acceptable for a fun community
-// leaderboard on a test network.
+// rate-limit. It only signs transactions that (a) call an ALLOWED function on
+// the matching known contract, (b) name THIS relayer in the `relayer` field,
+// (c) carry no EGLD value, and (d) ask for gas within that operation's cap. It
+// does not validate the payload's meaning: v1 scores / tap counts are
+// client-computed and spoofable by design (see the contracts + the brief). That
+// is acceptable for a fun community demo on a test network.
 //
 // RELAYED v3 SHARD RULE: the transaction sender (ephemeral key) must be in the
 // same shard as the relayer. The client guarantees this by generating the
@@ -43,6 +47,11 @@ import {
   TESTNET_GATEWAY,
   TESTNET_EXPLORER,
 } from "@/lib/onchain/leaderboard.config";
+import {
+  TAP_COUNTER_CONTRACT,
+  RECORD_TAPS_FUNCTION,
+  RECORD_TAPS_GAS_LIMIT,
+} from "@/lib/onchain/tap-counter.config";
 
 // The plain-object shape accepted by Transaction.newFromPlainObject, derived
 // from the function signature so we do not depend on the type's export name.
@@ -51,32 +60,67 @@ type PlainTxObject = Parameters<typeof Transaction.newFromPlainObject>[0];
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs"; // sdk-core crypto needs the Node runtime
 
-// A hard ceiling on relayed gas so a malicious client cannot drain the relayer.
-const MAX_RELAYED_GAS_LIMIT = SUBMIT_GAS_LIMIT + 100_000;
-
 const addressComputer = new AddressComputer();
 const txComputer = new TransactionComputer();
 
-// Lightweight in-memory rate limit per client IP. The relayer pays gas, so this
-// caps spam from a single source. Best-effort only: it resets on cold start and
-// is per-instance, not a substitute for a real shared limiter, but it raises the
-// cost of trivially draining the relayer. Tune as needed.
+// ---- relayable operations ----
+//
+// One entry per function the relayer will sign for. Each entry pins the exact
+// receiver contract for that function, a gas ceiling (so a malicious client
+// cannot drain the relayer), and a per-IP rate budget. Adding an operation here
+// is the ONLY change needed to relay a new function — the validation below is
+// driven entirely off this table, so the existing submitScore path keeps its own
+// receiver, gas cap, and 12/min budget unchanged.
+type RelayOp = {
+  /** Exact receiver contract this function must target. */
+  receiver: string;
+  /** Hard gas ceiling for this function (data bytes + execution). */
+  maxGasLimit: number;
+  /** Per-IP rate budget for this function. */
+  rateMax: number;
+};
+
 const RATE_WINDOW_MS = 60_000;
-const RATE_MAX = 12; // submissions per IP per window
+
+const RELAY_OPS: Record<string, RelayOp> = {
+  // The live leaderboard path — budget and gas cap unchanged from before.
+  [SUBMIT_FUNCTION]: {
+    receiver: LEADERBOARD_CONTRACT,
+    maxGasLimit: SUBMIT_GAS_LIMIT + 100_000,
+    rateMax: 12, // submissions per IP per window
+  },
+  // The /onchain tap path. Per-tap mode fires one tx per tap, so a human mashing
+  // (~8-12 taps/s) far exceeds 12/min. Supernova's fast finality keeps per-sender
+  // pending low at human rates; this budget gives a single player ample room for
+  // a full session while still capping a single IP. The client also offers a
+  // bundled mode that collapses many taps into one tx if a player hits this.
+  [RECORD_TAPS_FUNCTION]: {
+    receiver: TAP_COUNTER_CONTRACT,
+    maxGasLimit: RECORD_TAPS_GAS_LIMIT + 100_000,
+    rateMax: 1200, // taps (or bundles) per IP per window
+  },
+};
+
+// Lightweight in-memory rate limit per client IP, scoped PER FUNCTION. The
+// relayer pays gas, so this caps spam from a single source. Best-effort only: it
+// resets on cold start and is per-instance, not a substitute for a real shared
+// limiter, but it raises the cost of trivially draining the relayer. Scoping by
+// function means the high tap budget cannot weaken the leaderboard's budget.
 const rateHits = new Map<string, number[]>();
 
-function rateLimited(ip: string): boolean {
+function rateLimited(ip: string, fn: string, max: number): boolean {
   const now = Date.now();
-  const hits = (rateHits.get(ip) ?? []).filter((t) => now - t < RATE_WINDOW_MS);
+  const key = `${fn}:${ip}`;
+  const hits = (rateHits.get(key) ?? []).filter((t) => now - t < RATE_WINDOW_MS);
   hits.push(now);
-  rateHits.set(ip, hits);
+  rateHits.set(key, hits);
   // opportunistic cleanup so the map does not grow unbounded
   if (rateHits.size > 5000) {
     for (const [k, v] of rateHits) {
       if (v.every((t) => now - t >= RATE_WINDOW_MS)) rateHits.delete(k);
     }
   }
-  return hits.length > RATE_MAX;
+  return hits.length > max;
 }
 
 /** Load the relayer account from env. Returns null if no key is configured. */
@@ -119,17 +163,13 @@ export async function POST(request: Request) {
     );
   }
 
-  // Rate limit per client IP (the relayer pays gas; cap single-source spam).
+  // Client IP for rate limiting (the relayer pays gas; cap single-source spam).
+  // The actual limit is applied below, once we know which function this is, so
+  // each operation is metered against its own budget.
   const ip =
     request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
     request.headers.get("x-real-ip") ||
     "unknown";
-  if (rateLimited(ip)) {
-    return NextResponse.json(
-      { error: "rate_limited", message: "too many submissions, slow down" },
-      { status: 429 },
-    );
-  }
 
   // Sanity: the configured key must match the advertised relayer address.
   if (relayer.address.toBech32() !== RELAYER_ADDRESS) {
@@ -172,20 +212,37 @@ export async function POST(request: Request) {
     );
   }
 
-  // receiver must be the leaderboard contract
-  const receiver = tx.receiver.toBech32();
-  if (receiver !== LEADERBOARD_CONTRACT) {
+  // function must be one we relay. Both relayed functions take arguments, so the
+  // data field is `fn@arg...`; take the function name before the first `@` and
+  // require at least one argument (matches the prior `startsWith("fn@")` check).
+  const data = Buffer.from(tx.data ?? new Uint8Array()).toString("utf8");
+  const atIndex = data.indexOf("@");
+  const fnName = atIndex === -1 ? "" : data.slice(0, atIndex);
+  const op = fnName ? RELAY_OPS[fnName] : undefined;
+  if (!op) {
     return NextResponse.json(
-      { error: "wrong_receiver", message: "not the leaderboard contract" },
+      {
+        error: "wrong_function",
+        message: `only ${Object.keys(RELAY_OPS).join(", ")} are relayed`,
+      },
       { status: 400 },
     );
   }
 
-  // function must be submitScore
-  const data = Buffer.from(tx.data ?? new Uint8Array()).toString("utf8");
-  if (!data.startsWith(`${SUBMIT_FUNCTION}@`)) {
+  // Rate limit per client IP, against THIS function's budget. Scoping by
+  // function keeps the high tap budget from weakening the leaderboard's budget.
+  if (rateLimited(ip, fnName, op.rateMax)) {
     return NextResponse.json(
-      { error: "wrong_function", message: `only ${SUBMIT_FUNCTION} is relayed` },
+      { error: "rate_limited", message: "too many requests, slow down" },
+      { status: 429 },
+    );
+  }
+
+  // receiver must be the contract pinned for this function
+  const receiver = tx.receiver.toBech32();
+  if (receiver !== op.receiver) {
+    return NextResponse.json(
+      { error: "wrong_receiver", message: `wrong contract for ${fnName}` },
       { status: 400 },
     );
   }
@@ -215,8 +272,8 @@ export async function POST(request: Request) {
     );
   }
 
-  // gas cap
-  if (tx.gasLimit > BigInt(MAX_RELAYED_GAS_LIMIT)) {
+  // gas cap (this function's ceiling)
+  if (tx.gasLimit > BigInt(op.maxGasLimit)) {
     return NextResponse.json(
       { error: "gas_too_high", message: "gas limit exceeds relayer cap" },
       { status: 400 },
