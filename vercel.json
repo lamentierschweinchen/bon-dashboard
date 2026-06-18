@@ -5,6 +5,7 @@
     { "source": "/stress-test", "destination": "/stress-test.html" },
     { "source": "/perf-stats", "destination": "/perf-stats.html" },
     { "source": "/security-track", "destination": "/security-track.html" },
-    { "source": "/supernova-sprint", "destination": "/supernova-sprint.html" }
+    { "source": "/supernova-sprint", "destination": "/supernova-sprint.html" },
+    { "source": "/onchain", "destination": "/onchain.html" }
   ]
 }

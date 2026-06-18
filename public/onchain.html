@@ -1,0 +1,740 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>Every Tap Onchain · Supernova Sprint · MultiversX</title>
+<meta name="description" content="Every tap is a real transaction on MultiversX testnet. Watch them finalize live on the Supernova clock, sub-second behind your finger." />
+<meta property="og:type" content="website" />
+<meta property="og:title" content="Every Tap Onchain · MultiversX" />
+<meta property="og:description" content="Every tap is a real transaction on MultiversX testnet. Watch them finalize live on the Supernova clock." />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="Every Tap Onchain · MultiversX" />
+<meta name="twitter:description" content="Every tap is a real transaction on MultiversX testnet, finalizing live on the Supernova clock." />
+<!--
+================================================================================
+  ONCHAIN — "real onchain" Supernova Sprint experiment   (route: /onchain)
+================================================================================
+
+  A v2 of the Supernova Sprint tap game where EACH TAP fires a REAL relayed
+  transaction on MultiversX testnet (the public network currently running
+  Supernova, 600ms rounds) and the page counts the ones that actually finalize.
+
+  This is a NEW page. It does NOT touch the live /supernova-sprint game or the
+  live leaderboard contract. It uses its own contract (the tap-counter) and the
+  same gasless relayer, extended additively to relay `recordTaps`.
+
+  THE PIPELINE (per tap, default mode)
+  --------------------------------------------------------------------------------
+    1. tap → build a recordTaps(1) transaction
+    2. sign it with an ephemeral in-browser key, LOCAL nonce increment
+       (never wait between rapid taps — the nonce is tracked client-side)
+    3. POST the signed tx to /api/relay; the relayer adds its signature and
+       pays the testnet gas, so the player pays nothing
+    4. mark it "sent", then poll the tx status; when it finalizes, bump the
+       "finalized onchain" count. Finalized trails sent by the real finality
+       time (sub-second to ~1.8s) — that lag IS the demo.
+    5. headline a global on-chain counter read from the contract:
+       "players have fired N real transactions on MultiversX".
+
+  BUNDLED MODE (toggle / fallback)
+    Buffers taps over a short window and flushes them as one recordTaps(count)
+    tx. Default is per-tap (the visceral "every tap is a transaction"); bundled
+    keeps per-sender pending low at mash speed (the gateway caps ~100 pending
+    per sender), and the page auto-suggests it if pending climbs.
+
+  HONEST FRAMING
+    - Testnet only. Supernova is LIVE on testnet (600ms rounds) and scheduled
+      for mainnet — never claimed as a flat mainnet property.
+    - The count that is REAL is the number of recordTaps txs that finalize. The
+      per-tap count argument is the player's claim and is spoofable; acceptable
+      for a fun community demo on a test network (same caveat as the leaderboard).
+    - Testnet can be reset, which would clear the global counter.
+
+  FAIL-SOFT
+    Every onchain path is wrapped. If the crypto CDN is down, the relayer key is
+    unset, or the network errors, the page still loads and taps still register
+    locally; the onchain panel just shows an unavailable/degraded state.
+
+  CONFIG MIRRORS  src/lib/onchain/tap-counter.config.ts  (+ leaderboard.config.ts)
+================================================================================
+-->
+<style>
+/* ---------- Fonts (Roobert PRO, local @font-face, shared with the game) ---------- */
+@font-face{ font-family:'Roobert PRO'; src:url('/fonts/RoobertPRO-Light.otf') format('opentype'); font-weight:300; font-style:normal; font-display:swap; }
+@font-face{ font-family:'Roobert PRO'; src:url('/fonts/RoobertPRO-Regular.otf') format('opentype'); font-weight:400; font-style:normal; font-display:swap; }
+@font-face{ font-family:'Roobert PRO'; src:url('/fonts/RoobertPRO-Medium.otf') format('opentype'); font-weight:500; font-style:normal; font-display:swap; }
+@font-face{ font-family:'Roobert PRO'; src:url('/fonts/RoobertPRO-SemiBold.otf') format('opentype'); font-weight:600; font-style:normal; font-display:swap; }
+@font-face{ font-family:'Roobert PRO'; src:url('/fonts/RoobertPRO-Bold.otf') format('opentype'); font-weight:700; font-style:normal; font-display:swap; }
+@font-face{ font-family:'Roobert PRO'; src:url('/fonts/RoobertPRO-Heavy.otf') format('opentype'); font-weight:900; font-style:normal; font-display:swap; }
+
+:root{
+  --bg:#06070A;
+  --surface:#0E1117;
+  --surface-2:#141821;
+  --surface-3:#1a1f2b;
+  --border:#1E2330;
+  --border-soft:#161B25;
+  --mint:#23F7DD;
+  --mint-dim:#1ec8b4;
+  --text:#F4F6FA;
+  --text-dim:#9BA3B4;
+  --text-faint:#6B7385;
+  --blue:#5B8DEF;
+  --amber:#F5B544;
+  --coral:#FF6B9D;
+  --green:#4ADE80;
+  --lavender:#A78BFA;
+  --mono:'SFMono-Regular',ui-monospace,Menlo,Consolas,monospace;
+  --ease-out:cubic-bezier(.16,1,.3,1);
+}
+
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+html,body{min-height:100%;}
+body{
+  font-family:'Roobert PRO',system-ui,sans-serif;
+  background:var(--bg);
+  color:var(--text);
+  position:relative;
+  min-height:100vh;
+  touch-action:manipulation;
+  -webkit-user-select:none;user-select:none;
+  overflow-x:hidden;
+}
+
+/* cosmic background glows (shared visual language) */
+.cosmos{position:fixed;inset:0;z-index:0;overflow:hidden;pointer-events:none;}
+.glow{position:absolute;border-radius:50%;filter:blur(80px);opacity:.5;}
+.glow.g1{width:520px;height:520px;background:radial-gradient(circle,rgba(35,247,221,.20),transparent 70%);top:-180px;left:-120px;}
+.glow.g2{width:600px;height:600px;background:radial-gradient(circle,rgba(91,141,239,.13),transparent 70%);bottom:-260px;right:-160px;}
+.glow.g3{width:380px;height:380px;background:radial-gradient(circle,rgba(167,139,250,.10),transparent 70%);top:40%;left:55%;}
+.stars{position:absolute;inset:0;background-image:
+  radial-gradient(1px 1px at 20% 30%, rgba(244,246,250,.6), transparent),
+  radial-gradient(1px 1px at 70% 60%, rgba(244,246,250,.4), transparent),
+  radial-gradient(1px 1px at 40% 80%, rgba(244,246,250,.5), transparent),
+  radial-gradient(1px 1px at 85% 20%, rgba(244,246,250,.4), transparent);}
+
+/* layout */
+.wrap{position:relative;z-index:1;max-width:560px;margin:0 auto;padding:26px 20px 56px;display:flex;flex-direction:column;gap:18px;min-height:100vh;}
+
+/* header */
+.head{display:flex;align-items:center;justify-content:space-between;gap:12px;}
+.brand{display:flex;align-items:center;gap:10px;}
+.brand svg{width:26px;height:auto;display:block;}
+.brand .bt{font-weight:600;font-size:14px;letter-spacing:.01em;color:var(--text);}
+.net-pill{display:inline-flex;align-items:center;gap:7px;font-family:var(--mono);font-size:10.5px;color:var(--text-dim);background:var(--surface-2);border:1px solid var(--border);border-radius:999px;padding:5px 11px;}
+.net-pill .dot{width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 8px rgba(74,222,128,.8);animation:pulse 2s infinite;}
+@keyframes pulse{0%,100%{opacity:1;}50%{opacity:.4;}}
+
+/* hero copy */
+.hero h1{font-weight:900;font-size:27px;line-height:1.12;letter-spacing:-.01em;margin-bottom:9px;}
+.hero h1 .accent{color:var(--mint);}
+.hero p{font-size:14.5px;line-height:1.5;color:var(--text-dim);max-width:48ch;}
+.hero a.link-mint{color:var(--mint);text-decoration:none;border-bottom:1px solid transparent;transition:border-color .2s;}
+.hero a.link-mint:hover{border-bottom-color:var(--mint);}
+
+/* counters strip */
+.counters{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.counter{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:15px 16px;}
+.counter .cl{font-family:var(--mono);font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--text-faint);margin-bottom:7px;display:flex;align-items:center;gap:6px;}
+.counter .cn{font-family:var(--mono);font-weight:900;font-size:30px;line-height:1;font-variant-numeric:tabular-nums;}
+.counter .cn.sent{color:var(--text);}
+.counter .cn.fin{color:var(--mint);text-shadow:0 0 16px rgba(35,247,221,.4);}
+.counter .cs{font-size:11px;color:var(--text-faint);margin-top:6px;}
+.counter.global{grid-column:1 / -1;background:linear-gradient(180deg,var(--surface-2),var(--surface));}
+.counter.global .cn{font-size:34px;color:var(--text);}
+.counter.global .cn .g-mint{color:var(--mint);}
+
+/* the tap zone */
+.tap-card{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:22px 20px 24px;display:flex;flex-direction:column;align-items:center;gap:14px;}
+.tap-btn{
+  position:relative;width:200px;height:200px;border-radius:50%;cursor:pointer;border:none;
+  background:radial-gradient(circle at 50% 38%, #12303a, #0c1820 70%);
+  box-shadow:0 0 0 1px rgba(35,247,221,.30), 0 14px 50px rgba(35,247,221,.14), inset 0 0 50px rgba(35,247,221,.06);
+  display:flex;align-items:center;justify-content:center;
+  transition:transform .08s var(--ease-out), box-shadow .18s;
+  touch-action:manipulation;-webkit-user-select:none;user-select:none;
+}
+.tap-btn:active{transform:scale(.95);box-shadow:0 0 0 1px rgba(35,247,221,.6), 0 10px 36px rgba(35,247,221,.28), inset 0 0 60px rgba(35,247,221,.12);}
+.tap-btn svg{width:78px;height:auto;pointer-events:none;}
+.tap-btn .ring{position:absolute;inset:0;border-radius:50%;pointer-events:none;}
+.tap-btn[disabled]{opacity:.55;cursor:not-allowed;}
+.tap-hint{font-size:12.5px;color:var(--text-faint);text-align:center;}
+.tap-hint b{color:var(--text-dim);font-weight:600;}
+
+/* ripple/spark on tap */
+.spark{position:absolute;pointer-events:none;font-family:var(--mono);font-weight:700;font-size:12px;color:var(--mint);transform:translate(-50%,-50%);animation:spark .8s var(--ease-out) forwards;z-index:3;text-shadow:0 0 10px rgba(35,247,221,.7);white-space:nowrap;}
+@keyframes spark{0%{opacity:0;transform:translate(-50%,-50%) scale(.7);}18%{opacity:1;}100%{opacity:0;transform:translate(-50%,-160%) scale(1);}}
+
+/* mode toggle */
+.mode-row{display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap;}
+.mode-toggle{display:inline-flex;background:var(--surface-2);border:1px solid var(--border);border-radius:999px;padding:3px;}
+.mode-toggle button{font-family:inherit;font-size:11.5px;font-weight:600;letter-spacing:.01em;color:var(--text-dim);background:none;border:none;cursor:pointer;border-radius:999px;padding:6px 14px;transition:background .18s,color .18s;}
+.mode-toggle button.on{background:var(--mint);color:#04221d;}
+.mode-note{font-size:11px;color:var(--text-faint);text-align:center;max-width:42ch;}
+
+/* status line */
+.status{display:none;font-size:12.5px;line-height:1.45;border-radius:12px;padding:11px 13px;background:var(--surface-2);border:1px solid var(--border);color:var(--text-dim);}
+.status.show{display:block;}
+.status.warn{border-color:rgba(245,181,68,.4);background:rgba(245,181,68,.07);color:#f3cd86;}
+.status.err{border-color:rgba(255,107,157,.4);background:rgba(255,107,157,.07);color:#ffaecb;}
+.status.ok{border-color:rgba(74,222,128,.35);background:rgba(74,222,128,.06);color:#a7eec0;}
+.status a{color:var(--mint);text-decoration:none;font-family:var(--mono);font-size:11px;word-break:break-all;}
+
+/* recent transactions feed */
+.feed{background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:16px 16px 8px;}
+.feed h2{font-size:12px;font-weight:600;letter-spacing:.02em;color:var(--text-dim);margin-bottom:4px;display:flex;align-items:center;justify-content:space-between;}
+.feed h2 .legend{font-family:var(--mono);font-size:9.5px;font-weight:500;color:var(--text-faint);text-transform:none;letter-spacing:0;}
+.feed-list{display:flex;flex-direction:column;}
+.feed-empty{font-size:12.5px;color:var(--text-faint);padding:14px 2px 16px;text-align:center;}
+.tx-row{display:flex;align-items:center;gap:10px;padding:9px 2px;border-bottom:1px solid var(--border-soft);}
+.tx-row:last-child{border-bottom:none;}
+.tx-state{width:9px;height:9px;border-radius:50%;flex:0 0 auto;}
+.tx-state.pending{background:var(--amber);box-shadow:0 0 8px rgba(245,181,68,.7);animation:pulse 1.2s infinite;}
+.tx-state.final{background:var(--mint);box-shadow:0 0 8px rgba(35,247,221,.8);}
+.tx-state.failed{background:var(--coral);}
+.tx-hash{font-family:var(--mono);font-size:11px;color:var(--text-dim);text-decoration:none;flex:1 1 auto;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.tx-hash:hover{color:var(--mint);}
+.tx-meta{font-family:var(--mono);font-size:10px;color:var(--text-faint);flex:0 0 auto;text-align:right;min-width:64px;}
+.tx-meta.final{color:var(--mint);}
+
+/* footer note */
+.foot{font-size:11.5px;line-height:1.5;color:var(--text-faint);text-align:center;max-width:50ch;margin:2px auto 0;}
+.foot a{color:var(--text-dim);text-decoration:none;border-bottom:1px solid transparent;}
+.foot a:hover{border-bottom-color:var(--text-dim);}
+.foot .sep{opacity:.4;margin:0 6px;}
+
+.spin{display:inline-block;width:12px;height:12px;border:2px solid rgba(35,247,221,.3);border-top-color:var(--mint);border-radius:50%;animation:rot .7s linear infinite;vertical-align:-2px;margin-right:5px;}
+@keyframes rot{to{transform:rotate(360deg);}}
+
+@media (max-width:430px){
+  .hero h1{font-size:23px;}
+  .tap-btn{width:172px;height:172px;}
+  .tap-btn svg{width:66px;}
+  .counter .cn{font-size:26px;}
+  .counter.global .cn{font-size:29px;}
+}
+</style>
+</head>
+<body>
+<div class="cosmos" aria-hidden="true">
+  <div class="stars"></div>
+  <div class="glow g1"></div>
+  <div class="glow g2"></div>
+  <div class="glow g3"></div>
+</div>
+
+<main class="wrap">
+  <header class="head">
+    <div class="brand">
+      <svg viewBox="0 0 48 37" fill="none" aria-label="MultiversX"><path d="M26.6389 18.408L48.0001 6.93761L44.4089 0L24.8488 7.95166C24.3452 8.15668 23.7868 8.15668 23.2831 7.95166L3.72305 0L0.131836 6.93761L21.493 18.408L0.131836 29.8783L3.72305 36.8159L23.2831 28.8642C23.7868 28.6592 24.3452 28.6592 24.8488 28.8642L44.4089 36.8159L48.0001 29.8783L26.6389 18.408Z" fill="#23F7DD"/></svg>
+      <span class="bt">Supernova Sprint</span>
+    </div>
+    <span class="net-pill" id="netPill"><span class="dot"></span><span id="netLabel">testnet · 600ms</span></span>
+  </header>
+
+  <section class="hero">
+    <h1>Every tap is a <span class="accent">real transaction</span>.</h1>
+    <p>
+      Tap the X. Each tap fires a real transaction on MultiversX testnet — the
+      network running <a class="link-mint" href="https://multiversx.com/blog/supernova-decoupling-consensus-and-execution" target="_blank" rel="noopener">Supernova</a>
+      today at 600ms rounds. Watch the <b style="color:var(--mint)">finalized</b> count chase your finger,
+      sub-second behind. The lag is the whole point.
+    </p>
+  </section>
+
+  <section class="counters">
+    <div class="counter">
+      <div class="cl">Your taps · sent</div>
+      <div class="cn sent" id="cSent">0</div>
+      <div class="cs" id="cSentSub">transactions broadcast this session</div>
+    </div>
+    <div class="counter">
+      <div class="cl">Finalized onchain</div>
+      <div class="cn fin" id="cFinal">0</div>
+      <div class="cs" id="cFinalSub">irreversible on the Supernova clock</div>
+    </div>
+    <div class="counter global">
+      <div class="cl">Everyone · global onchain counter</div>
+      <div class="cn"><span class="g-mint" id="cGlobal">—</span> <span style="font-size:14px;color:var(--text-faint);font-weight:400">real transactions on MultiversX</span></div>
+      <div class="cs" id="cGlobalSub">read live from the tap-counter contract</div>
+    </div>
+  </section>
+
+  <section class="tap-card">
+    <button class="tap-btn" id="tapBtn" aria-label="Tap to fire a transaction">
+      <span class="ring" id="tapRing"></span>
+      <svg viewBox="0 0 48 37" fill="none"><path d="M26.6389 18.408L48.0001 6.93761L44.4089 0L24.8488 7.95166C24.3452 8.15668 23.7868 8.15668 23.2831 7.95166L3.72305 0L0.131836 6.93761L21.493 18.408L0.131836 29.8783L3.72305 36.8159L23.2831 28.8642C23.7868 28.6592 24.3452 28.6592 24.8488 28.8642L44.4089 36.8159L48.0001 29.8783L26.6389 18.408Z" fill="#23F7DD"/></svg>
+    </button>
+    <div class="tap-hint" id="tapHint">Tap, click, or press <b>space</b> — each one goes onchain</div>
+
+    <div class="mode-row">
+      <div class="mode-toggle" role="group" aria-label="Transaction mode">
+        <button id="modePerTap" class="on" type="button">Per tap</button>
+        <button id="modeBundled" type="button">Bundled</button>
+      </div>
+    </div>
+    <div class="mode-note" id="modeNote">One transaction per tap — the visceral version.</div>
+
+    <div class="status" id="status"></div>
+  </section>
+
+  <section class="feed">
+    <h2>Recent transactions <span class="legend"><span style="color:var(--amber)">●</span> pending&nbsp;&nbsp;<span style="color:var(--mint)">●</span> finalized</span></h2>
+    <div class="feed-list" id="feedList">
+      <div class="feed-empty" id="feedEmpty">Your transactions will appear here with live testnet explorer links.</div>
+    </div>
+  </section>
+
+  <p class="foot">
+    Testnet only — Supernova is live here at 600ms and scheduled for mainnet. The
+    finalized count is real on-chain transactions; the tap count you send is your
+    own claim (spoofable, and that's fine for a test-network demo). Testnet can be
+    reset, which would clear the global counter.
+    <br>
+    <a id="contractLink" href="#" target="_blank" rel="noopener">tap-counter contract</a>
+    <span class="sep">·</span>
+    <a href="/supernova-sprint">the original game</a>
+  </p>
+</main>
+
+<script>
+/* ============================================================================
+   CONFIG — mirrors src/lib/onchain/tap-counter.config.ts (+ leaderboard.config.ts).
+   Safe to expose (addresses + public endpoints). The relayer SIGNING KEY lives
+   only in the server env (see app/api/relay/route.ts).
+   ============================================================================ */
+var CFG = {
+  contract: 'erd1qqqqqqqqqqqqqpgq9tmxfe7dm4ndgzt4cx9z83mrj750kgnuenwscvaddk', // tap-counter (testnet)
+  relayer:  'erd1ru08dt4u5e0psfrwth38u0dfed0hw8289xqdd9yghl3ec24uppuq6hgphm', // gas payer (shard 0)
+  api:      'https://testnet-api.multiversx.com',
+  explorer: 'https://testnet-explorer.multiversx.com',
+  chainID:  'T',
+  gasLimit: 6000000,
+  gasPrice: 1000000000,
+  numShards: 3,
+  relayerShard: 0,          // erd1ru08... is in shard 0 (verified); grind handles any value
+  fn: 'recordTaps',
+  maxPerCall: 1000,         // mirrors the contract's MAX_TAPS_PER_CALL
+  bundleWindowMs: 600,      // bundled mode flush window (one Supernova round)
+  pendingSoftCap: 60,       // suggest bundled mode if local pending climbs past this
+  pollIntervalMs: 700,
+  pollMaxTries: 18,         // ~12.6s ceiling per tx before we stop polling
+  globalRefreshMs: 4000,
+  feedMax: 8
+};
+
+function $(id){ return document.getElementById(id); }
+
+/* runtime state */
+var ST = {
+  libs: null,            // { ed, bech32 }
+  key: null,             // { priv, pub, address }
+  nonce: 0,              // LOCAL nonce, incremented per tx (never wait between taps)
+  keyReady: false,       // ephemeral key + starting nonce resolved
+  initPromise: null,     // single-flight key init
+  available: true,       // false => degraded (no crypto / no relayer)
+  mode: 'pertap',        // 'pertap' | 'bundled'
+  sent: 0,               // txs broadcast this session
+  finalized: 0,          // txs that reached finality this session
+  pending: 0,            // sent but not yet finalized (local view)
+  global: null,          // global counter from the contract
+  bundleBuf: 0,          // buffered taps awaiting flush (bundled mode)
+  bundleTimer: null,
+  feed: [],              // recent { hash, state, sentAt, finalMs, count }
+  warnedPending: false,
+  warnedUnavailable: false
+};
+
+/* ---------- tiny encoders ---------- */
+function bytesToHex(b){ var h=''; for(var i=0;i<b.length;i++){ h+=b[i].toString(16).padStart(2,'0'); } return h; }
+function u32ToHex(n){ // recordTaps takes a u32 — pad to 8 hex (4 bytes BE)
+  var h = (n>>>0).toString(16); while(h.length<8) h='0'+h; return h;
+}
+
+/* address shard from the last pubkey byte (matches sdk-core AddressComputer) */
+function shardOfPubkey(pub){
+  var last = pub[31];
+  var shard = last & 3;                  // maskHigh = 0b11
+  if(shard > CFG.numShards - 1){ shard = last & 1; } // maskLow = 0b01
+  return shard;
+}
+
+/* lazy-load crypto libs from a CDN; resolve null on any failure (fail-soft) */
+function loadLibs(){
+  if(ST.libs) return Promise.resolve(ST.libs);
+  return Promise.all([
+    import('https://esm.sh/@noble/ed25519@2.1.0'),
+    import('https://esm.sh/@scure/base@1.1.6')
+  ]).then(function(mods){
+    ST.libs = { ed: mods[0], bech32: mods[1].bech32 };
+    return ST.libs;
+  }).catch(function(err){
+    console.warn('[onchain] crypto libs failed to load:', err);
+    return null;
+  });
+}
+
+function addressFromPubkey(bech32, pub){
+  return bech32.encode('erd', bech32.toWords(pub), 256);
+}
+
+/* generate an ephemeral keypair whose address lands in the relayer's shard */
+async function generateEphemeral(libs){
+  var ed = libs.ed, bech32 = libs.bech32;
+  for(var tries=0; tries<300; tries++){
+    var priv = ed.utils.randomPrivateKey();
+    var pub = await ed.getPublicKeyAsync(priv);
+    if(shardOfPubkey(pub) === CFG.relayerShard){
+      return { priv: priv, pub: pub, address: addressFromPubkey(bech32, pub) };
+    }
+  }
+  throw new Error('could not derive a key in the relayer shard');
+}
+
+/* canonical signing bytes — field ORDER + encoding match sdk-core
+   TransactionComputer.computeBytesForSigning exactly. */
+function signingString(tx){
+  return JSON.stringify({
+    nonce: tx.nonce, value: tx.value, receiver: tx.receiver, sender: tx.sender,
+    gasPrice: tx.gasPrice, gasLimit: tx.gasLimit, data: tx.dataB64,
+    chainID: tx.chainID, version: tx.version, relayer: tx.relayer
+  });
+}
+
+/* one-time (single-flight) ephemeral key + starting nonce init */
+function ensureKey(){
+  if(ST.keyReady) return Promise.resolve(true);
+  if(ST.initPromise) return ST.initPromise;
+  ST.initPromise = (async function(){
+    var libs = await loadLibs();
+    if(!libs){ ST.available = false; return false; }
+    try {
+      ST.key = await generateEphemeral(libs);
+    } catch(e){
+      console.warn('[onchain] key gen failed:', e);
+      ST.available = false;
+      return false;
+    }
+    // fetch the starting nonce once (fresh key => 0, but be correct), then
+    // increment LOCALLY for every tx so rapid taps never wait on the network.
+    ST.nonce = 0;
+    try {
+      var r = await fetch(CFG.api + '/accounts/' + ST.key.address);
+      if(r.ok){ var j = await r.json(); ST.nonce = j.nonce || 0; }
+    } catch(e){ /* fresh key, nonce stays 0 */ }
+    ST.keyReady = true;
+    return true;
+  })();
+  return ST.initPromise;
+}
+
+/* ---------- the core: fire ONE recordTaps(count) transaction ---------- */
+async function fireTaps(count){
+  // guard the per-call cap (the contract also enforces it)
+  if(count > CFG.maxPerCall) count = CFG.maxPerCall;
+  if(count <= 0) return;
+
+  var ok = await ensureKey();
+  if(!ok){ degrade(); return; }
+
+  var libs = ST.libs, key = ST.key;
+  var nonce = ST.nonce++;            // LOCAL increment — claim this nonce now
+
+  var dataStr = CFG.fn + '@' + u32ToHex(count);
+  var dataB64 = btoa(dataStr);
+  var txForSign = {
+    nonce: nonce, value: '0', receiver: CFG.contract, sender: key.address,
+    gasPrice: CFG.gasPrice, gasLimit: CFG.gasLimit, dataB64: dataB64,
+    chainID: CFG.chainID, version: 2, relayer: CFG.relayer
+  };
+
+  var sigBytes = await libs.ed.signAsync(new TextEncoder().encode(signingString(txForSign)), key.priv);
+  var plainTx = {
+    nonce: nonce, value: '0', receiver: CFG.contract, sender: key.address,
+    senderUsername: undefined, receiverUsername: undefined,
+    gasPrice: CFG.gasPrice, gasLimit: CFG.gasLimit, data: dataB64,
+    chainID: CFG.chainID, version: 2, relayer: CFG.relayer,
+    signature: bytesToHex(sigBytes)
+  };
+
+  var res, out;
+  try {
+    res = await fetch('/api/relay', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ transaction: plainTx })
+    });
+    out = await res.json();
+  } catch(e){
+    console.warn('[onchain] relay request failed:', e);
+    setStatus('err', 'Network hiccup reaching the relayer. Your taps still count locally; onchain will resume when it recovers.');
+    return;
+  }
+
+  if(!res.ok || out.error){
+    handleRelayError(out, res.status);
+    return;
+  }
+
+  // SENT: the relayer broadcast it. Count it and track it to finality.
+  ST.sent += 1;
+  ST.pending += 1;
+  renderCounters();
+  maybeSuggestBundled();
+
+  var hash = out.txHash;
+  var entry = { hash: hash, state: 'pending', sentAt: Date.now(), finalMs: null, count: count };
+  ST.feed.unshift(entry);
+  if(ST.feed.length > CFG.feedMax) ST.feed.length = CFG.feedMax;
+  renderFeed();
+
+  pollToFinality(entry);
+}
+
+/* poll a tx until it is finalized (or fails / times out) */
+async function pollToFinality(entry){
+  for(var i=0;i<CFG.pollMaxTries;i++){
+    await new Promise(function(r){ setTimeout(r, CFG.pollIntervalMs); });
+    var status = await fetchTxStatus(entry.hash);
+    if(status === 'success'){
+      entry.state = 'final';
+      entry.finalMs = Date.now() - entry.sentAt;
+      ST.finalized += 1;
+      ST.pending = Math.max(0, ST.pending - 1);
+      renderCounters(); renderFeed();
+      refreshGlobal(); // the global counter just grew
+      return;
+    }
+    if(status === 'fail' || status === 'invalid'){
+      entry.state = 'failed';
+      ST.pending = Math.max(0, ST.pending - 1);
+      renderCounters(); renderFeed();
+      return;
+    }
+    // pending / not-yet-indexed: keep polling
+  }
+  // timed out waiting — leave it pending in the feed, free the local pending slot
+  ST.pending = Math.max(0, ST.pending - 1);
+  renderCounters();
+}
+
+/* read a tx's status from the testnet API. Returns
+   'success' | 'fail' | 'invalid' | 'pending' | 'unknown'. */
+async function fetchTxStatus(hash){
+  try {
+    var r = await fetch(CFG.api + '/transactions/' + hash + '?fields=status');
+    if(!r.ok) return 'pending';
+    var j = await r.json();
+    return j && j.status ? j.status : 'pending';
+  } catch(e){ return 'pending'; }
+}
+
+/* ---------- global counter (read live from the contract) ---------- */
+async function refreshGlobal(){
+  try {
+    var body = { scAddress: CFG.contract, funcName: 'getGlobalTaps', args: [] };
+    var r = await fetch(CFG.api + '/vm-values/query', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+    if(!r.ok) return;
+    var j = await r.json();
+    var data = j && j.data && j.data.data ? j.data.data : null;
+    if(!data || data.returnCode !== 'ok') return;
+    var parts = data.returnData || [];
+    var b64 = parts[0] || '';
+    ST.global = b64 ? decodeU64(b64) : 0;
+    renderGlobal();
+  } catch(e){ /* leave the last known value */ }
+}
+
+/* decode a base64 big-endian u64 into a JS number (safe for our magnitudes) */
+function decodeU64(b64){
+  var bin = atob(b64);
+  var v = 0n;
+  for(var i=0;i<bin.length;i++){ v = (v<<8n) | BigInt(bin.charCodeAt(i)); }
+  return Number(v);
+}
+
+/* ---------- rendering ---------- */
+function fmt(n){ return (n==null) ? '—' : Number(n).toLocaleString('en-US'); }
+
+function renderCounters(){
+  $('cSent').textContent = fmt(ST.sent);
+  $('cFinal').textContent = fmt(ST.finalized);
+  var trailing = ST.sent - ST.finalized;
+  $('cFinalSub').textContent = trailing > 0
+    ? (trailing + ' still settling — that’s the finality lag')
+    : 'irreversible on the Supernova clock';
+}
+function renderGlobal(){
+  $('cGlobal').textContent = fmt(ST.global);
+}
+function renderFeed(){
+  var list = $('feedList');
+  if(!ST.feed.length){ return; }
+  var empty = $('feedEmpty'); if(empty) empty.style.display = 'none';
+  var html = '';
+  for(var i=0;i<ST.feed.length;i++){
+    var e = ST.feed[i];
+    var short = e.hash.slice(0,10) + '…' + e.hash.slice(-8);
+    var url = CFG.explorer + '/transactions/' + e.hash;
+    var meta, metaCls='';
+    if(e.state === 'final'){ meta = '✓ ' + (e.finalMs!=null ? (e.finalMs/1000).toFixed(2)+'s' : 'final'); metaCls='final'; }
+    else if(e.state === 'failed'){ meta = 'failed'; }
+    else { meta = 'pending'; }
+    var cnt = e.count > 1 ? (' <span style="color:var(--text-faint)">×'+e.count+'</span>') : '';
+    html += '<div class="tx-row">' +
+      '<span class="tx-state '+e.state+'"></span>' +
+      '<a class="tx-hash" href="'+url+'" target="_blank" rel="noopener">'+short+cnt+'</a>' +
+      '<span class="tx-meta '+metaCls+'">'+meta+'</span>' +
+    '</div>';
+  }
+  list.innerHTML = html;
+}
+
+/* ---------- status + degradation ---------- */
+function setStatus(kind, html){
+  var el = $('status');
+  el.className = 'status show' + (kind ? (' '+kind) : '');
+  el.innerHTML = html;
+}
+function clearStatus(){ var el=$('status'); el.className='status'; el.innerHTML=''; }
+
+function degrade(){
+  if(ST.warnedUnavailable) return;
+  ST.warnedUnavailable = true;
+  ST.available = false;
+  setStatus('warn', 'Onchain submission is unavailable right now (crypto libraries or relayer not reachable). Your taps still register here — the real-transaction layer just isn’t live this moment.');
+}
+
+function handleRelayError(out, status){
+  var code = out && out.error;
+  if(code === 'relayer_unavailable'){
+    setStatus('warn', 'The gasless relayer isn’t switched on yet. Taps still register locally; real transactions go live once the relayer key is set.');
+    ST.available = false; return;
+  }
+  if(code === 'relayer_misconfigured'){
+    setStatus('err', 'The relayer is misconfigured (flagged for the team). Taps still register locally.');
+    ST.available = false; return;
+  }
+  if(code === 'rate_limited'){
+    // most likely in per-tap mode at high speed — nudge to bundled
+    setStatus('warn', 'Going fast! You hit the relayer’s per-minute limit. Switch to <b>Bundled</b> to keep firing — it packs many taps into one transaction.');
+    return;
+  }
+  if(code === 'broadcast_failed'){
+    setStatus('err', 'The network didn’t accept that one (testnet can be busy or resetting). Keep tapping; the next should go through.');
+    return;
+  }
+  setStatus('err', 'Onchain submission hiccuped (' + (code || ('HTTP '+status)) + '). Your taps still count here.');
+}
+
+/* suggest bundled mode if local pending climbs toward the gateway's ~100/sender cap */
+function maybeSuggestBundled(){
+  if(ST.mode === 'bundled' || ST.warnedPending) return;
+  if(ST.pending >= CFG.pendingSoftCap){
+    ST.warnedPending = true;
+    setStatus('warn', 'Lots of transactions in flight. <b>Bundled</b> mode keeps things smooth at mash speed — it packs taps into one transaction per round.');
+  }
+}
+
+/* ---------- tap handling ---------- */
+function spark(x, y, label){
+  var card = $('tapBtn');
+  var rect = card.getBoundingClientRect();
+  var s = document.createElement('span');
+  s.className = 'spark';
+  s.textContent = label || '+1 tx';
+  s.style.left = (x - rect.left) + 'px';
+  s.style.top = (y - rect.top) + 'px';
+  card.appendChild(s);
+  setTimeout(function(){ s.remove(); }, 800);
+}
+
+function onTap(x, y){
+  if(ST.mode === 'pertap'){
+    spark(x, y, '+1 tx');
+    fireTaps(1).catch(function(e){ console.warn('[onchain] fire failed', e); });
+  } else {
+    // bundled: buffer this tap, flush on a short window or when the buffer is full
+    ST.bundleBuf += 1;
+    spark(x, y, '+1');
+    if(ST.bundleBuf >= CFG.maxPerCall){ flushBundle(); return; }
+    if(!ST.bundleTimer){
+      ST.bundleTimer = setTimeout(flushBundle, CFG.bundleWindowMs);
+    }
+  }
+}
+function flushBundle(){
+  if(ST.bundleTimer){ clearTimeout(ST.bundleTimer); ST.bundleTimer = null; }
+  var n = ST.bundleBuf; ST.bundleBuf = 0;
+  if(n > 0){ fireTaps(n).catch(function(e){ console.warn('[onchain] bundle fire failed', e); }); }
+}
+
+/* ---------- mode toggle ---------- */
+function setMode(mode){
+  if(ST.mode === mode) return;
+  // flush any buffered taps before leaving bundled mode
+  if(ST.mode === 'bundled') flushBundle();
+  ST.mode = mode;
+  ST.warnedPending = false;
+  $('modePerTap').classList.toggle('on', mode === 'pertap');
+  $('modeBundled').classList.toggle('on', mode === 'bundled');
+  $('modeNote').textContent = mode === 'pertap'
+    ? 'One transaction per tap — the visceral version.'
+    : 'Packs your taps into one transaction per ~600ms round — smoother at mash speed.';
+  clearStatus();
+}
+
+/* ============================================================================
+   wire-up
+   ============================================================================ */
+(function init(){
+  // contract explorer link in the footer
+  var cl = $('contractLink');
+  if(cl) cl.href = CFG.explorer + '/accounts/' + CFG.contract;
+
+  // tap interactions: pointer (covers mouse + touch), plus spacebar
+  var btn = $('tapBtn');
+  btn.addEventListener('pointerdown', function(ev){
+    ev.preventDefault();
+    onTap(ev.clientX, ev.clientY);
+  });
+  btn.addEventListener('contextmenu', function(e){ e.preventDefault(); });
+
+  document.addEventListener('keydown', function(ev){
+    if(ev.code === 'Space' || ev.key === ' '){
+      ev.preventDefault();
+      var r = btn.getBoundingClientRect();
+      onTap(r.left + r.width/2, r.top + r.height/2);
+      btn.style.transform = 'scale(.95)';
+      setTimeout(function(){ btn.style.transform = ''; }, 90);
+    }
+  });
+
+  $('modePerTap').addEventListener('click', function(){ setMode('pertap'); });
+  $('modeBundled').addEventListener('click', function(){ setMode('bundled'); });
+
+  // warm the ephemeral key in the background so the first tap is instant.
+  // fail-soft: if it can't init, the first tap shows the degraded state.
+  ensureKey().then(function(ok){ if(!ok) degrade(); });
+
+  // confirm the network is on Supernova (600ms) and keep the global counter fresh
+  (async function(){
+    try {
+      var r = await fetch(CFG.api + '/network/config');
+      if(r.ok){
+        var j = await r.json();
+        var dur = j && j.data && j.data.config ? j.data.config.erd_round_duration : null;
+        if(dur){ $('netLabel').textContent = 'testnet · ' + dur + 'ms'; }
+      }
+    } catch(e){ /* leave the static label */ }
+  })();
+
+  refreshGlobal();
+  setInterval(refreshGlobal, CFG.globalRefreshMs);
+})();
+</script>
+</body>
+</html>
