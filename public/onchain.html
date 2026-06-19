@@ -511,9 +511,9 @@ body{
       <div class="cs" id="cSentSub">transactions broadcast this session</div>
     </div>
     <div class="counter">
-      <div class="cl">Finalized onchain <button class="info-btn" id="infoBtn2" type="button" aria-label="Why not instant?">i</button></div>
+      <div class="cl">Confirmed onchain · live <button class="info-btn" id="infoBtn2" type="button" aria-label="What you're watching">i</button></div>
       <div class="cn fin" id="cFinal">0</div>
-      <div class="cs" id="cFinalSub">irreversible on the Supernova clock</div>
+      <div class="cs" id="cFinalSub">real transactions, confirmed onchain</div>
     </div>
     <div class="counter global">
       <div class="cl">Everyone · global onchain counter</div>
@@ -672,8 +672,8 @@ body{
   </section>
 
   <p class="foot">
-    Testnet only — Supernova is live here at 600ms and scheduled for mainnet. The
-    finalized count is real on-chain transactions; the tap count you send is your
+    Testnet only — Supernova is live here (600ms rounds) and scheduled for mainnet.
+    The confirmed count is real onchain transactions; the tap count you send is your
     own claim (spoofable, and that's fine for a test-network demo). Testnet can be
     reset, which would clear the global counter.
     <br>
@@ -683,7 +683,7 @@ body{
   </p>
 </main>
 
-<!-- INFO MODAL: why finality isn't instant -->
+<!-- INFO MODAL: what the player is watching (API-confirm vs true finality) -->
 <div class="info-modal" id="infoModal" role="dialog" aria-modal="true" aria-label="What you're watching">
   <div class="info-sheet">
     <button class="info-close" id="infoClose" aria-label="Close">&times;</button>
@@ -1007,8 +1007,8 @@ function renderCounters(){
   $('cFinal').textContent = fmt(ST.finalized);
   var trailing = ST.sent - ST.finalized;
   $('cFinalSub').textContent = trailing > 0
-    ? (trailing + ' still settling — that’s the finality lag')
-    : 'irreversible on the Supernova clock';
+    ? (trailing + ' still confirming — the API runs a beat behind')
+    : 'real transactions, confirmed onchain';
 }
 function renderGlobal(){
   $('cGlobal').textContent = fmt(ST.global);
@@ -1237,7 +1237,7 @@ function applyAppModeView(){
     $('tapHint').innerHTML = 'Press <b>Start 30-second sprint</b> — then tap, click, or hit <b>space</b>';
   } else {
     $('heroTitle').innerHTML = 'Every tap is a <span class="accent">real transaction</span>.';
-    $('heroCopy').innerHTML = 'Tap the X. Each tap fires a real transaction on MultiversX testnet — the network running <a class="link-mint" href="https://multiversx.com/blog/supernova-decoupling-consensus-and-execution" target="_blank" rel="noopener">Supernova</a> today at 600ms rounds. Watch the <b style="color:var(--mint)">finalized</b> count chase your finger, sub-second behind. Open-ended — go as long as you like.';
+    $('heroCopy').innerHTML = 'Tap the X. Each tap fires a real transaction on MultiversX testnet — the network running <a class="link-mint" href="https://multiversx.com/blog/supernova-decoupling-consensus-and-execution" target="_blank" rel="noopener">Supernova</a> today. Watch the <b style="color:var(--mint)">confirmed</b> count chase your finger as each one lands onchain. Open-ended — go as long as you like.';
     $('tapHint').innerHTML = 'Tap, click, or press <b>space</b> — each one goes onchain';
   }
 }
@@ -1831,7 +1831,7 @@ function lbUtf8ToHex(str){ return bytesToHex(new TextEncoder().encode(str)); }
 async function lbSubmit(){
   if(LB.submitted) return;
   var score = LB.lastScore;
-  if(!score || score <= 0){ lbStatus('err', 'Nothing finalized to submit. Play a sprint first.'); return; }
+  if(!score || score <= 0){ lbStatus('err', 'Nothing confirmed to submit. Play a sprint first.'); return; }
 
   var handle = ($('lbHandle').value || '').trim();
   if(!handle){ lbStatus('err', 'Pick a handle so you show up on the leaderboard.'); $('lbHandle').focus(); return; }
