@@ -1966,7 +1966,7 @@ async function lbLoadLeaderboard(){
   try {
     var libs = await loadLibs();
     if(!libs) return;
-    var nHex = (10).toString(16).padStart(2,'0');  // getTopScores(10)
+    var nHex = (100).toString(16).padStart(2,'0');  // getTopScores(100): deep enough to locate the player's own rank below the top 10
     var body = { scAddress: LB.contract, funcName: 'getTopScores', args: [nHex] };
     var res = await fetch(CFG.api + '/vm-values/query', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -2002,16 +2002,29 @@ function lbRenderLeaderboard(entries){
     rows.innerHTML = '<div class="lb-empty">No sprints onchain yet. Submit yours to be first.</div>';
     return;
   }
+  // order by score desc so rank = index + 1 (the view returns sorted; this is defensive)
+  entries = entries.slice().sort(function(a,b){ return b.score - a.score; });
   var myHandle = ($('lbHandle').value || '').trim();
-  var html = '';
-  for(var i=0;i<entries.length;i++){
-    var e = entries[i];
-    var mine = (LB.submitted && myHandle && e.handle === myHandle);
-    html += '<div class="lb-row' + (mine?' you':'') + '">' +
-      '<span class="lb-rank">' + (i+1) + '</span>' +
+  // locate the player's own row anywhere in the fetched list, so we can always show their rank
+  var myIdx = -1;
+  if(LB.submitted && myHandle){
+    for(var k=0;k<entries.length;k++){ if(entries[k].handle === myHandle){ myIdx = k; break; } }
+  }
+  var rowHtml = function(e, rank, mine){
+    return '<div class="lb-row' + (mine?' you':'') + '">' +
+      '<span class="lb-rank">' + rank + '</span>' +
       '<span class="lb-handle-cell">' + lbEscape(e.handle) + '</span>' +
       '<span class="lb-score-cell">' + e.score + '</span>' +
     '</div>';
+  };
+  var TOP = 10;
+  var limit = Math.min(TOP, entries.length);
+  var html = '';
+  for(var i=0;i<limit;i++){ html += rowHtml(entries[i], i + 1, (i === myIdx)); }
+  // player ranked below the top 10: pin their own row beneath a separator so it always shows
+  if(myIdx >= TOP){
+    html += '<div class="lb-row-sep" style="text-align:center;color:var(--text-faint);font-size:14px;letter-spacing:3px;padding:4px 0 2px;line-height:1;" aria-hidden="true">⋯</div>';
+    html += rowHtml(entries[myIdx], myIdx + 1, true);
   }
   rows.innerHTML = html;
 }
