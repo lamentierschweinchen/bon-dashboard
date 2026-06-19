@@ -765,7 +765,7 @@ h1.title{
     <div class="lanes-title">
       <span class="t">Finalized within the window</span>
       <span class="legend">
-        <span class="tip" data-tip="Sent. Instant on every chain."><i class="lg-dot lg-sub"></i><span class="tip-underline">sent</span></span>
+        <span class="tip" data-tip="Sent. Instant on any chain."><i class="lg-dot lg-sub"></i><span class="tip-underline">sent</span></span>
         <span class="tip" data-tip="Landed in a block. Still reversible."><i class="lg-dot lg-inc"></i><span class="tip-underline">in block</span></span>
         <span class="tip" data-tip="Irreversible. The number that matters."><i class="lg-dot lg-fin"></i><span class="tip-underline">final</span></span>
       </span>
@@ -899,7 +899,7 @@ h1.title{
     <p>Most blockchains work in sequence. Propose a block, vote on it, then run the transactions inside it, each step strictly after the last. That ordering is where the seconds go.</p>
     <p><b>Supernova overlaps the steps.</b> The network votes and executes at the same time, so a block that used to take about six seconds now targets around 600 milliseconds, and intra-shard finality targets around 250 milliseconds. About the length of a blink.</p>
     <div class="why-steps">
-      <div class="why-step"><span class="ws-n">1</span><span class="ws-t"><b>Submitted.</b> You clicked. Instant, your action, on every chain.</span></div>
+      <div class="why-step"><span class="ws-n">1</span><span class="ws-t"><b>Submitted.</b> You clicked. Instant, your action, on any chain.</span></div>
       <div class="why-step"><span class="ws-n">2</span><span class="ws-t"><b>In a block.</b> Gated by the chain's block time. Tap faster than its cadence and your transactions queue for the next block.</span></div>
       <div class="why-step"><span class="ws-n">3</span><span class="ws-t"><b>Final.</b> Irreversible. Gated by the chain's finality. This is where slow chains fall behind your thumb.</span></div>
     </div>
@@ -1327,7 +1327,7 @@ function makeLane(chain, finalized, score){
     '<div class="track">'+
       '<div class="final-zone"></div>'+
       '<div class="seg-labels">'+
-        '<div class="tip tip-left" data-tip="Sent. Instant on every chain.">Submitted</div>'+
+        '<div class="tip tip-left" data-tip="Sent. Instant on any chain.">Submitted</div>'+
         '<div class="tip" data-tip="Landed in a block. Still reversible.">In block</div>'+
         '<div class="tip" data-tip="Irreversible. The number that matters.">Final</div>'+
       '</div>'+

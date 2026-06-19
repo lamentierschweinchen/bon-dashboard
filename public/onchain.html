@@ -4,13 +4,13 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
 <title>Every Tap Onchain · Supernova Sprint · MultiversX</title>
-<meta name="description" content="Every tap is a real transaction on MultiversX testnet. Watch them confirm live, then compare against every chain's finality in a 30-second sprint." />
+<meta name="description" content="Every tap is a real smart-contract call on MultiversX testnet. Watch it confirm live, then see how Supernova finality compares to other chains." />
 <meta property="og:type" content="website" />
 <meta property="og:title" content="Every Tap Onchain · MultiversX" />
-<meta property="og:description" content="Every tap is a real transaction on MultiversX testnet. Watch them confirm live, then compare against every chain's finality." />
+<meta property="og:description" content="Every tap is a real smart-contract call on MultiversX testnet. Watch it confirm live, then see how Supernova finality compares to other chains." />
 <meta name="twitter:card" content="summary_large_image" />
 <meta name="twitter:title" content="Every Tap Onchain · MultiversX" />
-<meta name="twitter:description" content="Every tap is a real transaction on MultiversX testnet. Watch them confirm live, then compare against every chain's finality." />
+<meta name="twitter:description" content="Every tap is a real smart-contract call on MultiversX testnet. Watch it confirm live, then see how Supernova finality compares to other chains." />
 <meta property="og:url" content="https://supernova-sprint.xyz/" />
 <meta property="og:image" content="https://supernova-sprint.xyz/supernova-sprint-og.png" />
 <meta property="og:image:width" content="1200" />
@@ -494,9 +494,10 @@ body{
   <section class="hero">
     <h1 id="heroTitle">Every tap is a <span class="accent">real transaction</span>.</h1>
     <p id="heroCopy">
-      30 seconds. Tap as fast as you can. Your score is how many real transactions
-      you can <b style="color:var(--mint)">land on MultiversX</b> before the clock runs out.
+      30 seconds. Tap as fast as you can. Your score is how many transactions
+      you can <b style="color:var(--mint)">land on Supernova</b> before the clock runs out.
     </p>
+    <p class="hero-boast" style="font-size:13.5px;color:var(--text-dim);margin-top:9px;line-height:1.5;">Each one is a real <b style="color:var(--mint)">smart-contract call</b>, not just a simple transfer.</p>
   </section>
 
   <!-- top-level mode: 30s Sprint (default) | Unlimited -->
@@ -1235,7 +1236,7 @@ function applyAppModeView(){
   // hero + hint copy per mode
   if(sprint){
     $('heroTitle').innerHTML = 'Every tap is a <span class="accent">real transaction</span>.';
-    $('heroCopy').innerHTML = '30 seconds. Tap as fast as you can. Your score is how many real transactions you can <b style="color:var(--mint)">land on MultiversX</b> before the clock runs out.';
+    $('heroCopy').innerHTML = '30 seconds. Tap as fast as you can. Your score is how many transactions you can <b style="color:var(--mint)">land on Supernova</b> before the clock runs out.';
     $('tapHint').innerHTML = 'Press <b>Start 30-second sprint</b>, then tap, click, or hit <b>space</b>';
   } else {
     $('heroTitle').innerHTML = 'Every tap is a <span class="accent">real transaction</span>.';
@@ -1660,7 +1661,7 @@ function makeLane(chain, finalized, tapsTotal){
     '<div class="track">' +
       '<div class="final-zone"></div>' +
       '<div class="seg-labels">' +
-        '<div class="tip tip-left" data-tip="Sent. Instant on every chain.">Submitted</div>' +
+        '<div class="tip tip-left" data-tip="Sent. Instant on any chain.">Submitted</div>' +
         '<div class="tip" data-tip="Landed in a block. Still reversible.">In block</div>' +
         '<div class="tip" data-tip="Irreversible. The number that matters.">Final</div>' +
       '</div>' +
