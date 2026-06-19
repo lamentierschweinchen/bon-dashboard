@@ -100,7 +100,7 @@
 /* the [hidden] attribute must win over component display rules (e.g. .mode-row
    is display:flex; without this it would stay visible when hidden in Sprint) */
 [hidden]{display:none !important;}
-html,body{min-height:100%;}
+html,body{min-height:100%;overscroll-behavior:none;}
 body{
   font-family:'Roobert PRO',system-ui,sans-serif;
   background:var(--bg);
@@ -156,14 +156,14 @@ body{
 .counter.global .cn .g-mint{color:var(--mint);}
 
 /* the tap zone */
-.tap-card{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:22px 20px 24px;display:flex;flex-direction:column;align-items:center;gap:14px;}
+.tap-card{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:22px 20px 24px;display:flex;flex-direction:column;align-items:center;gap:14px;touch-action:none;-webkit-user-select:none;user-select:none;}
 .tap-btn{
   position:relative;width:200px;height:200px;border-radius:50%;cursor:pointer;border:none;
   background:radial-gradient(circle at 50% 38%, #12303a, #0c1820 70%);
   box-shadow:0 0 0 1px rgba(35,247,221,.30), 0 14px 50px rgba(35,247,221,.14), inset 0 0 50px rgba(35,247,221,.06);
   display:flex;align-items:center;justify-content:center;
   transition:transform .08s var(--ease-out), box-shadow .18s;
-  touch-action:manipulation;-webkit-user-select:none;user-select:none;
+  touch-action:none;-webkit-user-select:none;user-select:none;
 }
 .tap-btn:active{transform:scale(.95);box-shadow:0 0 0 1px rgba(35,247,221,.6), 0 10px 36px rgba(35,247,221,.28), inset 0 0 60px rgba(35,247,221,.12);}
 .tap-btn svg{width:78px;height:auto;pointer-events:none;}
@@ -492,12 +492,10 @@ body{
   </header>
 
   <section class="hero">
-    <h1 id="heroTitle">Every tap is a <span class="accent">real transaction</span>.</h1>
+    <h1 id="heroTitle">Sprint at <span class="accent">Supernova Speed</span>.</h1>
     <p id="heroCopy">
-      30 seconds. Tap as fast as you can. Your score is how many transactions
-      you can <b style="color:var(--mint)">land on Supernova</b> before the clock runs out.
+      Tap as fast as you can for 30 seconds. Every tap is a real transaction.
     </p>
-    <p class="hero-boast" style="font-size:13.5px;color:var(--text-dim);margin-top:9px;line-height:1.5;">Each one is a real <b style="color:var(--mint)">smart-contract call</b>, not just a simple transfer.</p>
   </section>
 
   <!-- top-level mode: 30s Sprint (default) | Unlimited -->
@@ -1241,12 +1239,12 @@ function applyAppModeView(){
 
   // hero + hint copy per mode
   if(sprint){
-    $('heroTitle').innerHTML = 'Every tap is a <span class="accent">real transaction</span>.';
-    $('heroCopy').innerHTML = '30 seconds. Tap as fast as you can. Your score is how many transactions you can <b style="color:var(--mint)">land on Supernova</b> before the clock runs out.';
+    $('heroTitle').innerHTML = 'Sprint at <span class="accent">Supernova Speed</span>.';
+    $('heroCopy').innerHTML = 'Tap as fast as you can for 30 seconds. Every tap is a real transaction.';
     $('tapHint').innerHTML = 'Press <b>Start 30-second sprint</b>, then tap, click, or hit <b>space</b>';
   } else {
-    $('heroTitle').innerHTML = 'Every tap is a <span class="accent">real transaction</span>.';
-    $('heroCopy').innerHTML = 'Tap the X. Every tap is a real transaction on Supernova. Watch the <b style="color:var(--mint)">confirmed</b> count chase your finger as each one lands onchain. Go as long as you like.';
+    $('heroTitle').innerHTML = 'Sprint at <span class="accent">Supernova Speed</span>.';
+    $('heroCopy').innerHTML = 'Tap as long as you like. Every tap is a real transaction.';
     $('tapHint').innerHTML = 'Tap, click, or press <b>space</b>. Each one goes onchain.';
   }
 }
