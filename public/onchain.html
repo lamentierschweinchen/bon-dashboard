@@ -390,7 +390,7 @@ body{
       30 seconds. Tap as fast as you can — each tap fires a real transaction on
       MultiversX testnet, the network running
       <a class="link-mint" href="https://multiversx.com/blog/supernova-decoupling-consensus-and-execution" target="_blank" rel="noopener">Supernova</a>
-      today at 600ms rounds. Your score is the number that <b style="color:var(--mint)">finalize onchain</b>.
+      today. Your score is the number that <b style="color:var(--mint)">confirm onchain</b> inside the 30 seconds — real, live, counted.
     </p>
   </section>
 
@@ -444,7 +444,7 @@ body{
     <!-- sprint live mini-stats -->
     <div class="sprint-live" id="sprintLive">
       <div class="sl-cell"><div class="sl-n fired" id="slFired">0</div><div class="sl-l">taps fired</div></div>
-      <div class="sl-cell"><div class="sl-n fin" id="slFin">0</div><div class="sl-l">finalized onchain <button class="info-btn" id="infoBtn1" type="button" aria-label="Why not instant?">i</button></div></div>
+      <div class="sl-cell"><div class="sl-n fin" id="slFin">0</div><div class="sl-l">confirmed onchain · live <button class="info-btn" id="infoBtn1" type="button" aria-label="Why not instant?">i</button></div></div>
     </div>
 
     <!-- settling banner (sprint, after buzzer) -->
@@ -576,8 +576,8 @@ var CFG = {
   maxPerCall: 1000,         // mirrors the contract's MAX_TAPS_PER_CALL
   bundleWindowMs: 600,      // bundled mode flush window (one Supernova round)
   pendingSoftCap: 60,       // suggest bundled mode if local pending climbs past this
-  pollIntervalMs: 700,
-  pollMaxTries: 18,         // ~12.6s ceiling per tx before we stop polling
+  pollIntervalMs: 500,      // tighter poll → snappier confirmation detection + a sharper 30s window boundary
+  pollMaxTries: 26,         // ~13s ceiling per tx before we stop polling (matches the old wall at 500ms)
   globalRefreshMs: 4000,
   feedMax: 8,
   sprintMs: 30000,          // 30-second sprint window
@@ -611,10 +611,12 @@ var ST = {
     phase: 'idle',       // 'idle' | 'countdown' | 'running' | 'settling' | 'done'
     runId: 0,            // bumped each run; stragglers from a prior run can't score
     tapsFired: 0,        // recordTaps txs broadcast during this run
-    finalized: 0,        // of those, how many have finalized (the SCORE)
+    finalized: 0,        // REAL txs confirmed onchain WITHIN the 30s window = the SCORE (N_real)
+    finalizedLate: 0,    // REAL txs that confirmed AFTER the buzzer — honest, but excluded from the score
     inFlight: [],        // entries still being polled to finality
-    finalityTimes: [],   // ms-to-final for each finalized tx (best/avg)
-    startTime: 0,
+    finalityTimes: [],   // ms-to-confirm for each in-window confirmed tx (live confirmation via API, NOT finality)
+    taps: [],            // elapsed-ms timestamp of each tap while running — drives the cross-chain SIMULATION
+    startTime: 0,        // performance.now() at GO (sprint clock origin)
     rafId: null,
     settleTimer: null
   }
@@ -955,6 +957,10 @@ function onTap(x, y){
     if(ph === 'idle' || ph === 'done'){ startSprint(); return; }
     // only accept taps while the clock is running (NOT during countdown/settling)
     if(ph !== 'running') return;
+    // record this tap's elapsed-ms within the window — the cross-chain SIMULATION
+    // replays exactly these timings at each chain's finality (clamped to the window).
+    var elapsed = performance.now() - ST.sprint.startTime;
+    if(elapsed >= 0 && elapsed <= CFG.sprintMs){ ST.sprint.taps.push(elapsed); }
     spark(x, y, '+1 tx');
     fireTaps(1).catch(function(e){ console.warn('[onchain] fire failed', e); });
     return;
@@ -1076,7 +1082,7 @@ function applyAppModeView(){
   // hero + hint copy per mode
   if(sprint){
     $('heroTitle').innerHTML = 'Every tap is a <span class="accent">real transaction</span>.';
-    $('heroCopy').innerHTML = '30 seconds. Tap as fast as you can — each tap fires a real transaction on MultiversX testnet, the network running <a class="link-mint" href="https://multiversx.com/blog/supernova-decoupling-consensus-and-execution" target="_blank" rel="noopener">Supernova</a> today at 600ms rounds. Your score is the number that <b style="color:var(--mint)">finalize onchain</b>.';
+    $('heroCopy').innerHTML = '30 seconds. Tap as fast as you can — each tap fires a real transaction on MultiversX testnet, the network running <a class="link-mint" href="https://multiversx.com/blog/supernova-decoupling-consensus-and-execution" target="_blank" rel="noopener">Supernova</a> today. Your score is the number that <b style="color:var(--mint)">confirm onchain</b> inside the 30 seconds — real, live, counted.';
     $('tapHint').innerHTML = 'Press <b>Start 30-second sprint</b> — then tap, click, or hit <b>space</b>';
   } else {
     $('heroTitle').innerHTML = 'Every tap is a <span class="accent">real transaction</span>.';
@@ -1108,8 +1114,8 @@ function resetSprint(){
   // bump the run id so any still-polling entries from the run we're leaving
   // become stragglers and can no longer touch the (now-zeroed) score
   s.runId += 1;
-  s.phase = 'idle'; s.tapsFired = 0; s.finalized = 0;
-  s.inFlight = []; s.finalityTimes = []; s.startTime = 0;
+  s.phase = 'idle'; s.tapsFired = 0; s.finalized = 0; s.finalizedLate = 0;
+  s.inFlight = []; s.finalityTimes = []; s.taps = []; s.startTime = 0;
   $('tapCard').classList.remove('danger');
   applyAppModeView();
 }
@@ -1121,8 +1127,8 @@ function startSprint(){
   // fresh run: bump the run id and clear any leftover sprint state. Stragglers
   // from a previous run carry the old id and are ignored when they resolve.
   s.runId += 1;
-  s.phase = 'countdown'; s.tapsFired = 0; s.finalized = 0;
-  s.inFlight = []; s.finalityTimes = []; s.startTime = 0;
+  s.phase = 'countdown'; s.tapsFired = 0; s.finalized = 0; s.finalizedLate = 0;
+  s.inFlight = []; s.finalityTimes = []; s.taps = []; s.startTime = 0;
   clearStatus();
   // warm the ephemeral key now so the first GO tap is instant (fail-soft)
   ensureKey().then(function(ok){ if(!ok) degrade(); });
@@ -1198,7 +1204,11 @@ function buzzer(){
   s.settleTimer = setTimeout(function(){ lockSprint(); }, CFG.settleMaxMs);
 }
 
-/* called by pollToFinality when a sprint tx resolves (final or not) */
+/* called by pollToFinality when a sprint tx resolves (confirmed or not).
+   THE IN-WINDOW RULE (honest, conservative): a tx counts toward the SCORE
+   (N_real) only if it is observed confirmed onchain WHILE THE CLOCK IS STILL
+   RUNNING (phase 'running'). If it confirms after the buzzer (phase 'settling'),
+   it is real but TOO LATE for the 30s — tallied separately, excluded from N_real. */
 function onSprintTxResolved(entry, ok){
   var s = ST.sprint;
   // ignore stragglers from a previous run (they can't move the current score)
@@ -1207,10 +1217,16 @@ function onSprintTxResolved(entry, ok){
   var idx = s.inFlight.indexOf(entry);
   if(idx !== -1) s.inFlight.splice(idx, 1);
   if(ok){
-    s.finalized += (entry.count || 1);
-    if(entry.finalMs != null) s.finalityTimes.push(entry.finalMs);
+    if(s.phase === 'running'){
+      // confirmed before the buzzer → counts toward N_real (the score)
+      s.finalized += (entry.count || 1);
+      if(entry.finalMs != null) s.finalityTimes.push(entry.finalMs);
+    } else {
+      // confirmed after the buzzer (settling) → real, but excluded from the score
+      s.finalizedLate += (entry.count || 1);
+    }
   }
-  // during running OR settling, keep the live finalized count animating up
+  // during running OR settling, keep the live counts animating up
   if(s.phase === 'running' || s.phase === 'settling'){
     renderSprintLive();
     if(s.phase === 'settling'){
@@ -1221,10 +1237,16 @@ function onSprintTxResolved(entry, ok){
 }
 
 function updateSettlingMsg(){
-  var n = ST.sprint.inFlight.length;
-  $('settlingMsg').textContent = n > 0
-    ? ('Your taps are still finalizing onchain… ' + n + ' to go')
-    : 'Locking your score…';
+  var s = ST.sprint;
+  var n = s.inFlight.length;
+  var late = s.finalizedLate;
+  if(n > 0){
+    $('settlingMsg').textContent = late > 0
+      ? ('Resolving the taps still in flight… ' + n + ' to go · ' + late + ' landed just after the buzzer')
+      : ('Resolving the taps still in flight… ' + n + ' to go');
+  } else {
+    $('settlingMsg').textContent = 'Locking your score…';
+  }
 }
 
 /* end of settling: LOCK the score (= finalized count) and show results */
