@@ -89,7 +89,7 @@ const RATE_WINDOW_MS = 60_000;
 // above it. The per-tap path fires one tx per tap, so a human mashing (~8-12
 // taps/s) far exceeds 12/min — this generous budget gives a single player ample
 // room for a full session while still capping a single IP. Keyed "transfer:ip".
-const TRANSFER_MAX_GAS_LIMIT = 60_000;
+const TRANSFER_MAX_GAS_LIMIT = 120_000;
 const TRANSFER_RATE_MAX = 1500; // transfers per IP per window
 
 const RELAY_OPS: Record<string, RelayOp> = {

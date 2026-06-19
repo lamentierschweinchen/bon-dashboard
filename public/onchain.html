@@ -685,7 +685,7 @@ var CFG = {
   api:      'https://testnet-api.multiversx.com',
   explorer: 'https://testnet-explorer.multiversx.com',
   chainID:  'T',
-  transferGasLimit: 50000,  // a bare value-0, empty-data move-balance tx
+  transferGasLimit: 100000, // relayed move-balance: 50k base + 50k relayed-v3 overhead
   lbGasLimit: 10000000,     // submitScore gas limit (mirrors SUBMIT_GAS_LIMIT)
   gasPrice: 1000000000,
   numShards: 3,
