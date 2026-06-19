@@ -209,6 +209,55 @@ body{
 .spin{display:inline-block;width:12px;height:12px;border:2px solid rgba(35,247,221,.3);border-top-color:var(--mint);border-radius:50%;animation:rot .7s linear infinite;vertical-align:-2px;margin-right:5px;}
 @keyframes rot{to{transform:rotate(360deg);}}
 
+/* ====================== SPRINT MODE ====================== */
+/* top-level app-mode toggle [ 30s Sprint | Unlimited ] */
+.appmode-row{display:flex;justify-content:center;}
+.appmode-toggle{display:inline-flex;background:var(--surface-2);border:1px solid var(--border);border-radius:999px;padding:4px;gap:2px;}
+.appmode-toggle button{font-family:inherit;font-size:13px;font-weight:600;letter-spacing:.01em;color:var(--text-dim);background:none;border:none;cursor:pointer;border-radius:999px;padding:8px 18px;transition:background .18s,color .18s;display:inline-flex;align-items:center;gap:7px;}
+.appmode-toggle button.on{background:var(--mint);color:#04221d;}
+.appmode-toggle button .am-ic{font-size:13px;line-height:1;}
+
+/* countdown ring around the tap button (sprint) */
+.tap-ringwrap{position:absolute;inset:-14px;pointer-events:none;}
+.tap-ringwrap svg{width:100%;height:100%;transform:rotate(-90deg);}
+.tap-ringwrap circle{fill:none;stroke-width:5;}
+.tap-ringwrap .ring-track{stroke:rgba(35,247,221,.10);}
+.tap-ringwrap .ring-prog{stroke:var(--mint);stroke-linecap:round;transition:stroke-dashoffset .12s linear, stroke .25s;filter:drop-shadow(0 0 6px rgba(35,247,221,.5));}
+
+/* big countdown number overlaid on the tap button */
+.pre-count{position:absolute;inset:0;display:none;align-items:center;justify-content:center;font-family:var(--mono);font-weight:900;font-size:72px;color:var(--mint);text-shadow:0 0 30px rgba(35,247,221,.6);pointer-events:none;z-index:4;letter-spacing:-.02em;}
+.pre-count.go{font-size:56px;}
+
+/* seconds readout in the center of the tap button while running */
+.sprint-clock{position:absolute;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;pointer-events:none;z-index:2;}
+.sprint-clock.show{display:flex;}
+.sprint-clock .sc-secs{font-family:var(--mono);font-weight:900;font-size:46px;line-height:1;color:var(--text);font-variant-numeric:tabular-nums;text-shadow:0 0 18px rgba(35,247,221,.35);}
+.sprint-clock .sc-lbl{font-family:var(--mono);font-size:9.5px;letter-spacing:.10em;text-transform:uppercase;color:var(--text-faint);margin-top:6px;}
+/* tension in the final seconds */
+.tap-card.danger .sprint-clock .sc-secs{color:var(--coral);text-shadow:0 0 22px rgba(255,107,157,.6);}
+.tap-card.danger .tap-btn{box-shadow:0 0 0 1px rgba(255,107,157,.5), 0 14px 50px rgba(255,107,157,.20), inset 0 0 50px rgba(255,107,157,.08);animation:dangerPulse .6s ease-in-out infinite;}
+@keyframes dangerPulse{0%,100%{transform:scale(1);}50%{transform:scale(1.015);}}
+
+/* idle "start sprint" affordance over the button */
+.sprint-start-hint{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none;z-index:2;text-align:center;padding:0 18px;}
+.sprint-start-hint .ssh-go{font-weight:900;font-size:20px;color:var(--mint);line-height:1.1;text-shadow:0 0 18px rgba(35,247,221,.4);}
+.sprint-start-hint .ssh-sub{font-size:11px;color:var(--text-faint);margin-top:6px;}
+.tap-card.sprint-idle .tap-btn svg{opacity:.22;}
+
+/* settling phase banner */
+.settling{display:none;align-items:center;gap:10px;font-size:13px;line-height:1.4;border-radius:12px;padding:12px 14px;background:rgba(35,247,221,.06);border:1px solid rgba(35,247,221,.3);color:#a7eec0;width:100%;}
+.settling.show{display:flex;}
+.settling .spin{margin-right:0;}
+
+/* sprint live mini-stats (taps fired + finalized so far) */
+.sprint-live{display:none;grid-template-columns:1fr 1fr;gap:12px;width:100%;}
+.sprint-live.show{display:grid;}
+.sprint-live .sl-cell{background:var(--surface-2);border:1px solid var(--border);border-radius:14px;padding:12px 14px;text-align:center;}
+.sprint-live .sl-n{font-family:var(--mono);font-weight:900;font-size:26px;line-height:1;font-variant-numeric:tabular-nums;}
+.sprint-live .sl-n.fired{color:var(--text);}
+.sprint-live .sl-n.fin{color:var(--mint);text-shadow:0 0 14px rgba(35,247,221,.4);}
+.sprint-live .sl-l{font-family:var(--mono);font-size:9px;letter-spacing:.06em;text-transform:uppercase;color:var(--text-faint);margin-top:7px;}
+
 @media (max-width:430px){
   .hero h1{font-size:23px;}
   .tap-btn{width:172px;height:172px;}
@@ -236,16 +285,25 @@ body{
   </header>
 
   <section class="hero">
-    <h1>Every tap is a <span class="accent">real transaction</span>.</h1>
-    <p>
-      Tap the X. Each tap fires a real transaction on MultiversX testnet — the
-      network running <a class="link-mint" href="https://multiversx.com/blog/supernova-decoupling-consensus-and-execution" target="_blank" rel="noopener">Supernova</a>
-      today at 600ms rounds. Watch the <b style="color:var(--mint)">finalized</b> count chase your finger,
-      sub-second behind. The lag is the whole point.
+    <h1 id="heroTitle">Every tap is a <span class="accent">real transaction</span>.</h1>
+    <p id="heroCopy">
+      30 seconds. Tap as fast as you can — each tap fires a real transaction on
+      MultiversX testnet, the network running
+      <a class="link-mint" href="https://multiversx.com/blog/supernova-decoupling-consensus-and-execution" target="_blank" rel="noopener">Supernova</a>
+      today at 600ms rounds. Your score is the number that <b style="color:var(--mint)">finalize onchain</b>.
     </p>
   </section>
 
-  <section class="counters">
+  <!-- top-level mode: 30s Sprint (default) | Unlimited -->
+  <div class="appmode-row">
+    <div class="appmode-toggle" role="group" aria-label="Game mode">
+      <button id="appSprint" class="on" type="button"><span class="am-ic">⏱</span> 30s Sprint</button>
+      <button id="appUnlimited" type="button"><span class="am-ic">∞</span> Unlimited</button>
+    </div>
+  </div>
+
+  <!-- UNLIMITED-mode counters (the original session counters) -->
+  <section class="counters" id="counters">
     <div class="counter">
       <div class="cl">Your taps · sent</div>
       <div class="cn sent" id="cSent">0</div>
@@ -263,20 +321,43 @@ body{
     </div>
   </section>
 
-  <section class="tap-card">
-    <button class="tap-btn" id="tapBtn" aria-label="Tap to fire a transaction">
-      <span class="ring" id="tapRing"></span>
-      <svg viewBox="0 0 48 37" fill="none"><path d="M26.6389 18.408L48.0001 6.93761L44.4089 0L24.8488 7.95166C24.3452 8.15668 23.7868 8.15668 23.2831 7.95166L3.72305 0L0.131836 6.93761L21.493 18.408L0.131836 29.8783L3.72305 36.8159L23.2831 28.8642C23.7868 28.6592 24.3452 28.6592 24.8488 28.8642L44.4089 36.8159L48.0001 29.8783L26.6389 18.408Z" fill="#23F7DD"/></svg>
-    </button>
-    <div class="tap-hint" id="tapHint">Tap, click, or press <b>space</b> — each one goes onchain</div>
+  <section class="tap-card sprint-idle" id="tapCard">
+    <div style="position:relative;">
+      <!-- countdown ring (sprint) -->
+      <div class="tap-ringwrap" id="ringWrap" hidden>
+        <svg viewBox="0 0 120 120"><circle class="ring-track" cx="60" cy="60" r="56"></circle><circle class="ring-prog" id="ringProg" cx="60" cy="60" r="56"></circle></svg>
+      </div>
+      <button class="tap-btn" id="tapBtn" aria-label="Tap to fire a transaction">
+        <span class="ring" id="tapRing"></span>
+        <svg viewBox="0 0 48 37" fill="none"><path d="M26.6389 18.408L48.0001 6.93761L44.4089 0L24.8488 7.95166C24.3452 8.15668 23.7868 8.15668 23.2831 7.95166L3.72305 0L0.131836 6.93761L21.493 18.408L0.131836 29.8783L3.72305 36.8159L23.2831 28.8642C23.7868 28.6592 24.3452 28.6592 24.8488 28.8642L44.4089 36.8159L48.0001 29.8783L26.6389 18.408Z" fill="#23F7DD"/></svg>
+        <!-- idle start affordance (sprint) -->
+        <span class="sprint-start-hint" id="sprintStartHint"><span class="ssh-go">Start</span><span class="ssh-sub">30-second sprint</span></span>
+        <!-- countdown 3·2·1·GO (sprint) -->
+        <span class="pre-count" id="preCount"></span>
+        <!-- live seconds readout (sprint, running) -->
+        <span class="sprint-clock" id="sprintClock"><span class="sc-secs" id="scSecs">30</span><span class="sc-lbl">seconds left</span></span>
+      </button>
+    </div>
 
-    <div class="mode-row">
+    <div class="tap-hint" id="tapHint">Press <b>Start 30-second sprint</b> — then tap, click, or hit <b>space</b></div>
+
+    <!-- sprint live mini-stats -->
+    <div class="sprint-live" id="sprintLive">
+      <div class="sl-cell"><div class="sl-n fired" id="slFired">0</div><div class="sl-l">taps fired</div></div>
+      <div class="sl-cell"><div class="sl-n fin" id="slFin">0</div><div class="sl-l">finalized onchain</div></div>
+    </div>
+
+    <!-- settling banner (sprint, after buzzer) -->
+    <div class="settling" id="settling"><span class="spin"></span><span id="settlingMsg">Your taps are still finalizing onchain…</span></div>
+
+    <!-- UNLIMITED-mode sub-toggle (per-tap / bundled) -->
+    <div class="mode-row" id="modeRow" hidden>
       <div class="mode-toggle" role="group" aria-label="Transaction mode">
         <button id="modePerTap" class="on" type="button">Per tap</button>
         <button id="modeBundled" type="button">Bundled</button>
       </div>
     </div>
-    <div class="mode-note" id="modeNote">One transaction per tap — the visceral version.</div>
+    <div class="mode-note" id="modeNote" hidden>One transaction per tap — the visceral version.</div>
 
     <div class="status" id="status"></div>
   </section>
@@ -307,12 +388,21 @@ body{
    only in the server env (see app/api/relay/route.ts).
    ============================================================================ */
 var CFG = {
-  contract: 'erd1qqqqqqqqqqqqqpgq9tmxfe7dm4ndgzt4cx9z83mrj750kgnuenwscvaddk', // tap-counter (testnet)
+  // PRIMARY tap-counter — SHARD 0, intra-shard, fast finality (default). The
+  // ephemeral player keys + relayer are also shard 0, so a recordTaps here is
+  // intra-shard and finalizes in ~sub-2s.
+  contract: 'erd1qqqqqqqqqqqqqpgqlwv6l2zpx9v0uv6869tn90exv3vdplejppuq97k7r4', // tap-counter shard 0 (intra, fast)
+  // CROSS-SHARD tap-counter — SHARD 1. From a shard-0 sender this is a
+  // cross-shard tx that trails several seconds (Unlimited-mode toggle only).
+  contractCrossShard: 'erd1qqqqqqqqqqqqqpgq9tmxfe7dm4ndgzt4cx9z83mrj750kgnuenwscvaddk', // tap-counter shard 1 (cross, slow)
+  // SPRINT leaderboard — SHARD 0, intra-shard.
+  sprintLeaderboard: 'erd1qqqqqqqqqqqqqpgqh9wpfl0mt337h68z8cuv6w6mkfucqv5tppuqsxz6sp',
   relayer:  'erd1ru08dt4u5e0psfrwth38u0dfed0hw8289xqdd9yghl3ec24uppuq6hgphm', // gas payer (shard 0)
   api:      'https://testnet-api.multiversx.com',
   explorer: 'https://testnet-explorer.multiversx.com',
   chainID:  'T',
   gasLimit: 6000000,
+  lbGasLimit: 10000000,     // submitScore gas limit (mirrors SUBMIT_GAS_LIMIT)
   gasPrice: 1000000000,
   numShards: 3,
   relayerShard: 0,          // erd1ru08... is in shard 0 (verified); grind handles any value
@@ -323,7 +413,9 @@ var CFG = {
   pollIntervalMs: 700,
   pollMaxTries: 18,         // ~12.6s ceiling per tx before we stop polling
   globalRefreshMs: 4000,
-  feedMax: 8
+  feedMax: 8,
+  sprintMs: 30000,          // 30-second sprint window
+  settleMaxMs: 12000        // max time we keep polling stragglers after the buzzer
 };
 
 function $(id){ return document.getElementById(id); }
@@ -336,8 +428,10 @@ var ST = {
   keyReady: false,       // ephemeral key + starting nonce resolved
   initPromise: null,     // single-flight key init
   available: true,       // false => degraded (no crypto / no relayer)
-  mode: 'pertap',        // 'pertap' | 'bundled'
-  sent: 0,               // txs broadcast this session
+  appMode: 'sprint',     // 'sprint' | 'unlimited' — top-level game mode
+  shardMode: 'intra',    // 'intra' | 'cross' — which tap-counter (Unlimited only)
+  mode: 'pertap',        // 'pertap' | 'bundled' (Unlimited sub-toggle)
+  sent: 0,               // txs broadcast this session (Unlimited counters)
   finalized: 0,          // txs that reached finality this session
   pending: 0,            // sent but not yet finalized (local view)
   global: null,          // global counter from the contract
@@ -345,8 +439,27 @@ var ST = {
   bundleTimer: null,
   feed: [],              // recent { hash, state, sentAt, finalMs, count }
   warnedPending: false,
-  warnedUnavailable: false
+  warnedUnavailable: false,
+  // ---- sprint sub-state ----
+  sprint: {
+    phase: 'idle',       // 'idle' | 'countdown' | 'running' | 'settling' | 'done'
+    tapsFired: 0,        // recordTaps txs broadcast during this run
+    finalized: 0,        // of those, how many have finalized (the SCORE)
+    inFlight: [],        // entries still being polled to finality
+    finalityTimes: [],   // ms-to-final for each finalized tx (best/avg)
+    startTime: 0,
+    rafId: null,
+    settleTimer: null
+  }
 };
+
+/* the active tap-counter contract for the CURRENT mode. Sprint is ALWAYS
+   intra-shard (shard 0) for a fair fast board; Unlimited honors the shard
+   toggle so players can feel cross-shard finality. */
+function activeTapContract(){
+  if(ST.appMode === 'unlimited' && ST.shardMode === 'cross') return CFG.contractCrossShard;
+  return CFG.contract;
+}
 
 /* ---------- tiny encoders ---------- */
 function bytesToHex(b){ var h=''; for(var i=0;i<b.length;i++){ h+=b[i].toString(16).padStart(2,'0'); } return h; }
@@ -442,18 +555,19 @@ async function fireTaps(count){
 
   var libs = ST.libs, key = ST.key;
   var nonce = ST.nonce++;            // LOCAL increment — claim this nonce now
+  var receiver = activeTapContract(); // intra-shard (default) or cross-shard (Unlimited toggle)
 
   var dataStr = CFG.fn + '@' + u32ToHex(count);
   var dataB64 = btoa(dataStr);
   var txForSign = {
-    nonce: nonce, value: '0', receiver: CFG.contract, sender: key.address,
+    nonce: nonce, value: '0', receiver: receiver, sender: key.address,
     gasPrice: CFG.gasPrice, gasLimit: CFG.gasLimit, dataB64: dataB64,
     chainID: CFG.chainID, version: 2, relayer: CFG.relayer
   };
 
   var sigBytes = await libs.ed.signAsync(new TextEncoder().encode(signingString(txForSign)), key.priv);
   var plainTx = {
-    nonce: nonce, value: '0', receiver: CFG.contract, sender: key.address,
+    nonce: nonce, value: '0', receiver: receiver, sender: key.address,
     senderUsername: undefined, receiverUsername: undefined,
     gasPrice: CFG.gasPrice, gasLimit: CFG.gasLimit, data: dataB64,
     chainID: CFG.chainID, version: 2, relayer: CFG.relayer,
@@ -479,13 +593,20 @@ async function fireTaps(count){
   }
 
   // SENT: the relayer broadcast it. Count it and track it to finality.
-  ST.sent += 1;
-  ST.pending += 1;
-  renderCounters();
-  maybeSuggestBundled();
+  var inSprint = (ST.appMode === 'sprint');
+  var entry = { hash: out.txHash, state: 'pending', sentAt: Date.now(), finalMs: null, count: count, sprint: inSprint };
 
-  var hash = out.txHash;
-  var entry = { hash: hash, state: 'pending', sentAt: Date.now(), finalMs: null, count: count };
+  if(inSprint){
+    ST.sprint.tapsFired += count;
+    ST.sprint.inFlight.push(entry);
+    renderSprintLive();
+  } else {
+    ST.sent += 1;
+    ST.pending += 1;
+    renderCounters();
+    maybeSuggestBundled();
+  }
+
   ST.feed.unshift(entry);
   if(ST.feed.length > CFG.feedMax) ST.feed.length = CFG.feedMax;
   renderFeed();
@@ -501,23 +622,28 @@ async function pollToFinality(entry){
     if(status === 'success'){
       entry.state = 'final';
       entry.finalMs = Date.now() - entry.sentAt;
-      ST.finalized += 1;
-      ST.pending = Math.max(0, ST.pending - 1);
-      renderCounters(); renderFeed();
+      if(entry.sprint){ onSprintTxResolved(entry, true); }
+      else {
+        ST.finalized += 1;
+        ST.pending = Math.max(0, ST.pending - 1);
+        renderCounters();
+      }
+      renderFeed();
       refreshGlobal(); // the global counter just grew
       return;
     }
     if(status === 'fail' || status === 'invalid'){
       entry.state = 'failed';
-      ST.pending = Math.max(0, ST.pending - 1);
-      renderCounters(); renderFeed();
+      if(entry.sprint){ onSprintTxResolved(entry, false); }
+      else { ST.pending = Math.max(0, ST.pending - 1); renderCounters(); }
+      renderFeed();
       return;
     }
     // pending / not-yet-indexed: keep polling
   }
-  // timed out waiting — leave it pending in the feed, free the local pending slot
-  ST.pending = Math.max(0, ST.pending - 1);
-  renderCounters();
+  // timed out waiting — leave it pending in the feed, free the local slot
+  if(entry.sprint){ onSprintTxResolved(entry, false); renderFeed(); }
+  else { ST.pending = Math.max(0, ST.pending - 1); renderCounters(); }
 }
 
 /* read a tx's status from the testnet API. Returns
@@ -655,6 +781,18 @@ function spark(x, y, label){
 }
 
 function onTap(x, y){
+  // ---- SPRINT mode ----
+  if(ST.appMode === 'sprint'){
+    var ph = ST.sprint.phase;
+    // idle / done: the tap button is the "start" affordance
+    if(ph === 'idle' || ph === 'done'){ startSprint(); return; }
+    // only accept taps while the clock is running (NOT during countdown/settling)
+    if(ph !== 'running') return;
+    spark(x, y, '+1 tx');
+    fireTaps(1).catch(function(e){ console.warn('[onchain] fire failed', e); });
+    return;
+  }
+  // ---- UNLIMITED mode (original behavior) ----
   if(ST.mode === 'pertap'){
     spark(x, y, '+1 tx');
     fireTaps(1).catch(function(e){ console.warn('[onchain] fire failed', e); });
@@ -690,12 +828,225 @@ function setMode(mode){
 }
 
 /* ============================================================================
+   APP MODE — 30s Sprint (default) vs Unlimited
+   ============================================================================ */
+function setAppMode(mode){
+  if(ST.appMode === mode) return;
+  // never switch mid-sprint; bail back to idle first
+  if(ST.appMode === 'sprint' && ST.sprint.phase !== 'idle' && ST.sprint.phase !== 'done'){
+    resetSprint();
+  }
+  // leaving unlimited: flush any buffered bundle so nothing is lost
+  if(ST.appMode === 'unlimited' && ST.mode === 'bundled') flushBundle();
+
+  ST.appMode = mode;
+  $('appSprint').classList.toggle('on', mode === 'sprint');
+  $('appUnlimited').classList.toggle('on', mode === 'unlimited');
+  clearStatus();
+  applyAppModeView();
+}
+
+/* show/hide the right UI for the active app mode */
+function applyAppModeView(){
+  var sprint = ST.appMode === 'sprint';
+  var card = $('tapCard');
+  // counters strip is the Unlimited session view
+  $('counters').style.display = sprint ? 'none' : '';
+  // Unlimited sub-toggle (per-tap/bundled) + note
+  $('modeRow').hidden = sprint;
+  $('modeNote').hidden = sprint;
+  // sprint-only widgets
+  $('ringWrap').hidden = !sprint || ST.sprint.phase === 'idle' || ST.sprint.phase === 'done';
+  $('sprintLive').classList.toggle('show', sprint && (ST.sprint.phase === 'running' || ST.sprint.phase === 'settling'));
+  $('sprintStartHint').style.display = (sprint && (ST.sprint.phase === 'idle' || ST.sprint.phase === 'done')) ? 'flex' : 'none';
+  $('sprintClock').classList.toggle('show', sprint && ST.sprint.phase === 'running');
+  card.classList.toggle('sprint-idle', sprint && (ST.sprint.phase === 'idle' || ST.sprint.phase === 'done'));
+  if(!sprint){ card.classList.remove('sprint-idle','danger'); }
+
+  // hero + hint copy per mode
+  if(sprint){
+    $('heroTitle').innerHTML = 'Every tap is a <span class="accent">real transaction</span>.';
+    $('heroCopy').innerHTML = '30 seconds. Tap as fast as you can — each tap fires a real transaction on MultiversX testnet, the network running <a class="link-mint" href="https://multiversx.com/blog/supernova-decoupling-consensus-and-execution" target="_blank" rel="noopener">Supernova</a> today at 600ms rounds. Your score is the number that <b style="color:var(--mint)">finalize onchain</b>.';
+    $('tapHint').innerHTML = 'Press <b>Start 30-second sprint</b> — then tap, click, or hit <b>space</b>';
+  } else {
+    $('heroTitle').innerHTML = 'Every tap is a <span class="accent">real transaction</span>.';
+    $('heroCopy').innerHTML = 'Tap the X. Each tap fires a real transaction on MultiversX testnet — the network running <a class="link-mint" href="https://multiversx.com/blog/supernova-decoupling-consensus-and-execution" target="_blank" rel="noopener">Supernova</a> today at 600ms rounds. Watch the <b style="color:var(--mint)">finalized</b> count chase your finger, sub-second behind. Open-ended — go as long as you like.';
+    $('tapHint').innerHTML = 'Tap, click, or press <b>space</b> — each one goes onchain';
+  }
+}
+
+/* ============================================================================
+   SPRINT state machine: idle → countdown → running → settling → done
+   ============================================================================ */
+var SP_RING_C = 2 * Math.PI * 56;  // ring circle r=56 (matches the SVG)
+function initSprintRing(){
+  var rp = $('ringProg');
+  if(rp){ rp.style.strokeDasharray = SP_RING_C.toFixed(2); rp.style.strokeDashoffset = '0'; }
+}
+function setSprintRing(frac, cls){
+  var rp = $('ringProg');
+  if(!rp) return;
+  rp.style.strokeDashoffset = (SP_RING_C * (1 - frac)).toFixed(2);
+  rp.style.stroke = cls === 'danger' ? 'var(--coral)' : (cls === 'warn' ? 'var(--amber)' : 'var(--mint)');
+}
+
+/* reset to a clean idle sprint (cancels any running clock / settle poll) */
+function resetSprint(){
+  var s = ST.sprint;
+  if(s.rafId){ cancelAnimationFrame(s.rafId); s.rafId = null; }
+  if(s.settleTimer){ clearTimeout(s.settleTimer); s.settleTimer = null; }
+  s.phase = 'idle'; s.tapsFired = 0; s.finalized = 0;
+  s.inFlight = []; s.finalityTimes = []; s.startTime = 0;
+  $('tapCard').classList.remove('danger');
+  applyAppModeView();
+}
+
+/* kick off the 3·2·1·GO countdown, then the running clock */
+function startSprint(){
+  var s = ST.sprint;
+  if(s.phase === 'countdown' || s.phase === 'running' || s.phase === 'settling') return;
+  // fresh run: clear any leftover sprint feed/state
+  s.phase = 'countdown'; s.tapsFired = 0; s.finalized = 0;
+  s.inFlight = []; s.finalityTimes = []; s.startTime = 0;
+  clearStatus();
+  // warm the ephemeral key now so the first GO tap is instant (fail-soft)
+  ensureKey().then(function(ok){ if(!ok) degrade(); });
+
+  $('tapCard').classList.remove('danger');
+  $('sprintStartHint').style.display = 'none';
+  $('counters').style.display = 'none';
+  $('ringWrap').hidden = false;
+  $('sprintClock').classList.remove('show');
+  $('sprintLive').classList.remove('show');
+  initSprintRing();
+  setSprintRing(1, '');
+
+  var pc = $('preCount');
+  pc.style.display = 'flex';
+  var seq = ['3','2','1','GO']; var i = 0;
+  function tick(){
+    pc.textContent = seq[i];
+    pc.className = seq[i] === 'GO' ? 'pre-count go' : 'pre-count';
+    try { pc.animate([{transform:'scale(.6)',opacity:0},{transform:'scale(1)',opacity:1}],{duration:200,easing:'cubic-bezier(.16,1,.3,1)'}); } catch(e){}
+    i++;
+    if(i < seq.length){ setTimeout(tick, 650); }
+    else { setTimeout(function(){ pc.style.display = 'none'; beginSprintClock(); }, 420); }
+  }
+  tick();
+}
+
+function beginSprintClock(){
+  var s = ST.sprint;
+  s.phase = 'running';
+  s.startTime = performance.now();
+  $('sprintClock').classList.add('show');
+  $('sprintLive').classList.add('show');
+  $('scSecs').textContent = (CFG.sprintMs/1000).toFixed(0);
+  renderSprintLive();
+  sprintLoop();
+}
+
+function sprintLoop(){
+  var s = ST.sprint;
+  if(s.phase !== 'running') return;
+  var elapsed = performance.now() - s.startTime;
+  var left = Math.max(0, CFG.sprintMs - elapsed);
+  var secs = left / 1000;
+  var frac = left / CFG.sprintMs;
+  $('scSecs').textContent = secs >= 10 ? secs.toFixed(0) : secs.toFixed(1);
+  var cls = secs <= 5 ? 'danger' : (secs <= 10 ? 'warn' : '');
+  setSprintRing(frac, cls);
+  $('tapCard').classList.toggle('danger', cls === 'danger');
+  if(left <= 0){ buzzer(); return; }
+  s.rafId = requestAnimationFrame(sprintLoop);
+}
+
+/* buzzer at 0: stop accepting taps, enter the settling phase */
+function buzzer(){
+  var s = ST.sprint;
+  if(s.rafId){ cancelAnimationFrame(s.rafId); s.rafId = null; }
+  s.phase = 'settling';
+  $('scSecs').textContent = '0';
+  setSprintRing(0, 'danger');
+  $('tapCard').classList.remove('danger');
+  $('sprintClock').classList.remove('show');
+
+  // flash the button
+  var btn = $('tapBtn');
+  try { btn.animate([{boxShadow:'0 0 0 0 rgba(35,247,221,.7)'},{boxShadow:'0 0 0 26px rgba(35,247,221,0)'}],{duration:520,easing:'ease-out'}); } catch(e){}
+
+  // any taps still in flight? keep polling them; otherwise lock immediately.
+  if(s.inFlight.length === 0){ lockSprint(); return; }
+  $('settling').classList.add('show');
+  updateSettlingMsg();
+  // hard ceiling: if stragglers never resolve, lock anyway
+  s.settleTimer = setTimeout(function(){ lockSprint(); }, CFG.settleMaxMs);
+}
+
+/* called by pollToFinality when a sprint tx resolves (final or not) */
+function onSprintTxResolved(entry, ok){
+  var s = ST.sprint;
+  // remove from in-flight
+  var idx = s.inFlight.indexOf(entry);
+  if(idx !== -1) s.inFlight.splice(idx, 1);
+  if(ok){
+    s.finalized += (entry.count || 1);
+    if(entry.finalMs != null) s.finalityTimes.push(entry.finalMs);
+  }
+  // during running OR settling, keep the live finalized count animating up
+  if(s.phase === 'running' || s.phase === 'settling'){
+    renderSprintLive();
+    if(s.phase === 'settling'){
+      updateSettlingMsg();
+      if(s.inFlight.length === 0){ lockSprint(); }
+    }
+  }
+}
+
+function updateSettlingMsg(){
+  var n = ST.sprint.inFlight.length;
+  $('settlingMsg').textContent = n > 0
+    ? ('Your taps are still finalizing onchain… ' + n + ' to go')
+    : 'Locking your score…';
+}
+
+/* end of settling: LOCK the score (= finalized count) and show results */
+function lockSprint(){
+  var s = ST.sprint;
+  if(s.phase === 'done') return;
+  if(s.settleTimer){ clearTimeout(s.settleTimer); s.settleTimer = null; }
+  s.phase = 'done';
+  $('settling').classList.remove('show');
+  $('sprintLive').classList.remove('show');
+  $('ringWrap').hidden = true;
+  $('sprintClock').classList.remove('show');
+  // restore the idle start affordance for "play again"
+  $('sprintStartHint').style.display = 'flex';
+  $('tapCard').classList.add('sprint-idle');
+  showSprintResults();  // defined in Phase 2
+}
+
+function renderSprintLive(){
+  $('slFired').textContent = fmt(ST.sprint.tapsFired);
+  $('slFin').textContent = fmt(ST.sprint.finalized);
+}
+
+/* Phase-2 replaces this with the full results panel (leaderboard + share).
+   Phase-1 placeholder keeps the sprint loop end-to-end and playable. */
+if(typeof showSprintResults !== 'function'){
+  window.showSprintResults = function(){
+    var s = ST.sprint;
+    setStatus('ok', '<b>Sprint complete.</b> ' + s.tapsFired + ' taps fired · <b style="color:var(--mint)">' + s.finalized + ' finalized onchain</b>. Tap to play again.');
+  };
+}
+
+/* ============================================================================
    wire-up
    ============================================================================ */
 (function init(){
-  // contract explorer link in the footer
+  // contract explorer link in the footer (the active tap-counter for the mode)
   var cl = $('contractLink');
-  if(cl) cl.href = CFG.explorer + '/accounts/' + CFG.contract;
+  if(cl) cl.href = CFG.explorer + '/accounts/' + activeTapContract();
 
   // tap interactions: pointer (covers mouse + touch), plus spacebar
   var btn = $('tapBtn');
@@ -707,6 +1058,9 @@ function setMode(mode){
 
   document.addEventListener('keydown', function(ev){
     if(ev.code === 'Space' || ev.key === ' '){
+      // don't hijack space while typing in an input (e.g. the leaderboard handle)
+      var t = ev.target;
+      if(t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA')) return;
       ev.preventDefault();
       var r = btn.getBoundingClientRect();
       onTap(r.left + r.width/2, r.top + r.height/2);
@@ -715,8 +1069,17 @@ function setMode(mode){
     }
   });
 
+  // top-level app-mode toggle
+  $('appSprint').addEventListener('click', function(){ setAppMode('sprint'); });
+  $('appUnlimited').addEventListener('click', function(){ setAppMode('unlimited'); });
+
+  // Unlimited sub-toggle (per-tap / bundled)
   $('modePerTap').addEventListener('click', function(){ setMode('pertap'); });
   $('modeBundled').addEventListener('click', function(){ setMode('bundled'); });
+
+  // initial view = sprint (default), idle
+  initSprintRing();
+  applyAppModeView();
 
   // warm the ephemeral key in the background so the first tap is instant.
   // fail-soft: if it can't init, the first tap shows the degraded state.
