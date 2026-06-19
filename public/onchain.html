@@ -588,6 +588,36 @@ body{
       </div>
     </div>
 
+    <!-- leaderboard submit + live board -->
+    <div class="lb-card">
+      <div class="lb-card-head">
+        <span aria-hidden="true" style="display:inline-flex"><svg viewBox="0 0 24 24" width="17" height="17" fill="none"><path d="M12 2 L20 6.5 V15 L12 22 L4 15 V6.5 Z" stroke="#23F7DD" stroke-width="1.6" stroke-linejoin="round"/><path d="M9 12 l2.2 2.2 L15 9.5" stroke="#23F7DD" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+        <span class="lc-t">Onchain leaderboard</span>
+        <span class="lc-net">Testnet</span>
+      </div>
+      <div class="lb-card-copy">Put your finalized score on a leaderboard read straight from a MultiversX testnet contract. Gasless, no wallet needed.</div>
+      <input class="lb-handle" id="lbHandle" type="text" maxlength="20" autocomplete="off" spellcheck="false" placeholder="Pick a handle (e.g. novapilot)" />
+      <button class="btn btn-primary" id="lbSubmitBtn" type="button">
+        <span id="lbSubmitIcon" aria-hidden="true"><svg viewBox="0 0 24 24" width="16" height="16" fill="none"><path d="M5 12 h14 M13 6 l6 6 -6 6" stroke="#04221d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+        <span id="lbSubmitLabel">Submit to leaderboard</span>
+      </button>
+      <div class="lb-submit-status" id="lbSubmitStatus"></div>
+
+      <div class="lb-board">
+        <div class="lb-board-head"><span class="dot"></span> Top finalized sprints · live from chain</div>
+        <div class="lb-rows" id="lbRows">
+          <div class="lb-empty">Loading the live board…</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="res-actions">
+      <div class="res-btn-row">
+        <button class="btn btn-ghost" id="resAgainBtn" type="button">Play again</button>
+        <button class="btn btn-ghost" id="resShareBtn" type="button">Share</button>
+      </div>
+    </div>
+
     <!-- honest bridge line: what you watched is the API catching up, not finality -->
     <p class="honest-line">What you watch confirm here is the public API catching up, a beat behind. True finality is sub-second. The comparison below is a simulation at each chain's real finality.</p>
 
@@ -630,36 +660,6 @@ body{
       <div class="compare-line" id="compareLine"></div>
       <div class="compare-foot" id="compareFoot"></div>
     </section>
-
-    <!-- leaderboard submit + live board -->
-    <div class="lb-card">
-      <div class="lb-card-head">
-        <span aria-hidden="true" style="display:inline-flex"><svg viewBox="0 0 24 24" width="17" height="17" fill="none"><path d="M12 2 L20 6.5 V15 L12 22 L4 15 V6.5 Z" stroke="#23F7DD" stroke-width="1.6" stroke-linejoin="round"/><path d="M9 12 l2.2 2.2 L15 9.5" stroke="#23F7DD" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
-        <span class="lc-t">Onchain leaderboard</span>
-        <span class="lc-net">Testnet</span>
-      </div>
-      <div class="lb-card-copy">Put your finalized score on a leaderboard read straight from a MultiversX testnet contract. Gasless, no wallet needed.</div>
-      <input class="lb-handle" id="lbHandle" type="text" maxlength="20" autocomplete="off" spellcheck="false" placeholder="Pick a handle (e.g. novapilot)" />
-      <button class="btn btn-primary" id="lbSubmitBtn" type="button">
-        <span id="lbSubmitIcon" aria-hidden="true"><svg viewBox="0 0 24 24" width="16" height="16" fill="none"><path d="M5 12 h14 M13 6 l6 6 -6 6" stroke="#04221d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
-        <span id="lbSubmitLabel">Submit to leaderboard</span>
-      </button>
-      <div class="lb-submit-status" id="lbSubmitStatus"></div>
-
-      <div class="lb-board">
-        <div class="lb-board-head"><span class="dot"></span> Top finalized sprints · live from chain</div>
-        <div class="lb-rows" id="lbRows">
-          <div class="lb-empty">Loading the live board…</div>
-        </div>
-      </div>
-    </div>
-
-    <div class="res-actions">
-      <div class="res-btn-row">
-        <button class="btn btn-ghost" id="resAgainBtn" type="button">Play again</button>
-        <button class="btn btn-ghost" id="resShareBtn" type="button">Share</button>
-      </div>
-    </div>
     <div class="res-switch"><a id="resToUnlimited">Prefer open-ended? Switch to Unlimited →</a></div>
   </section>
 
