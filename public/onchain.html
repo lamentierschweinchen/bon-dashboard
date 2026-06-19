@@ -2022,7 +2022,7 @@ function lbRenderLeaderboard(entries){
 function sprintShare(){
   var score = ST.sprint.finalized;   // N_real — confirmed onchain in the 30s (the honest number)
   var lines = [
-    'Fired ' + score + ' real transactions on Supernova in 30 seconds. All confirmed onchain, watched them land live.'
+    'I got ' + score + ' real transactions in 30 seconds. Compete against me in the Supernova Sprint!'
   ];
   // add the simulated cross-chain line if we have it (clearly labeled)
   if(simResult){
@@ -2032,7 +2032,7 @@ function sprintShare(){
     lines.push('MultiversX ' + fin.mvx + ' · Solana ' + fin.sol + ' · Ethereum ' + fin.eth + ' · Bitcoin ' + fin.btc + ' · Tron ' + fin.trx);
   }
   lines.push('');
-  lines.push('Beat me 👉 https://supernova-sprint.xyz');
+  lines.push('👉 https://supernova-sprint.xyz');
   var text = lines.join('\n');
   // native share on mobile, X web-intent otherwise
   if(navigator.share){
