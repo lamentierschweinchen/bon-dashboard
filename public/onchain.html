@@ -1246,7 +1246,7 @@ function applyAppModeView(){
     $('tapHint').innerHTML = 'Press <b>Start 30-second sprint</b>, then tap, click, or hit <b>space</b>';
   } else {
     $('heroTitle').innerHTML = 'Every tap is a <span class="accent">real transaction</span>.';
-    $('heroCopy').innerHTML = 'Tap the X. Every tap is a real transaction on MultiversX. Watch the <b style="color:var(--mint)">confirmed</b> count chase your finger as each one lands onchain. Go as long as you like.';
+    $('heroCopy').innerHTML = 'Tap the X. Every tap is a real transaction on Supernova. Watch the <b style="color:var(--mint)">confirmed</b> count chase your finger as each one lands onchain. Go as long as you like.';
     $('tapHint').innerHTML = 'Tap, click, or press <b>space</b>. Each one goes onchain.';
   }
 }
@@ -2032,7 +2032,7 @@ function sprintShare(){
     lines.push('MultiversX ' + fin.mvx + ' · Solana ' + fin.sol + ' · Ethereum ' + fin.eth + ' · Bitcoin ' + fin.btc + ' · Tron ' + fin.trx);
   }
   lines.push('');
-  lines.push('Beat me 👉 https://supernova-sprint.xyz/onchain');
+  lines.push('Beat me 👉 https://supernova-sprint.xyz');
   var text = lines.join('\n');
   // native share on mobile, X web-intent otherwise
   if(navigator.share){
