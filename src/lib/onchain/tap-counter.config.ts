@@ -28,18 +28,30 @@ export {
 } from "./leaderboard.config";
 
 /**
- * The deployed tap-counter contract address on testnet.
+ * The PRIMARY tap-counter — deployed in SHARD 0, the same shard as the relayer
+ * and the ephemeral player keys. That makes every recordTaps an INTRA-SHARD
+ * transaction (no cross-shard routing), so it finalizes on the Supernova clock
+ * in ~sub-2s. This is the default for the /onchain experience.
  *
- * Deployed from the project's funded deployer wallet (the same wallet that
- * deployed the leaderboard) at its nonce 1, so this address differs from the
- * leaderboard's and the live leaderboard is untouched.
+ * (The original tap-counter was in shard 1; from a shard-0 sender every tap was
+ * a CROSS-shard tx, which is why finality trailed by several seconds. We keep
+ * that shard-1 contract below for an optional "cross-shard" demo toggle.)
  *
- * Override with NEXT_PUBLIC_TAP_COUNTER_CONTRACT if the contract is redeployed
- * (a redeploy uses the next nonce and yields a different address). Always
- * confirm against the deploy output / DEPLOYED.md in the contract dir.
+ * Override with NEXT_PUBLIC_TAP_COUNTER_CONTRACT if redeployed (a redeploy uses
+ * the next nonce and yields a different address). Confirm against DEPLOYED.md.
  */
 export const TAP_COUNTER_CONTRACT =
   process.env.NEXT_PUBLIC_TAP_COUNTER_CONTRACT ||
+  "erd1qqqqqqqqqqqqqpgqlwv6l2zpx9v0uv6869tn90exv3vdplejppuq97k7r4";
+
+/**
+ * The original tap-counter, in SHARD 1. From a shard-0 sender, a recordTaps to
+ * this contract is CROSS-SHARD and finalizes a few seconds slower. Used only by
+ * the optional secondary "cross-shard" toggle so players can feel the
+ * difference; the primary experience uses the intra-shard contract above.
+ */
+export const TAP_COUNTER_CONTRACT_CROSSSHARD =
+  process.env.NEXT_PUBLIC_TAP_COUNTER_CONTRACT_CROSSSHARD ||
   "erd1qqqqqqqqqqqqqpgq9tmxfe7dm4ndgzt4cx9z83mrj750kgnuenwscvaddk";
 
 /** The contract endpoint the relayer is allowed to relay for taps. */

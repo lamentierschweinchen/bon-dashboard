@@ -41,6 +41,7 @@ import {
 import {
   CHAIN_ID,
   LEADERBOARD_CONTRACT,
+  ONCHAIN_LEADERBOARD_CONTRACT,
   RELAYER_ADDRESS,
   SUBMIT_FUNCTION,
   SUBMIT_GAS_LIMIT,
@@ -49,6 +50,7 @@ import {
 } from "@/lib/onchain/leaderboard.config";
 import {
   TAP_COUNTER_CONTRACT,
+  TAP_COUNTER_CONTRACT_CROSSSHARD,
   RECORD_TAPS_FUNCTION,
   RECORD_TAPS_GAS_LIMIT,
 } from "@/lib/onchain/tap-counter.config";
@@ -72,8 +74,12 @@ const txComputer = new TransactionComputer();
 // driven entirely off this table, so the existing submitScore path keeps its own
 // receiver, gas cap, and 12/min budget unchanged.
 type RelayOp = {
-  /** Exact receiver contract this function must target. */
-  receiver: string;
+  /** Receiver contracts this function may target. One function can serve more
+   *  than one deployed instance: submitScore for both leaderboard boards (the
+   *  main game's, shard 1; the onchain sprint's, shard 0), and recordTaps for
+   *  both the intra-shard tap-counter (shard 0) and the original cross-shard one
+   *  (shard 1, used only by the optional cross-shard demo toggle). */
+  receivers: string[];
   /** Hard gas ceiling for this function (data bytes + execution). */
   maxGasLimit: number;
   /** Per-IP rate budget for this function. */
@@ -83,19 +89,22 @@ type RelayOp = {
 const RATE_WINDOW_MS = 60_000;
 
 const RELAY_OPS: Record<string, RelayOp> = {
-  // The live leaderboard path — budget and gas cap unchanged from before.
+  // The leaderboard path — the main game's board (shard 1) AND the onchain
+  // sprint's board (shard 0). Same function + gas profile; budget unchanged.
   [SUBMIT_FUNCTION]: {
-    receiver: LEADERBOARD_CONTRACT,
+    receivers: [LEADERBOARD_CONTRACT, ONCHAIN_LEADERBOARD_CONTRACT],
     maxGasLimit: SUBMIT_GAS_LIMIT + 100_000,
     rateMax: 12, // submissions per IP per window
   },
-  // The /onchain tap path. Per-tap mode fires one tx per tap, so a human mashing
-  // (~8-12 taps/s) far exceeds 12/min. Supernova's fast finality keeps per-sender
-  // pending low at human rates; this budget gives a single player ample room for
-  // a full session while still capping a single IP. The client also offers a
-  // bundled mode that collapses many taps into one tx if a player hits this.
+  // The /onchain tap path — the primary intra-shard tap-counter (shard 0) AND
+  // the original cross-shard one (shard 1, only via the cross-shard toggle).
+  // Per-tap mode fires one tx per tap, so a human mashing (~8-12 taps/s) far
+  // exceeds 12/min. Supernova's fast finality keeps per-sender pending low at
+  // human rates; this budget gives a single player ample room for a full session
+  // while still capping a single IP. The client also offers a bundled mode that
+  // collapses many taps into one tx if a player hits this.
   [RECORD_TAPS_FUNCTION]: {
-    receiver: TAP_COUNTER_CONTRACT,
+    receivers: [TAP_COUNTER_CONTRACT, TAP_COUNTER_CONTRACT_CROSSSHARD],
     maxGasLimit: RECORD_TAPS_GAS_LIMIT + 100_000,
     rateMax: 1200, // taps (or bundles) per IP per window
   },
@@ -238,9 +247,9 @@ export async function POST(request: Request) {
     );
   }
 
-  // receiver must be the contract pinned for this function
+  // receiver must be one of the contracts allowed for this function
   const receiver = tx.receiver.toBech32();
-  if (receiver !== op.receiver) {
+  if (!op.receivers.includes(receiver)) {
     return NextResponse.json(
       { error: "wrong_receiver", message: `wrong contract for ${fnName}` },
       { status: 400 },

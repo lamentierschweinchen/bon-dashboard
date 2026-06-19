@@ -37,6 +37,19 @@ export const LEADERBOARD_CONTRACT =
   process.env.NEXT_PUBLIC_LEADERBOARD_CONTRACT ||
   "erd1qqqqqqqqqqqqqpgqpy7j8ha5pkudun8qleh7l0zjdxnnjnulenwsynzhhf";
 
+/**
+ * The ONCHAIN-SPRINT leaderboard: a SECOND instance of this same contract,
+ * deployed in SHARD 0 (the relayer's shard) so the sprint's submitScore is an
+ * intra-shard, fast-finality transaction. The /onchain 30s sprint submits its
+ * score — the count of transactions that actually FINALIZED in the run — here,
+ * on its own board, kept separate from the main game's tap-score board above.
+ *
+ * Override with NEXT_PUBLIC_ONCHAIN_LEADERBOARD_CONTRACT if redeployed.
+ */
+export const ONCHAIN_LEADERBOARD_CONTRACT =
+  process.env.NEXT_PUBLIC_ONCHAIN_LEADERBOARD_CONTRACT ||
+  "erd1qqqqqqqqqqqqqpgqh9wpfl0mt337h68z8cuv6w6mkfucqv5tppuqsxz6sp";
+
 /** The contract endpoint the relayer is allowed to relay. */
 export const SUBMIT_FUNCTION = "submitScore";
 
