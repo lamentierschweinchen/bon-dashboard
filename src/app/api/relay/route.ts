@@ -7,18 +7,15 @@
 // route adds the RELAYER signature (Relayed v3) and broadcasts it, so the
 // RELAYER pays the testnet gas and the player pays nothing.
 //
-// Two kinds of transaction are relayed (each with its own constraints):
-//   - a value-0, EMPTY-DATA transfer  (the /onchain experiment, one per tap):
-//     receiver is the SENDER's own address (intra-shard self-transfer) OR the
-//     fixed shard-1 sink (the cross-shard demo toggle). A bare move-balance tx.
-//   - `submitScore` -> the leaderboard contract(s)  (/onchain + /supernova-sprint)
+// Two operations are relayed (additively; each pins its own receiver + caps):
+//   - `submitScore` -> the leaderboard contract  (the /supernova-sprint game)
+//   - `recordTaps`  -> the tap-counter contract   (the /onchain experiment)
 //
 // TRUST MODEL: the relayer is a trusted component. It pays gas and can refuse or
-// rate-limit. For TRANSFERS it only signs txs that (a) carry no data, (b) carry
-// no EGLD value, (c) go to the sender itself or the known sink, (d) ask for gas
-// within a move-balance cap, and (e) name THIS relayer. For FUNCTION CALLS it
-// only signs `submitScore` to a known leaderboard, within its gas cap, naming
-// this relayer. It does not validate the payload's meaning: scores are
+// rate-limit. It only signs transactions that (a) call an ALLOWED function on
+// the matching known contract, (b) name THIS relayer in the `relayer` field,
+// (c) carry no EGLD value, and (d) ask for gas within that operation's cap. It
+// does not validate the payload's meaning: v1 scores / tap counts are
 // client-computed and spoofable by design (see the contracts + the brief). That
 // is acceptable for a fun community demo on a test network.
 //
@@ -51,7 +48,12 @@ import {
   TESTNET_GATEWAY,
   TESTNET_EXPLORER,
 } from "@/lib/onchain/leaderboard.config";
-import { CROSS_SHARD_SINK } from "@/lib/onchain/tap-counter.config";
+import {
+  TAP_COUNTER_CONTRACT,
+  TAP_COUNTER_CONTRACT_CROSSSHARD,
+  RECORD_TAPS_FUNCTION,
+  RECORD_TAPS_GAS_LIMIT,
+} from "@/lib/onchain/tap-counter.config";
 
 // The plain-object shape accepted by Transaction.newFromPlainObject, derived
 // from the function signature so we do not depend on the type's export name.
@@ -63,18 +65,20 @@ export const runtime = "nodejs"; // sdk-core crypto needs the Node runtime
 const addressComputer = new AddressComputer();
 const txComputer = new TransactionComputer();
 
-// ---- relayable FUNCTION-CALL operations ----
+// ---- relayable operations ----
 //
 // One entry per function the relayer will sign for. Each entry pins the exact
-// receiver contracts for that function, a gas ceiling (so a malicious client
-// cannot drain the relayer), and a per-IP rate budget. The data-less TRANSFER
-// path is handled separately below (it has no function name); this table is for
-// function calls only. submitScore keeps its own receivers, gas cap, and
-// 12/min budget unchanged.
+// receiver contract for that function, a gas ceiling (so a malicious client
+// cannot drain the relayer), and a per-IP rate budget. Adding an operation here
+// is the ONLY change needed to relay a new function — the validation below is
+// driven entirely off this table, so the existing submitScore path keeps its own
+// receiver, gas cap, and 12/min budget unchanged.
 type RelayOp = {
-  /** Receiver contracts this function may target. submitScore serves both
-   *  leaderboard boards: the main game's (shard 1) and the onchain sprint's
-   *  (shard 0). */
+  /** Receiver contracts this function may target. One function can serve more
+   *  than one deployed instance: submitScore for both leaderboard boards (the
+   *  main game's, shard 1; the onchain sprint's, shard 0), and recordTaps for
+   *  both the intra-shard tap-counter (shard 0) and the original cross-shard one
+   *  (shard 1, used only by the optional cross-shard demo toggle). */
   receivers: string[];
   /** Hard gas ceiling for this function (data bytes + execution). */
   maxGasLimit: number;
@@ -84,14 +88,6 @@ type RelayOp = {
 
 const RATE_WINDOW_MS = 60_000;
 
-// Transfer-path limits (the /onchain per-tap value-0, empty-data transfer).
-// A move-balance tx is 50_000 gas; allow a little headroom and reject anything
-// above it. The per-tap path fires one tx per tap, so a human mashing (~8-12
-// taps/s) far exceeds 12/min — this generous budget gives a single player ample
-// room for a full session while still capping a single IP. Keyed "transfer:ip".
-const TRANSFER_MAX_GAS_LIMIT = 120_000;
-const TRANSFER_RATE_MAX = 1500; // transfers per IP per window
-
 const RELAY_OPS: Record<string, RelayOp> = {
   // The leaderboard path — the main game's board (shard 1) AND the onchain
   // sprint's board (shard 0). Same function + gas profile; budget unchanged.
@@ -99,6 +95,18 @@ const RELAY_OPS: Record<string, RelayOp> = {
     receivers: [LEADERBOARD_CONTRACT, ONCHAIN_LEADERBOARD_CONTRACT],
     maxGasLimit: SUBMIT_GAS_LIMIT + 100_000,
     rateMax: 12, // submissions per IP per window
+  },
+  // The /onchain tap path — the primary intra-shard tap-counter (shard 0) AND
+  // the original cross-shard one (shard 1, only via the cross-shard toggle).
+  // Per-tap mode fires one tx per tap, so a human mashing (~8-12 taps/s) far
+  // exceeds 12/min. Supernova's fast finality keeps per-sender pending low at
+  // human rates; this budget gives a single player ample room for a full session
+  // while still capping a single IP. The client also offers a bundled mode that
+  // collapses many taps into one tx if a player hits this.
+  [RECORD_TAPS_FUNCTION]: {
+    receivers: [TAP_COUNTER_CONTRACT, TAP_COUNTER_CONTRACT_CROSSSHARD],
+    maxGasLimit: RECORD_TAPS_GAS_LIMIT + 100_000,
+    rateMax: 1200, // taps (or bundles) per IP per window
   },
 };
 
@@ -213,77 +221,46 @@ export async function POST(request: Request) {
     );
   }
 
-  // no value transfer (both the transfer path and submitScore are value-0)
-  if (tx.value !== BigInt(0)) {
+  // function must be one we relay. Both relayed functions take arguments, so the
+  // data field is `fn@arg...`; take the function name before the first `@` and
+  // require at least one argument (matches the prior `startsWith("fn@")` check).
+  const data = Buffer.from(tx.data ?? new Uint8Array()).toString("utf8");
+  const atIndex = data.indexOf("@");
+  const fnName = atIndex === -1 ? "" : data.slice(0, atIndex);
+  const op = fnName ? RELAY_OPS[fnName] : undefined;
+  if (!op) {
     return NextResponse.json(
-      { error: "value_not_allowed", message: "value must be 0" },
+      {
+        error: "wrong_function",
+        message: `only ${Object.keys(RELAY_OPS).join(", ")} are relayed`,
+      },
       { status: 400 },
     );
   }
 
-  // Branch on the data field. An EMPTY data field is the per-tap TRANSFER path
-  // (a bare move-balance tx); a non-empty `fn@arg...` is a FUNCTION CALL (only
-  // submitScore is relayed). Each branch sets the rate-limit budget, the gas
-  // cap, and the allowed-receiver rule; the remaining checks (relayer field,
-  // signature, shard) are common and run afterward.
-  const data = Buffer.from(tx.data ?? new Uint8Array()).toString("utf8");
-  const sender = tx.sender.toBech32();
-  const receiver = tx.receiver.toBech32();
-
-  let rateKey: string;
-  let rateMax: number;
-  let maxGasLimit: number;
-
-  if (data.length === 0) {
-    // ---- TRANSFER path (per-tap value-0, empty-data move-balance tx) ----
-    rateKey = "transfer";
-    rateMax = TRANSFER_RATE_MAX;
-    maxGasLimit = TRANSFER_MAX_GAS_LIMIT;
-
-    // receiver must be the sender itself (intra-shard self-transfer) OR the
-    // known shard-1 sink (the cross-shard demo). Nothing else.
-    if (receiver !== sender && receiver !== CROSS_SHARD_SINK) {
-      return NextResponse.json(
-        {
-          error: "wrong_receiver",
-          message: "transfer must go to the sender itself or the sink",
-        },
-        { status: 400 },
-      );
-    }
-  } else {
-    // ---- FUNCTION-CALL path (only submitScore is relayed) ----
-    const atIndex = data.indexOf("@");
-    const fnName = atIndex === -1 ? "" : data.slice(0, atIndex);
-    const op = fnName ? RELAY_OPS[fnName] : undefined;
-    if (!op) {
-      return NextResponse.json(
-        {
-          error: "wrong_function",
-          message: `only ${Object.keys(RELAY_OPS).join(", ")} are relayed`,
-        },
-        { status: 400 },
-      );
-    }
-    rateKey = fnName;
-    rateMax = op.rateMax;
-    maxGasLimit = op.maxGasLimit;
-
-    // receiver must be one of the contracts allowed for this function
-    if (!op.receivers.includes(receiver)) {
-      return NextResponse.json(
-        { error: "wrong_receiver", message: `wrong contract for ${fnName}` },
-        { status: 400 },
-      );
-    }
-  }
-
-  // Rate limit per client IP, against THIS path's budget. Scoping by path keeps
-  // the high transfer budget from weakening the leaderboard's budget.
-  if (rateLimited(ip, rateKey, rateMax)) {
+  // Rate limit per client IP, against THIS function's budget. Scoping by
+  // function keeps the high tap budget from weakening the leaderboard's budget.
+  if (rateLimited(ip, fnName, op.rateMax)) {
     return NextResponse.json(
       { error: "rate_limited", message: "too many requests, slow down" },
       { status: 429 },
+    );
+  }
+
+  // receiver must be one of the contracts allowed for this function
+  const receiver = tx.receiver.toBech32();
+  if (!op.receivers.includes(receiver)) {
+    return NextResponse.json(
+      { error: "wrong_receiver", message: `wrong contract for ${fnName}` },
+      { status: 400 },
+    );
+  }
+
+  // no value transfer
+  if (tx.value !== BigInt(0)) {
+    return NextResponse.json(
+      { error: "value_not_allowed", message: "value must be 0" },
+      { status: 400 },
     );
   }
 
@@ -304,17 +281,15 @@ export async function POST(request: Request) {
     );
   }
 
-  // gas cap (this path's ceiling)
-  if (tx.gasLimit > BigInt(maxGasLimit)) {
+  // gas cap (this function's ceiling)
+  if (tx.gasLimit > BigInt(op.maxGasLimit)) {
     return NextResponse.json(
       { error: "gas_too_high", message: "gas limit exceeds relayer cap" },
       { status: 400 },
     );
   }
 
-  // Relayed v3 shard rule: the SENDER must be in the relayer's shard. (Only the
-  // sender's shard is checked — for a cross-shard transfer the RECEIVER is in a
-  // different shard by design, which is fine and must not be rejected.)
+  // Relayed v3 shard rule: sender must be in the relayer's shard.
   try {
     const senderShard = addressComputer.getShardOfAddress(tx.sender);
     const relayerShard = addressComputer.getShardOfAddress(relayer.address);

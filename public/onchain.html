@@ -11,6 +11,11 @@
 <meta name="twitter:card" content="summary_large_image" />
 <meta name="twitter:title" content="Every Tap Onchain · MultiversX" />
 <meta name="twitter:description" content="Every tap is a real transaction on MultiversX testnet. Watch them confirm live, then compare against every chain's finality." />
+<meta property="og:url" content="https://supernova-sprint.xyz/" />
+<meta property="og:image" content="https://supernova-sprint.xyz/supernova-sprint-og.png" />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
+<meta name="twitter:image" content="https://supernova-sprint.xyz/supernova-sprint-og.png" />
 <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
 <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
 <!--
@@ -22,35 +27,36 @@
   transaction on MultiversX testnet (the public network currently running
   Supernova, 600ms rounds) and the page counts the ones that actually finalize.
 
-  Each tap is a value-0, EMPTY-DATA TRANSFER (a bare move-balance tx), not a
-  contract call. A transfer has no VM execution and no storage writes, so it
-  finalizes faster than a contract call — that contrast is the finality demo.
-
   This is a NEW page. It does NOT touch the live /supernova-sprint game or the
-  live leaderboard contract. It uses the same gasless relayer, extended to relay
-  data-less transfers alongside the leaderboard's submitScore.
+  live leaderboard contract. It uses its own contract (the tap-counter) and the
+  same gasless relayer, extended additively to relay `recordTaps`.
 
-  THE PIPELINE (per tap)
+  THE PIPELINE (per tap, default mode)
   --------------------------------------------------------------------------------
-    1. tap → build a value-0, empty-data transfer. Intra-shard (default): the
-       receiver is the ephemeral sender's OWN shard-0 address (a self-transfer).
-       Cross-shard (the Unlimited toggle): the receiver is a fixed shard-1 sink.
+    1. tap → build a recordTaps(1) transaction
     2. sign it with an ephemeral in-browser key, LOCAL nonce increment
-       (never wait between rapid taps — the nonce is tracked client-side). For an
-       empty-data tx the signed JSON OMITS the data key (see signingString).
+       (never wait between rapid taps — the nonce is tracked client-side)
     3. POST the signed tx to /api/relay; the relayer adds its signature and
        pays the testnet gas, so the player pays nothing
     4. mark it "sent", then poll the tx status; when it finalizes, bump the
        "finalized onchain" count. Finalized trails sent by the real finality
        time (sub-second to ~1.8s) — that lag IS the demo.
+    5. headline a global on-chain counter read from the contract:
+       "players have fired N real transactions on MultiversX".
+
+  BUNDLED MODE (toggle / fallback)
+    Buffers taps over a short window and flushes them as one recordTaps(count)
+    tx. Default is per-tap (the visceral "every tap is a transaction"); bundled
+    keeps per-sender pending low at mash speed (the gateway caps ~100 pending
+    per sender), and the page auto-suggests it if pending climbs.
 
   HONEST FRAMING
     - Testnet only. Supernova is LIVE on testnet (600ms rounds) and scheduled
       for mainnet — never claimed as a flat mainnet property.
-    - The count that is REAL is the number of transfers that finalize. The taps
-      themselves are 100% real transactions; the score is hard to inflate (each
-      tap is one on-chain tx). Acceptable for a fun community demo on a testnet.
-    - Testnet can be reset, which would clear the leaderboard.
+    - The count that is REAL is the number of recordTaps txs that finalize. The
+      per-tap count argument is the player's claim and is spoofable; acceptable
+      for a fun community demo on a test network (same caveat as the leaderboard).
+    - Testnet can be reset, which would clear the global counter.
 
   FAIL-SOFT
     Every onchain path is wrapped. If the crypto CDN is down, the relayer key is
@@ -91,8 +97,8 @@
 }
 
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
-/* the [hidden] attribute must win over component display rules (e.g. some rows
-   are display:flex; without this they would stay visible when hidden) */
+/* the [hidden] attribute must win over component display rules (e.g. .mode-row
+   is display:flex; without this it would stay visible when hidden in Sprint) */
 [hidden]{display:none !important;}
 html,body{min-height:100%;}
 body{
@@ -145,6 +151,9 @@ body{
 .counter .cn.sent{color:var(--text);}
 .counter .cn.fin{color:var(--mint);text-shadow:0 0 16px rgba(35,247,221,.4);}
 .counter .cs{font-size:11px;color:var(--text-faint);margin-top:6px;}
+.counter.global{grid-column:1 / -1;background:linear-gradient(180deg,var(--surface-2),var(--surface));}
+.counter.global .cn{font-size:34px;color:var(--text);}
+.counter.global .cn .g-mint{color:var(--mint);}
 
 /* the tap zone */
 .tap-card{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:22px 20px 24px;display:flex;flex-direction:column;align-items:center;gap:14px;}
@@ -166,6 +175,13 @@ body{
 /* ripple/spark on tap */
 .spark{position:absolute;pointer-events:none;font-family:var(--mono);font-weight:700;font-size:12px;color:var(--mint);transform:translate(-50%,-50%);animation:spark .8s var(--ease-out) forwards;z-index:3;text-shadow:0 0 10px rgba(35,247,221,.7);white-space:nowrap;}
 @keyframes spark{0%{opacity:0;transform:translate(-50%,-50%) scale(.7);}18%{opacity:1;}100%{opacity:0;transform:translate(-50%,-160%) scale(1);}}
+
+/* mode toggle */
+.mode-row{display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap;}
+.mode-toggle{display:inline-flex;background:var(--surface-2);border:1px solid var(--border);border-radius:999px;padding:3px;}
+.mode-toggle button{font-family:inherit;font-size:11.5px;font-weight:600;letter-spacing:.01em;color:var(--text-dim);background:none;border:none;cursor:pointer;border-radius:999px;padding:6px 14px;transition:background .18s,color .18s;}
+.mode-toggle button.on{background:var(--mint);color:#04221d;}
+.mode-note{font-size:11px;color:var(--text-faint);text-align:center;max-width:42ch;}
 
 /* status line */
 .status{display:none;font-size:12.5px;line-height:1.45;border-radius:12px;padding:11px 13px;background:var(--surface-2);border:1px solid var(--border);color:var(--text-dim);}
@@ -447,6 +463,7 @@ body{
   .tap-btn{width:172px;height:172px;}
   .tap-btn svg{width:66px;}
   .counter .cn{font-size:26px;}
+  .counter.global .cn{font-size:29px;}
 }
 @media (max-width:380px){
   .lane-spec{display:none;}
@@ -504,6 +521,11 @@ body{
       <div class="cn fin" id="cFinal">0</div>
       <div class="cs" id="cFinalSub">real transactions, confirmed onchain</div>
     </div>
+    <div class="counter global">
+      <div class="cl">Everyone · global onchain counter</div>
+      <div class="cn"><span class="g-mint" id="cGlobal">—</span> <span style="font-size:14px;color:var(--text-faint);font-weight:400">real transactions on MultiversX</span></div>
+      <div class="cs" id="cGlobalSub">read live from the tap-counter contract</div>
+    </div>
   </section>
 
   <section class="tap-card sprint-idle" id="tapCard">
@@ -535,6 +557,15 @@ body{
     <!-- settling banner (sprint, after buzzer) -->
     <div class="settling" id="settling"><span class="spin"></span><span id="settlingMsg">Resolving the taps still in flight…</span></div>
 
+    <!-- UNLIMITED-mode sub-toggle (per-tap / bundled) -->
+    <div class="mode-row" id="modeRow" hidden>
+      <div class="mode-toggle" role="group" aria-label="Transaction mode">
+        <button id="modePerTap" class="on" type="button">Per tap</button>
+        <button id="modeBundled" type="button">Bundled</button>
+      </div>
+    </div>
+    <div class="mode-note" id="modeNote" hidden>One transaction per tap — the visceral version.</div>
+
     <!-- CROSS-SHARD toggle (Unlimited only): a live demo of MultiversX sharding -->
     <div class="shard-row" id="shardRow">
       <div class="shard-toggle" role="group" aria-label="Shard routing demo">
@@ -542,7 +573,7 @@ body{
         <button id="shardCross" type="button">Cross-shard</button>
       </div>
       <div class="shard-caption" id="shardCaption">
-        Sharding demo: each tap is a <b>shard-0</b> self-transfer — same shard as the sender, so it finalizes fast.
+        Sharding demo: taps hit a <b>shard-0</b> contract — same shard as the sender, so they finalize fast.
       </div>
     </div>
 
@@ -648,10 +679,11 @@ body{
 
   <p class="foot">
     Testnet only — Supernova is live here (600ms rounds) and scheduled for mainnet.
-    Every tap is a real onchain transaction; the confirmed count is the ones that
-    finalized. Testnet can be reset, which would clear the leaderboard.
+    The confirmed count is real onchain transactions; the tap count you send is your
+    own claim (spoofable, and that's fine for a test-network demo). Testnet can be
+    reset, which would clear the global counter.
     <br>
-    <a id="leaderboardLink" href="#" target="_blank" rel="noopener">leaderboard contract</a>
+    <a id="contractLink" href="#" target="_blank" rel="noopener">tap-counter contract</a>
     <span class="sep">·</span>
     <a href="/supernova-sprint">the original game</a>
   </p>
@@ -674,24 +706,31 @@ body{
    only in the server env (see app/api/relay/route.ts).
    ============================================================================ */
 var CFG = {
-  // CROSS-SHARD sink — a plain SHARD-1 account. The Unlimited cross-shard toggle
-  // sends each transfer here; from a shard-0 sender that is a cross-shard tx that
-  // trails several seconds. value-0 transfers to it are harmless no-ops. Mirrors
-  // CROSS_SHARD_SINK in tap-counter.config.ts.
-  sinkCrossShard: 'erd1f0c93h5px8vwwrr3q9z3rv9h0d55mmezfw988x8ecuvvnkjcenwsl4evkl', // shard-1 sink (cross, slow)
+  // PRIMARY tap-counter — SHARD 0, intra-shard, fast finality (default). The
+  // ephemeral player keys + relayer are also shard 0, so a recordTaps here is
+  // intra-shard and finalizes in ~sub-2s.
+  contract: 'erd1qqqqqqqqqqqqqpgqlwv6l2zpx9v0uv6869tn90exv3vdplejppuq97k7r4', // tap-counter shard 0 (intra, fast)
+  // CROSS-SHARD tap-counter — SHARD 1. From a shard-0 sender this is a
+  // cross-shard tx that trails several seconds (Unlimited-mode toggle only).
+  contractCrossShard: 'erd1qqqqqqqqqqqqqpgq9tmxfe7dm4ndgzt4cx9z83mrj750kgnuenwscvaddk', // tap-counter shard 1 (cross, slow)
   // SPRINT leaderboard — SHARD 0, intra-shard.
   sprintLeaderboard: 'erd1qqqqqqqqqqqqqpgqh9wpfl0mt337h68z8cuv6w6mkfucqv5tppuqsxz6sp',
   relayer:  'erd1ru08dt4u5e0psfrwth38u0dfed0hw8289xqdd9yghl3ec24uppuq6hgphm', // gas payer (shard 0)
   api:      'https://testnet-api.multiversx.com',
   explorer: 'https://testnet-explorer.multiversx.com',
   chainID:  'T',
-  transferGasLimit: 100000, // relayed move-balance: 50k base + 50k relayed-v3 overhead
+  gasLimit: 6000000,
   lbGasLimit: 10000000,     // submitScore gas limit (mirrors SUBMIT_GAS_LIMIT)
   gasPrice: 1000000000,
   numShards: 3,
   relayerShard: 0,          // erd1ru08... is in shard 0 (verified); grind handles any value
+  fn: 'recordTaps',
+  maxPerCall: 1000,         // mirrors the contract's MAX_TAPS_PER_CALL
+  bundleWindowMs: 600,      // bundled mode flush window (one Supernova round)
+  pendingSoftCap: 60,       // suggest bundled mode if local pending climbs past this
   pollIntervalMs: 500,      // tighter poll → snappier confirmation detection + a sharper 30s window boundary
   pollMaxTries: 26,         // ~13s ceiling per tx before we stop polling (matches the old wall at 500ms)
+  globalRefreshMs: 4000,
   feedMax: 8,
   sprintMs: 30000,          // 30-second sprint window
   settleMaxMs: 12000        // max time we keep polling stragglers after the buzzer
@@ -708,17 +747,22 @@ var ST = {
   initPromise: null,     // single-flight key init
   available: true,       // false => degraded (no crypto / no relayer)
   appMode: 'sprint',     // 'sprint' | 'unlimited' — top-level game mode
-  shardMode: 'intra',    // 'intra' | 'cross' — receiver shard (Unlimited only)
+  shardMode: 'intra',    // 'intra' | 'cross' — which tap-counter (Unlimited only)
+  mode: 'pertap',        // 'pertap' | 'bundled' (Unlimited sub-toggle)
   sent: 0,               // txs broadcast this session (Unlimited counters)
   finalized: 0,          // txs that reached finality this session
   pending: 0,            // sent but not yet finalized (local view)
+  global: null,          // global counter from the contract
+  bundleBuf: 0,          // buffered taps awaiting flush (bundled mode)
+  bundleTimer: null,
   feed: [],              // recent { hash, state, sentAt, finalMs, count }
+  warnedPending: false,
   warnedUnavailable: false,
   // ---- sprint sub-state ----
   sprint: {
     phase: 'idle',       // 'idle' | 'countdown' | 'running' | 'settling' | 'done'
     runId: 0,            // bumped each run; stragglers from a prior run can't score
-    tapsFired: 0,        // transfer txs broadcast during this run
+    tapsFired: 0,        // recordTaps txs broadcast during this run
     finalized: 0,        // REAL txs confirmed onchain WITHIN the 30s window = the SCORE (N_real)
     finalizedLate: 0,    // REAL txs that confirmed AFTER the buzzer — honest, but excluded from the score
     inFlight: [],        // entries still being polled to finality
@@ -730,19 +774,19 @@ var ST = {
   }
 };
 
-/* the RECEIVER for the per-tap transfer in the CURRENT mode. Each tap is a
-   value-0, empty-data move-balance tx. Sprint (and Unlimited's default) is an
-   intra-shard SELF-transfer — the ephemeral sender sends to its OWN shard-0
-   address, the fastest possible tx. The Unlimited cross-shard toggle instead
-   targets a fixed shard-1 sink, so the tx hops shards and finality visibly
-   trails. The SENDER is always shard 0; only the receiver's shard differs. */
-function activeTapReceiver(){
-  if(ST.appMode === 'unlimited' && ST.shardMode === 'cross') return CFG.sinkCrossShard;
-  return ST.key ? ST.key.address : '';
+/* the active tap-counter contract for the CURRENT mode. Sprint is ALWAYS
+   intra-shard (shard 0) for a fair fast board; Unlimited honors the shard
+   toggle so players can feel cross-shard finality. */
+function activeTapContract(){
+  if(ST.appMode === 'unlimited' && ST.shardMode === 'cross') return CFG.contractCrossShard;
+  return CFG.contract;
 }
 
 /* ---------- tiny encoders ---------- */
 function bytesToHex(b){ var h=''; for(var i=0;i<b.length;i++){ h+=b[i].toString(16).padStart(2,'0'); } return h; }
+function u32ToHex(n){ // recordTaps takes a u32 — pad to 8 hex (4 bytes BE)
+  var h = (n>>>0).toString(16); while(h.length<8) h='0'+h; return h;
+}
 
 /* address shard from the last pubkey byte (matches sdk-core AddressComputer) */
 function shardOfPubkey(pub){
@@ -785,15 +829,11 @@ async function generateEphemeral(libs){
 }
 
 /* canonical signing bytes — field ORDER + encoding match sdk-core
-   TransactionComputer.computeBytesForSigning exactly. sdk-core's toPlainObject
-   sets data via toBase64OrUndefined (undefined for empty data) and JSON.stringify
-   omits undefined keys, so an EMPTY-DATA transfer must serialize with NO `data`
-   key. `tx.dataB64 || undefined` keeps the key in position for data txs (e.g.
-   submitScore) and omits it when the data is empty (the per-tap transfer). */
+   TransactionComputer.computeBytesForSigning exactly. */
 function signingString(tx){
   return JSON.stringify({
     nonce: tx.nonce, value: tx.value, receiver: tx.receiver, sender: tx.sender,
-    gasPrice: tx.gasPrice, gasLimit: tx.gasLimit, data: tx.dataB64 || undefined,
+    gasPrice: tx.gasPrice, gasLimit: tx.gasLimit, data: tx.dataB64,
     chainID: tx.chainID, version: tx.version, relayer: tx.relayer
   });
 }
@@ -825,26 +865,24 @@ function ensureKey(){
   return ST.initPromise;
 }
 
-/* ---------- the core: fire ONE value-0, EMPTY-DATA transfer ---------- */
-/* Each tap is a bare move-balance transaction (no VM, no storage), which is why
-   it finalizes faster than a contract call — that contrast is the demo. Intra
-   mode is a self-transfer (receiver = the sender's own shard-0 address); the
-   Unlimited cross-shard toggle sends to the fixed shard-1 sink instead. */
-async function fireTaps(){
+/* ---------- the core: fire ONE recordTaps(count) transaction ---------- */
+async function fireTaps(count){
+  // guard the per-call cap (the contract also enforces it)
+  if(count > CFG.maxPerCall) count = CFG.maxPerCall;
+  if(count <= 0) return;
+
   var ok = await ensureKey();
   if(!ok){ degrade(); return; }
 
   var libs = ST.libs, key = ST.key;
   var nonce = ST.nonce++;            // LOCAL increment — claim this nonce now
-  var receiver = activeTapReceiver(); // own address (self) or the shard-1 sink (cross)
+  var receiver = activeTapContract(); // intra-shard (default) or cross-shard (Unlimited toggle)
 
-  // EMPTY data: btoa('') === ''. The signing JSON must OMIT the data key entirely
-  // for the signature to verify (see signingString); downstream we send
-  // `data: dataB64 || undefined` so the relayer treats it as a no-data tx too.
-  var dataB64 = '';
+  var dataStr = CFG.fn + '@' + u32ToHex(count);
+  var dataB64 = btoa(dataStr);
   var txForSign = {
     nonce: nonce, value: '0', receiver: receiver, sender: key.address,
-    gasPrice: CFG.gasPrice, gasLimit: CFG.transferGasLimit, dataB64: dataB64,
+    gasPrice: CFG.gasPrice, gasLimit: CFG.gasLimit, dataB64: dataB64,
     chainID: CFG.chainID, version: 2, relayer: CFG.relayer
   };
 
@@ -852,7 +890,7 @@ async function fireTaps(){
   var plainTx = {
     nonce: nonce, value: '0', receiver: receiver, sender: key.address,
     senderUsername: undefined, receiverUsername: undefined,
-    gasPrice: CFG.gasPrice, gasLimit: CFG.transferGasLimit, data: dataB64 || undefined,
+    gasPrice: CFG.gasPrice, gasLimit: CFG.gasLimit, data: dataB64,
     chainID: CFG.chainID, version: 2, relayer: CFG.relayer,
     signature: bytesToHex(sigBytes)
   };
@@ -877,16 +915,17 @@ async function fireTaps(){
 
   // SENT: the relayer broadcast it. Count it and track it to finality.
   var inSprint = (ST.appMode === 'sprint');
-  var entry = { hash: out.txHash, state: 'pending', sentAt: Date.now(), finalMs: null, count: 1, sprint: inSprint, runId: ST.sprint.runId };
+  var entry = { hash: out.txHash, state: 'pending', sentAt: Date.now(), finalMs: null, count: count, sprint: inSprint, runId: ST.sprint.runId };
 
   if(inSprint){
-    ST.sprint.tapsFired += 1;
+    ST.sprint.tapsFired += count;
     ST.sprint.inFlight.push(entry);
     renderSprintLive();
   } else {
     ST.sent += 1;
     ST.pending += 1;
     renderCounters();
+    maybeSuggestBundled();
   }
 
   ST.feed.unshift(entry);
@@ -911,6 +950,7 @@ async function pollToFinality(entry){
         renderCounters();
       }
       renderFeed();
+      refreshGlobal(); // the global counter just grew
       return;
     }
     if(status === 'fail' || status === 'invalid'){
@@ -938,6 +978,33 @@ async function fetchTxStatus(hash){
   } catch(e){ return 'pending'; }
 }
 
+/* ---------- global counter (read live from the contract) ---------- */
+async function refreshGlobal(){
+  try {
+    var body = { scAddress: activeTapContract(), funcName: 'getGlobalTaps', args: [] };
+    var r = await fetch(CFG.api + '/vm-values/query', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+    if(!r.ok) return;
+    var j = await r.json();
+    var data = j && j.data && j.data.data ? j.data.data : null;
+    if(!data || data.returnCode !== 'ok') return;
+    var parts = data.returnData || [];
+    var b64 = parts[0] || '';
+    ST.global = b64 ? decodeU64(b64) : 0;
+    renderGlobal();
+  } catch(e){ /* leave the last known value */ }
+}
+
+/* decode a base64 big-endian u64 into a JS number (safe for our magnitudes) */
+function decodeU64(b64){
+  var bin = atob(b64);
+  var v = 0n;
+  for(var i=0;i<bin.length;i++){ v = (v<<8n) | BigInt(bin.charCodeAt(i)); }
+  return Number(v);
+}
+
 /* ---------- rendering ---------- */
 function fmt(n){ return (n==null) ? '—' : Number(n).toLocaleString('en-US'); }
 
@@ -948,6 +1015,9 @@ function renderCounters(){
   $('cFinalSub').textContent = trailing > 0
     ? (trailing + ' still confirming — the API runs a beat behind')
     : 'real transactions, confirmed onchain';
+}
+function renderGlobal(){
+  $('cGlobal').textContent = fmt(ST.global);
 }
 function renderFeed(){
   var list = $('feedList');
@@ -1014,6 +1084,15 @@ function handleRelayError(out, status){
   setStatus('err', 'Onchain submission hiccuped (' + (code || ('HTTP '+status)) + '). Your taps still count here.');
 }
 
+/* suggest bundled mode if local pending climbs toward the gateway's ~100/sender cap */
+function maybeSuggestBundled(){
+  if(ST.mode === 'bundled' || ST.warnedPending) return;
+  if(ST.pending >= CFG.pendingSoftCap){
+    ST.warnedPending = true;
+    setStatus('warn', 'Lots of transactions in flight. <b>Bundled</b> mode keeps things smooth at mash speed — it packs taps into one transaction per round.');
+  }
+}
+
 /* ---------- tap handling ---------- */
 function spark(x, y, label){
   var card = $('tapBtn');
@@ -1027,9 +1106,6 @@ function spark(x, y, label){
   setTimeout(function(){ s.remove(); }, 800);
 }
 
-/* Every tap fires exactly ONE transfer — sprint and Unlimited alike. There is no
-   bundling: with bare transfers there is no contract call to pack taps into, so
-   "every tap is one real transaction" holds literally. */
 function onTap(x, y){
   // ---- SPRINT mode ----
   if(ST.appMode === 'sprint'){
@@ -1042,10 +1118,43 @@ function onTap(x, y){
     // replays exactly these timings at each chain's finality (clamped to the window).
     var elapsed = performance.now() - ST.sprint.startTime;
     if(elapsed >= 0 && elapsed <= CFG.sprintMs){ ST.sprint.taps.push(elapsed); }
+    spark(x, y, '+1 tx');
+    fireTaps(1).catch(function(e){ console.warn('[onchain] fire failed', e); });
+    return;
   }
-  // ---- both modes: one transfer per tap ----
-  spark(x, y, '+1 tx');
-  fireTaps().catch(function(e){ console.warn('[onchain] fire failed', e); });
+  // ---- UNLIMITED mode (original behavior) ----
+  if(ST.mode === 'pertap'){
+    spark(x, y, '+1 tx');
+    fireTaps(1).catch(function(e){ console.warn('[onchain] fire failed', e); });
+  } else {
+    // bundled: buffer this tap, flush on a short window or when the buffer is full
+    ST.bundleBuf += 1;
+    spark(x, y, '+1');
+    if(ST.bundleBuf >= CFG.maxPerCall){ flushBundle(); return; }
+    if(!ST.bundleTimer){
+      ST.bundleTimer = setTimeout(flushBundle, CFG.bundleWindowMs);
+    }
+  }
+}
+function flushBundle(){
+  if(ST.bundleTimer){ clearTimeout(ST.bundleTimer); ST.bundleTimer = null; }
+  var n = ST.bundleBuf; ST.bundleBuf = 0;
+  if(n > 0){ fireTaps(n).catch(function(e){ console.warn('[onchain] bundle fire failed', e); }); }
+}
+
+/* ---------- mode toggle ---------- */
+function setMode(mode){
+  if(ST.mode === mode) return;
+  // flush any buffered taps before leaving bundled mode
+  if(ST.mode === 'bundled') flushBundle();
+  ST.mode = mode;
+  ST.warnedPending = false;
+  $('modePerTap').classList.toggle('on', mode === 'pertap');
+  $('modeBundled').classList.toggle('on', mode === 'bundled');
+  $('modeNote').textContent = mode === 'pertap'
+    ? 'One transaction per tap — the visceral version.'
+    : 'Packs your taps into one transaction per ~600ms round — smoother at mash speed.';
+  clearStatus();
 }
 
 /* ============================================================================
@@ -1057,21 +1166,27 @@ function setAppMode(mode){
   if(ST.appMode === 'sprint' && ST.sprint.phase !== 'idle' && ST.sprint.phase !== 'done'){
     resetSprint();
   }
+  // leaving unlimited: flush any buffered bundle so nothing is lost
+  if(ST.appMode === 'unlimited' && ST.mode === 'bundled') flushBundle();
 
   ST.appMode = mode;
   $('appSprint').classList.toggle('on', mode === 'sprint');
   $('appUnlimited').classList.toggle('on', mode === 'unlimited');
   clearStatus();
   applyAppModeView();
+  // the active contract (and thus the global counter) may have changed
+  updateContractLink();
+  refreshGlobal();
 }
 
-/* cross-shard demo toggle (Unlimited only). Flips the transfer DESTINATION:
-   intra-shard self-transfer (receiver = the shard-0 sender's own address, fast,
-   default) vs a fixed shard-1 sink (cross-shard, slower). The ephemeral SENDER
-   stays shard 0 in both; only the RECEIVER's shard changes, so the cross-shard
-   run shows the extra finality cost of hopping between shards. */
+/* cross-shard demo toggle (Unlimited only). Flips which tap-counter recordTaps
+   targets: shard-0 (intra, fast, default) vs shard-1 (cross-shard, slower). The
+   ephemeral SENDER stays shard 0 in both; only the RECEIVER contract changes, so
+   the cross-shard run shows the extra finality cost of hopping between shards. */
 function setShardMode(mode){
   if(ST.shardMode === mode) return;
+  // flush any buffered bundle bound for the old contract first
+  if(ST.mode === 'bundled') flushBundle();
   ST.shardMode = mode;
   var cross = mode === 'cross';
   var bIntra = $('shardIntra'), bCross = $('shardCross');
@@ -1081,9 +1196,16 @@ function setShardMode(mode){
   var cap = $('shardCaption');
   cap.classList.toggle('cross', cross);
   cap.innerHTML = cross
-    ? 'Sharding demo: each tap now sends to a <b>shard-1</b> address while you send from shard 0 — every transaction has to hop between shards, so finality visibly trails. Same security, more distance.'
-    : 'Sharding demo: each tap is a <b>shard-0</b> self-transfer — same shard as the sender, so it finalizes fast.';
+    ? 'Sharding demo: taps now hit a <b>shard-1</b> contract while you send from shard 0 — each transaction has to hop between shards, so finality visibly trails. Same security, more distance.'
+    : 'Sharding demo: taps hit a <b>shard-0</b> contract — same shard as the sender, so they finalize fast.';
+  updateContractLink();
+  refreshGlobal();   // the cross-shard contract has its own global counter
   clearStatus();
+}
+
+function updateContractLink(){
+  var cl = $('contractLink');
+  if(cl) cl.href = CFG.explorer + '/accounts/' + activeTapContract();
 }
 
 /* ---------- info modal ("why not instant?") ---------- */
@@ -1102,7 +1224,9 @@ function applyAppModeView(){
   card.style.display = showingResults ? 'none' : '';
   // counters strip is the Unlimited session view
   $('counters').style.display = sprint ? 'none' : '';
-  // cross-shard demo toggle (Unlimited only)
+  // Unlimited sub-toggle (per-tap/bundled) + note + cross-shard demo
+  $('modeRow').hidden = sprint;
+  $('modeNote').hidden = sprint;
   $('shardRow').classList.toggle('show', !sprint);
   // sprint-only widgets
   $('ringWrap').hidden = !sprint || ph === 'idle' || ph === 'done';
@@ -1922,10 +2046,8 @@ function openXIntent(text){
    wire-up
    ============================================================================ */
 (function init(){
-  // footer link → the sprint leaderboard contract (where scores live). Static:
-  // the transfer path touches no contract, so there is no per-tap contract link.
-  var lbLink = $('leaderboardLink');
-  if(lbLink) lbLink.href = CFG.explorer + '/accounts/' + CFG.sprintLeaderboard;
+  // contract explorer link in the footer (the active tap-counter for the mode)
+  updateContractLink();
 
   // tap interactions: pointer (covers mouse + touch), plus spacebar
   var btn = $('tapBtn');
@@ -1951,6 +2073,10 @@ function openXIntent(text){
   // top-level app-mode toggle
   $('appSprint').addEventListener('click', function(){ setAppMode('sprint'); });
   $('appUnlimited').addEventListener('click', function(){ setAppMode('unlimited'); });
+
+  // Unlimited sub-toggle (per-tap / bundled)
+  $('modePerTap').addEventListener('click', function(){ setMode('pertap'); });
+  $('modeBundled').addEventListener('click', function(){ setMode('bundled'); });
 
   // sprint results: leaderboard submit, share, play again, switch to unlimited
   $('lbSubmitBtn').addEventListener('click', function(){
@@ -2022,6 +2148,9 @@ function openXIntent(text){
       if(r.ok){ await r.json(); /* network confirmed; pill stays "testnet" */ }
     } catch(e){ /* leave the static label */ }
   })();
+
+  refreshGlobal();
+  setInterval(refreshGlobal, CFG.globalRefreshMs);
 })();
 </script>
 </body>
