@@ -92,7 +92,7 @@
   --coral:#FF6B9D;
   --green:#4ADE80;
   --lavender:#A78BFA;
-  --mono:'SFMono-Regular',ui-monospace,Menlo,Consolas,monospace;
+  --mono:'Roobert PRO',system-ui,sans-serif;
   --ease-out:cubic-bezier(.16,1,.3,1);
 }
 
@@ -494,10 +494,8 @@ body{
   <section class="hero">
     <h1 id="heroTitle">Every tap is a <span class="accent">real transaction</span>.</h1>
     <p id="heroCopy">
-      30 seconds. Tap as fast as you can — each tap fires a real transaction on
-      MultiversX testnet, the network running
-      <a class="link-mint" href="https://multiversx.com/blog/supernova-decoupling-consensus-and-execution" target="_blank" rel="noopener">Supernova</a>
-      today. Your score is the number that <b style="color:var(--mint)">confirm onchain</b> inside the 30 seconds — real, live, counted.
+      30 seconds. Tap as fast as you can. Your score is how many real transactions
+      you can <b style="color:var(--mint)">land on MultiversX</b> before the clock runs out.
     </p>
   </section>
 
@@ -546,7 +544,7 @@ body{
       </button>
     </div>
 
-    <div class="tap-hint" id="tapHint">Press <b>Start 30-second sprint</b> — then tap, click, or hit <b>space</b></div>
+    <div class="tap-hint" id="tapHint">Press <b>Start 30-second sprint</b>, then tap, click, or hit <b>space</b></div>
 
     <!-- sprint live mini-stats -->
     <div class="sprint-live" id="sprintLive">
@@ -564,7 +562,7 @@ body{
         <button id="modeBundled" type="button">Bundled</button>
       </div>
     </div>
-    <div class="mode-note" id="modeNote" hidden>One transaction per tap — the visceral version.</div>
+    <div class="mode-note" id="modeNote" hidden>One transaction per tap. The visceral version.</div>
 
     <!-- CROSS-SHARD toggle (Unlimited only): a live demo of MultiversX sharding -->
     <div class="shard-row" id="shardRow">
@@ -608,7 +606,7 @@ body{
       </div>
       <div class="compare-sub">
         An apples-to-apples estimate: your <b>real tap timings</b> replayed at each chain's published
-        block time and finality. Not throughput — latency only. MultiversX is shown at its
+        block time and finality. Not throughput, latency only. MultiversX is shown at its
         <b>~250ms intra-shard finality</b> (the Supernova target).
       </div>
 
@@ -617,7 +615,7 @@ body{
         <div class="bridge-cell real">
           <div class="bc-tag">Real · live</div>
           <div class="bc-n" id="brReal">0</div>
-          <div class="bc-l">confirmed onchain in the 30s — you watched these land</div>
+          <div class="bc-l">confirmed onchain in the 30s, you watched these land</div>
         </div>
         <div class="bridge-cell sim">
           <div class="bc-tag">Simulated · MvX 250ms</div>
@@ -626,7 +624,7 @@ body{
         </div>
       </div>
       <div class="bridge-note" id="bridgeNote">
-        MultiversX is the only one where this isn't hypothetical — you just watched
+        MultiversX is the only one where this isn't hypothetical. You just watched
         your real transactions confirm live.
       </div>
 
@@ -671,21 +669,19 @@ body{
 
   <section class="feed">
     <h2>Recent transactions <span class="legend"><span style="color:var(--amber)">●</span> pending&nbsp;&nbsp;<span style="color:var(--mint)">●</span> confirmed</span></h2>
-    <div class="feed-note">Live confirmation via the public API (a beat behind). True finality is sub-second — the API adds a beat.</div>
+    <div class="feed-note">Live confirmation via the public API, a beat behind. True finality is sub-second.</div>
     <div class="feed-list" id="feedList">
       <div class="feed-empty" id="feedEmpty">Your transactions will appear here with live testnet explorer links.</div>
     </div>
   </section>
 
+  <div style="text-align:center;margin:6px 0 18px;">
+    <a href="/supernova-sprint" style="display:inline-block;font-family:'Roobert PRO',system-ui,sans-serif;font-size:13.5px;font-weight:600;color:var(--mint);background:rgba(35,247,221,.06);border:1px solid rgba(35,247,221,.4);border-radius:999px;padding:11px 22px;text-decoration:none;">Curious how every chain compares? See the simulation →</a>
+  </div>
   <p class="foot">
-    Testnet only — Supernova is live here (600ms rounds) and scheduled for mainnet.
-    The confirmed count is real onchain transactions; the tap count you send is your
-    own claim (spoofable, and that's fine for a test-network demo). Testnet can be
-    reset, which would clear the global counter.
+    Testnet only. Supernova runs here at 600ms rounds. The confirmed count is real onchain transactions, gasless via a relayer. Testnet can be reset, which clears the counter.
     <br>
     <a id="contractLink" href="#" target="_blank" rel="noopener">tap-counter contract</a>
-    <span class="sep">·</span>
-    <a href="/supernova-sprint">the original game</a>
   </p>
 </main>
 
@@ -694,8 +690,8 @@ body{
   <div class="info-sheet">
     <button class="info-close" id="infoClose" aria-label="Close">&times;</button>
     <h3><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9.2" stroke="#23F7DD" stroke-width="1.6"/><path d="M12 11v5M12 7.6v.2" stroke="#23F7DD" stroke-width="1.9" stroke-linecap="round"/></svg> What you're watching</h3>
-    <p>What you see confirm here is the <b>public API catching up</b> — about a beat behind. It bundles an indexing buffer, the gasless relayer hop (it co-signs and pays the gas so you play with no wallet), and a polling interval, so it reads in roughly two seconds. <b>That number is not finality.</b></p>
-    <p style="margin-top:11px;"><b>True finality on MultiversX is sub-second</b> — about 250ms intra-shard. We show that as an <b>estimate</b>, sourced from Supernova / Battle of Nodes telemetry, rather than measuring it through the API. The cross-chain comparison below uses each chain's real finality the same way. The transactions themselves are 100% real. (Flip the cross-shard toggle to feel the extra cost when a transaction hops between shards.)</p>
+    <p>What you see confirm here is the <b>public API catching up</b>, about a beat behind. It bundles an indexing buffer, the gasless relayer hop (it co-signs and pays the gas so you play with no wallet), and a polling interval, so it reads in roughly two seconds. <b>That number is not finality.</b></p>
+    <p style="margin-top:11px;"><b>True finality on MultiversX is sub-second</b>, about 250ms intra-shard. We show that as an <b>estimate</b>, sourced from Supernova / Battle of Nodes telemetry, rather than measuring it through the API. The cross-chain comparison below uses each chain's real finality the same way. The transactions themselves are 100% real. (Flip the cross-shard toggle to feel the extra cost when a transaction hops between shards.)</p>
   </div>
 </div>
 
@@ -1013,7 +1009,7 @@ function renderCounters(){
   $('cFinal').textContent = fmt(ST.finalized);
   var trailing = ST.sent - ST.finalized;
   $('cFinalSub').textContent = trailing > 0
-    ? (trailing + ' still confirming — the API runs a beat behind')
+    ? (trailing + ' still confirming, the API runs a beat behind')
     : 'real transactions, confirmed onchain';
 }
 function renderGlobal(){
@@ -1032,7 +1028,7 @@ function renderFeed(){
     if(e.state === 'final'){
       // "confirmed" (real) — the time is the API confirmation lag, NOT finality
       meta = '✓ ' + (e.finalMs!=null ? (e.finalMs/1000).toFixed(2)+'s' : 'confirmed'); metaCls='final';
-      metaTitle = 'Live confirmation via the public API — true finality is sub-second; the API adds a beat.';
+      metaTitle = 'Live confirmation via the public API, a beat behind. True finality is sub-second.';
     }
     else if(e.state === 'failed'){ meta = 'failed'; }
     else { meta = 'pending'; }
@@ -1059,7 +1055,7 @@ function degrade(){
   if(ST.warnedUnavailable) return;
   ST.warnedUnavailable = true;
   ST.available = false;
-  setStatus('warn', 'Onchain submission is unavailable right now (crypto libraries or relayer not reachable). Your taps still register here — the real-transaction layer just isn’t live this moment.');
+  setStatus('warn', 'Onchain submission is unavailable right now (crypto libraries or relayer not reachable). Your taps still register here. The real-transaction layer just isn’t live this moment.');
 }
 
 function handleRelayError(out, status){
@@ -1074,7 +1070,7 @@ function handleRelayError(out, status){
   }
   if(code === 'rate_limited'){
     // most likely in per-tap mode at high speed — nudge to bundled
-    setStatus('warn', 'Going fast! You hit the relayer’s per-minute limit. Switch to <b>Bundled</b> to keep firing — it packs many taps into one transaction.');
+    setStatus('warn', 'Going fast! You hit the relayer’s per-minute limit. Switch to <b>Bundled</b> to keep firing. It packs many taps into one transaction.');
     return;
   }
   if(code === 'broadcast_failed'){
@@ -1089,7 +1085,7 @@ function maybeSuggestBundled(){
   if(ST.mode === 'bundled' || ST.warnedPending) return;
   if(ST.pending >= CFG.pendingSoftCap){
     ST.warnedPending = true;
-    setStatus('warn', 'Lots of transactions in flight. <b>Bundled</b> mode keeps things smooth at mash speed — it packs taps into one transaction per round.');
+    setStatus('warn', 'Lots of transactions in flight. <b>Bundled</b> mode keeps things smooth at mash speed. It packs taps into one transaction per round.');
   }
 }
 
@@ -1152,8 +1148,8 @@ function setMode(mode){
   $('modePerTap').classList.toggle('on', mode === 'pertap');
   $('modeBundled').classList.toggle('on', mode === 'bundled');
   $('modeNote').textContent = mode === 'pertap'
-    ? 'One transaction per tap — the visceral version.'
-    : 'Packs your taps into one transaction per ~600ms round — smoother at mash speed.';
+    ? 'One transaction per tap. The visceral version.'
+    : 'Packs your taps into one transaction per ~600ms round, smoother at mash speed.';
   clearStatus();
 }
 
@@ -1239,12 +1235,12 @@ function applyAppModeView(){
   // hero + hint copy per mode
   if(sprint){
     $('heroTitle').innerHTML = 'Every tap is a <span class="accent">real transaction</span>.';
-    $('heroCopy').innerHTML = '30 seconds. Tap as fast as you can — each tap fires a real transaction on MultiversX testnet, the network running <a class="link-mint" href="https://multiversx.com/blog/supernova-decoupling-consensus-and-execution" target="_blank" rel="noopener">Supernova</a> today. Your score is the number that <b style="color:var(--mint)">confirm onchain</b> inside the 30 seconds — real, live, counted.';
-    $('tapHint').innerHTML = 'Press <b>Start 30-second sprint</b> — then tap, click, or hit <b>space</b>';
+    $('heroCopy').innerHTML = '30 seconds. Tap as fast as you can. Your score is how many real transactions you can <b style="color:var(--mint)">land on MultiversX</b> before the clock runs out.';
+    $('tapHint').innerHTML = 'Press <b>Start 30-second sprint</b>, then tap, click, or hit <b>space</b>';
   } else {
     $('heroTitle').innerHTML = 'Every tap is a <span class="accent">real transaction</span>.';
-    $('heroCopy').innerHTML = 'Tap the X. Each tap fires a real transaction on MultiversX testnet — the network running <a class="link-mint" href="https://multiversx.com/blog/supernova-decoupling-consensus-and-execution" target="_blank" rel="noopener">Supernova</a> today. Watch the <b style="color:var(--mint)">confirmed</b> count chase your finger as each one lands onchain. Open-ended — go as long as you like.';
-    $('tapHint').innerHTML = 'Tap, click, or press <b>space</b> — each one goes onchain';
+    $('heroCopy').innerHTML = 'Tap the X. Every tap is a real transaction on MultiversX. Watch the <b style="color:var(--mint)">confirmed</b> count chase your finger as each one lands onchain. Go as long as you like.';
+    $('tapHint').innerHTML = 'Tap, click, or press <b>space</b>. Each one goes onchain.';
   }
 }
 
@@ -1484,7 +1480,7 @@ function showSprintResults(){
   var pbEl = $('resPb');
   if(isPB && score > 0){ pbEl.className = 'res-pb win'; pbEl.textContent = 'New personal best. Previous: ' + prevPB + '.'; }
   else if(score > 0){ pbEl.className = 'res-pb norm'; pbEl.textContent = 'Your best: ' + prevPB + '. Go again to beat it.'; }
-  else { pbEl.className = 'res-pb norm'; pbEl.textContent = 'Nothing confirmed in the window. Testnet may be busy — try again.'; }
+  else { pbEl.className = 'res-pb norm'; pbEl.textContent = 'Nothing confirmed in the window. Testnet may be busy, try again.'; }
   $('resPbNum').textContent = fmt(Math.max(score, prevPB));
 
   // build the cross-chain SIMULATION (lanes + the bridge to the real count)
@@ -1588,8 +1584,8 @@ function buildCompare(){
   $('brReal').textContent = '0'; animateNumber($('brReal'), 0, nReal, 800);
   $('brSim').textContent = '0';  animateNumber($('brSim'), 0, fin.mvx, 800);
   $('bridgeNote').innerHTML = (nReal > 0)
-    ? 'MultiversX is the only one where this isn’t hypothetical — you just watched <b>' + fmt(nReal) + '</b> of them confirm live.'
-    : 'MultiversX is the only one where this isn’t hypothetical — the real ones confirm live, on the same Supernova clock the simulation uses.';
+    ? 'MultiversX is the only one where this isn’t hypothetical. You just watched <b>' + fmt(nReal) + '</b> of them confirm live.'
+    : 'MultiversX is the only one where this isn’t hypothetical. The real ones confirm live, on the same Supernova clock the simulation uses.';
 
   // build the per-chain lanes (hidden; staged in below)
   var wrap = $('lanes');
@@ -2018,7 +2014,7 @@ function lbRenderLeaderboard(entries){
 function sprintShare(){
   var score = ST.sprint.finalized;   // N_real — confirmed onchain in the 30s (the honest number)
   var lines = [
-    score + ' of my taps confirmed onchain on MultiversX testnet in 30 seconds — real transactions, watched them land live.'
+    score + ' of my taps confirmed onchain on MultiversX testnet in 30 seconds. Real transactions, watched them land live.'
   ];
   // add the simulated cross-chain line if we have it (clearly labeled)
   if(simResult){
