@@ -196,7 +196,7 @@ body{
 .feed h2{font-size:12px;font-weight:600;letter-spacing:.02em;color:var(--text-dim);margin-bottom:4px;display:flex;align-items:center;justify-content:space-between;}
 .feed h2 .legend{font-family:var(--mono);font-size:9.5px;font-weight:500;color:var(--text-faint);text-transform:none;letter-spacing:0;}
 .feed-note{font-size:10.5px;line-height:1.45;color:var(--text-faint);margin:0 0 8px;}
-.feed-list{display:flex;flex-direction:column;}
+.feed-list{display:flex;flex-direction:column;height:188px;overflow-y:auto;overscroll-behavior:contain;}
 .feed-empty{font-size:12.5px;color:var(--text-faint);padding:14px 2px 16px;text-align:center;}
 .tx-row{display:flex;align-items:center;gap:10px;padding:9px 2px;border-bottom:1px solid var(--border-soft);}
 .tx-row:last-child{border-bottom:none;}
@@ -2022,7 +2022,7 @@ function lbRenderLeaderboard(entries){
 function sprintShare(){
   var score = ST.sprint.finalized;   // N_real — confirmed onchain in the 30s (the honest number)
   var lines = [
-    score + ' of my taps confirmed onchain on MultiversX testnet in 30 seconds. Real transactions, watched them land live.'
+    'Fired ' + score + ' real transactions on Supernova in 30 seconds. All confirmed onchain, watched them land live.'
   ];
   // add the simulated cross-chain line if we have it (clearly labeled)
   if(simResult){
