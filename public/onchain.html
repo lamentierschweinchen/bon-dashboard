@@ -701,31 +701,24 @@ body{
    only in the server env (see app/api/relay/route.ts).
    ============================================================================ */
 var CFG = {
-  // PRIMARY tap-counter — SHARD 0, intra-shard, fast finality (default). The
-  // ephemeral player keys + relayer are also shard 0, so a recordTaps here is
-  // intra-shard and finalizes in ~sub-2s.
-  contract: 'erd1qqqqqqqqqqqqqpgqlwv6l2zpx9v0uv6869tn90exv3vdplejppuq97k7r4', // tap-counter shard 0 (intra, fast)
-  // CROSS-SHARD tap-counter — SHARD 1. From a shard-0 sender this is a
-  // cross-shard tx that trails several seconds (Unlimited-mode toggle only).
-  contractCrossShard: 'erd1qqqqqqqqqqqqqpgq9tmxfe7dm4ndgzt4cx9z83mrj750kgnuenwscvaddk', // tap-counter shard 1 (cross, slow)
+  // CROSS-SHARD sink — a plain SHARD-1 account. The Unlimited cross-shard toggle
+  // sends each transfer here; from a shard-0 sender that is a cross-shard tx that
+  // trails several seconds. value-0 transfers to it are harmless no-ops. Mirrors
+  // CROSS_SHARD_SINK in tap-counter.config.ts.
+  sinkCrossShard: 'erd1f0c93h5px8vwwrr3q9z3rv9h0d55mmezfw988x8ecuvvnkjcenwsl4evkl', // shard-1 sink (cross, slow)
   // SPRINT leaderboard — SHARD 0, intra-shard.
   sprintLeaderboard: 'erd1qqqqqqqqqqqqqpgqh9wpfl0mt337h68z8cuv6w6mkfucqv5tppuqsxz6sp',
   relayer:  'erd1ru08dt4u5e0psfrwth38u0dfed0hw8289xqdd9yghl3ec24uppuq6hgphm', // gas payer (shard 0)
   api:      'https://testnet-api.multiversx.com',
   explorer: 'https://testnet-explorer.multiversx.com',
   chainID:  'T',
-  gasLimit: 6000000,
+  transferGasLimit: 50000,  // a bare value-0, empty-data move-balance tx
   lbGasLimit: 10000000,     // submitScore gas limit (mirrors SUBMIT_GAS_LIMIT)
   gasPrice: 1000000000,
   numShards: 3,
   relayerShard: 0,          // erd1ru08... is in shard 0 (verified); grind handles any value
-  fn: 'recordTaps',
-  maxPerCall: 1000,         // mirrors the contract's MAX_TAPS_PER_CALL
-  bundleWindowMs: 600,      // bundled mode flush window (one Supernova round)
-  pendingSoftCap: 60,       // suggest bundled mode if local pending climbs past this
   pollIntervalMs: 500,      // tighter poll → snappier confirmation detection + a sharper 30s window boundary
   pollMaxTries: 26,         // ~13s ceiling per tx before we stop polling (matches the old wall at 500ms)
-  globalRefreshMs: 4000,
   feedMax: 8,
   sprintMs: 30000,          // 30-second sprint window
   settleMaxMs: 12000        // max time we keep polling stragglers after the buzzer
@@ -769,19 +762,19 @@ var ST = {
   }
 };
 
-/* the active tap-counter contract for the CURRENT mode. Sprint is ALWAYS
-   intra-shard (shard 0) for a fair fast board; Unlimited honors the shard
-   toggle so players can feel cross-shard finality. */
-function activeTapContract(){
-  if(ST.appMode === 'unlimited' && ST.shardMode === 'cross') return CFG.contractCrossShard;
-  return CFG.contract;
+/* the RECEIVER for the per-tap transfer in the CURRENT mode. Each tap is a
+   value-0, empty-data move-balance tx. Sprint (and Unlimited's default) is an
+   intra-shard SELF-transfer — the ephemeral sender sends to its OWN shard-0
+   address, the fastest possible tx. The Unlimited cross-shard toggle instead
+   targets a fixed shard-1 sink, so the tx hops shards and finality visibly
+   trails. The SENDER is always shard 0; only the receiver's shard differs. */
+function activeTapReceiver(){
+  if(ST.appMode === 'unlimited' && ST.shardMode === 'cross') return CFG.sinkCrossShard;
+  return ST.key ? ST.key.address : '';
 }
 
 /* ---------- tiny encoders ---------- */
 function bytesToHex(b){ var h=''; for(var i=0;i<b.length;i++){ h+=b[i].toString(16).padStart(2,'0'); } return h; }
-function u32ToHex(n){ // recordTaps takes a u32 — pad to 8 hex (4 bytes BE)
-  var h = (n>>>0).toString(16); while(h.length<8) h='0'+h; return h;
-}
 
 /* address shard from the last pubkey byte (matches sdk-core AddressComputer) */
 function shardOfPubkey(pub){
@@ -824,11 +817,15 @@ async function generateEphemeral(libs){
 }
 
 /* canonical signing bytes — field ORDER + encoding match sdk-core
-   TransactionComputer.computeBytesForSigning exactly. */
+   TransactionComputer.computeBytesForSigning exactly. sdk-core's toPlainObject
+   sets data via toBase64OrUndefined (undefined for empty data) and JSON.stringify
+   omits undefined keys, so an EMPTY-DATA transfer must serialize with NO `data`
+   key. `tx.dataB64 || undefined` keeps the key in position for data txs (e.g.
+   submitScore) and omits it when the data is empty (the per-tap transfer). */
 function signingString(tx){
   return JSON.stringify({
     nonce: tx.nonce, value: tx.value, receiver: tx.receiver, sender: tx.sender,
-    gasPrice: tx.gasPrice, gasLimit: tx.gasLimit, data: tx.dataB64,
+    gasPrice: tx.gasPrice, gasLimit: tx.gasLimit, data: tx.dataB64 || undefined,
     chainID: tx.chainID, version: tx.version, relayer: tx.relayer
   });
 }
@@ -860,24 +857,26 @@ function ensureKey(){
   return ST.initPromise;
 }
 
-/* ---------- the core: fire ONE recordTaps(count) transaction ---------- */
-async function fireTaps(count){
-  // guard the per-call cap (the contract also enforces it)
-  if(count > CFG.maxPerCall) count = CFG.maxPerCall;
-  if(count <= 0) return;
-
+/* ---------- the core: fire ONE value-0, EMPTY-DATA transfer ---------- */
+/* Each tap is a bare move-balance transaction (no VM, no storage), which is why
+   it finalizes faster than a contract call — that contrast is the demo. Intra
+   mode is a self-transfer (receiver = the sender's own shard-0 address); the
+   Unlimited cross-shard toggle sends to the fixed shard-1 sink instead. */
+async function fireTaps(){
   var ok = await ensureKey();
   if(!ok){ degrade(); return; }
 
   var libs = ST.libs, key = ST.key;
   var nonce = ST.nonce++;            // LOCAL increment — claim this nonce now
-  var receiver = activeTapContract(); // intra-shard (default) or cross-shard (Unlimited toggle)
+  var receiver = activeTapReceiver(); // own address (self) or the shard-1 sink (cross)
 
-  var dataStr = CFG.fn + '@' + u32ToHex(count);
-  var dataB64 = btoa(dataStr);
+  // EMPTY data: btoa('') === ''. The signing JSON must OMIT the data key entirely
+  // for the signature to verify (see signingString); downstream we send
+  // `data: dataB64 || undefined` so the relayer treats it as a no-data tx too.
+  var dataB64 = '';
   var txForSign = {
     nonce: nonce, value: '0', receiver: receiver, sender: key.address,
-    gasPrice: CFG.gasPrice, gasLimit: CFG.gasLimit, dataB64: dataB64,
+    gasPrice: CFG.gasPrice, gasLimit: CFG.transferGasLimit, dataB64: dataB64,
     chainID: CFG.chainID, version: 2, relayer: CFG.relayer
   };
 
@@ -885,7 +884,7 @@ async function fireTaps(count){
   var plainTx = {
     nonce: nonce, value: '0', receiver: receiver, sender: key.address,
     senderUsername: undefined, receiverUsername: undefined,
-    gasPrice: CFG.gasPrice, gasLimit: CFG.gasLimit, data: dataB64,
+    gasPrice: CFG.gasPrice, gasLimit: CFG.transferGasLimit, data: dataB64 || undefined,
     chainID: CFG.chainID, version: 2, relayer: CFG.relayer,
     signature: bytesToHex(sigBytes)
   };
@@ -910,17 +909,16 @@ async function fireTaps(count){
 
   // SENT: the relayer broadcast it. Count it and track it to finality.
   var inSprint = (ST.appMode === 'sprint');
-  var entry = { hash: out.txHash, state: 'pending', sentAt: Date.now(), finalMs: null, count: count, sprint: inSprint, runId: ST.sprint.runId };
+  var entry = { hash: out.txHash, state: 'pending', sentAt: Date.now(), finalMs: null, count: 1, sprint: inSprint, runId: ST.sprint.runId };
 
   if(inSprint){
-    ST.sprint.tapsFired += count;
+    ST.sprint.tapsFired += 1;
     ST.sprint.inFlight.push(entry);
     renderSprintLive();
   } else {
     ST.sent += 1;
     ST.pending += 1;
     renderCounters();
-    maybeSuggestBundled();
   }
 
   ST.feed.unshift(entry);
@@ -976,7 +974,7 @@ async function fetchTxStatus(hash){
 /* ---------- global counter (read live from the contract) ---------- */
 async function refreshGlobal(){
   try {
-    var body = { scAddress: activeTapContract(), funcName: 'getGlobalTaps', args: [] };
+    var body = { scAddress: activeTapReceiver(), funcName: 'getGlobalTaps', args: [] };
     var r = await fetch(CFG.api + '/vm-values/query', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body)
@@ -1200,7 +1198,7 @@ function setShardMode(mode){
 
 function updateContractLink(){
   var cl = $('contractLink');
-  if(cl) cl.href = CFG.explorer + '/accounts/' + activeTapContract();
+  if(cl) cl.href = CFG.explorer + '/accounts/' + activeTapReceiver();
 }
 
 /* ---------- info modal ("why not instant?") ---------- */
