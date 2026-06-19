@@ -92,8 +92,8 @@
 }
 
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
-/* the [hidden] attribute must win over component display rules (e.g. .mode-row
-   is display:flex; without this it would stay visible when hidden in Sprint) */
+/* the [hidden] attribute must win over component display rules (e.g. some rows
+   are display:flex; without this they would stay visible when hidden) */
 [hidden]{display:none !important;}
 html,body{min-height:100%;}
 body{
@@ -170,13 +170,6 @@ body{
 /* ripple/spark on tap */
 .spark{position:absolute;pointer-events:none;font-family:var(--mono);font-weight:700;font-size:12px;color:var(--mint);transform:translate(-50%,-50%);animation:spark .8s var(--ease-out) forwards;z-index:3;text-shadow:0 0 10px rgba(35,247,221,.7);white-space:nowrap;}
 @keyframes spark{0%{opacity:0;transform:translate(-50%,-50%) scale(.7);}18%{opacity:1;}100%{opacity:0;transform:translate(-50%,-160%) scale(1);}}
-
-/* mode toggle */
-.mode-row{display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap;}
-.mode-toggle{display:inline-flex;background:var(--surface-2);border:1px solid var(--border);border-radius:999px;padding:3px;}
-.mode-toggle button{font-family:inherit;font-size:11.5px;font-weight:600;letter-spacing:.01em;color:var(--text-dim);background:none;border:none;cursor:pointer;border-radius:999px;padding:6px 14px;transition:background .18s,color .18s;}
-.mode-toggle button.on{background:var(--mint);color:#04221d;}
-.mode-note{font-size:11px;color:var(--text-faint);text-align:center;max-width:42ch;}
 
 /* status line */
 .status{display:none;font-size:12.5px;line-height:1.45;border-radius:12px;padding:11px 13px;background:var(--surface-2);border:1px solid var(--border);color:var(--text-dim);}
@@ -552,15 +545,6 @@ body{
     <!-- settling banner (sprint, after buzzer) -->
     <div class="settling" id="settling"><span class="spin"></span><span id="settlingMsg">Resolving the taps still in flight…</span></div>
 
-    <!-- UNLIMITED-mode sub-toggle (per-tap / bundled) -->
-    <div class="mode-row" id="modeRow" hidden>
-      <div class="mode-toggle" role="group" aria-label="Transaction mode">
-        <button id="modePerTap" class="on" type="button">Per tap</button>
-        <button id="modeBundled" type="button">Bundled</button>
-      </div>
-    </div>
-    <div class="mode-note" id="modeNote" hidden>One transaction per tap — the visceral version.</div>
-
     <!-- CROSS-SHARD toggle (Unlimited only): a live demo of MultiversX sharding -->
     <div class="shard-row" id="shardRow">
       <div class="shard-toggle" role="group" aria-label="Shard routing demo">
@@ -735,16 +719,12 @@ var ST = {
   initPromise: null,     // single-flight key init
   available: true,       // false => degraded (no crypto / no relayer)
   appMode: 'sprint',     // 'sprint' | 'unlimited' — top-level game mode
-  shardMode: 'intra',    // 'intra' | 'cross' — which tap-counter (Unlimited only)
-  mode: 'pertap',        // 'pertap' | 'bundled' (Unlimited sub-toggle)
+  shardMode: 'intra',    // 'intra' | 'cross' — receiver shard (Unlimited only)
   sent: 0,               // txs broadcast this session (Unlimited counters)
   finalized: 0,          // txs that reached finality this session
   pending: 0,            // sent but not yet finalized (local view)
   global: null,          // global counter from the contract
-  bundleBuf: 0,          // buffered taps awaiting flush (bundled mode)
-  bundleTimer: null,
   feed: [],              // recent { hash, state, sentAt, finalMs, count }
-  warnedPending: false,
   warnedUnavailable: false,
   // ---- sprint sub-state ----
   sprint: {
@@ -1077,15 +1057,6 @@ function handleRelayError(out, status){
   setStatus('err', 'Onchain submission hiccuped (' + (code || ('HTTP '+status)) + '). Your taps still count here.');
 }
 
-/* suggest bundled mode if local pending climbs toward the gateway's ~100/sender cap */
-function maybeSuggestBundled(){
-  if(ST.mode === 'bundled' || ST.warnedPending) return;
-  if(ST.pending >= CFG.pendingSoftCap){
-    ST.warnedPending = true;
-    setStatus('warn', 'Lots of transactions in flight. <b>Bundled</b> mode keeps things smooth at mash speed — it packs taps into one transaction per round.');
-  }
-}
-
 /* ---------- tap handling ---------- */
 function spark(x, y, label){
   var card = $('tapBtn');
@@ -1099,6 +1070,9 @@ function spark(x, y, label){
   setTimeout(function(){ s.remove(); }, 800);
 }
 
+/* Every tap fires exactly ONE transfer — sprint and Unlimited alike. There is no
+   bundling: with bare transfers there is no contract call to pack taps into, so
+   "every tap is one real transaction" holds literally. */
 function onTap(x, y){
   // ---- SPRINT mode ----
   if(ST.appMode === 'sprint'){
@@ -1111,43 +1085,10 @@ function onTap(x, y){
     // replays exactly these timings at each chain's finality (clamped to the window).
     var elapsed = performance.now() - ST.sprint.startTime;
     if(elapsed >= 0 && elapsed <= CFG.sprintMs){ ST.sprint.taps.push(elapsed); }
-    spark(x, y, '+1 tx');
-    fireTaps(1).catch(function(e){ console.warn('[onchain] fire failed', e); });
-    return;
   }
-  // ---- UNLIMITED mode (original behavior) ----
-  if(ST.mode === 'pertap'){
-    spark(x, y, '+1 tx');
-    fireTaps(1).catch(function(e){ console.warn('[onchain] fire failed', e); });
-  } else {
-    // bundled: buffer this tap, flush on a short window or when the buffer is full
-    ST.bundleBuf += 1;
-    spark(x, y, '+1');
-    if(ST.bundleBuf >= CFG.maxPerCall){ flushBundle(); return; }
-    if(!ST.bundleTimer){
-      ST.bundleTimer = setTimeout(flushBundle, CFG.bundleWindowMs);
-    }
-  }
-}
-function flushBundle(){
-  if(ST.bundleTimer){ clearTimeout(ST.bundleTimer); ST.bundleTimer = null; }
-  var n = ST.bundleBuf; ST.bundleBuf = 0;
-  if(n > 0){ fireTaps(n).catch(function(e){ console.warn('[onchain] bundle fire failed', e); }); }
-}
-
-/* ---------- mode toggle ---------- */
-function setMode(mode){
-  if(ST.mode === mode) return;
-  // flush any buffered taps before leaving bundled mode
-  if(ST.mode === 'bundled') flushBundle();
-  ST.mode = mode;
-  ST.warnedPending = false;
-  $('modePerTap').classList.toggle('on', mode === 'pertap');
-  $('modeBundled').classList.toggle('on', mode === 'bundled');
-  $('modeNote').textContent = mode === 'pertap'
-    ? 'One transaction per tap — the visceral version.'
-    : 'Packs your taps into one transaction per ~600ms round — smoother at mash speed.';
-  clearStatus();
+  // ---- both modes: one transfer per tap ----
+  spark(x, y, '+1 tx');
+  fireTaps().catch(function(e){ console.warn('[onchain] fire failed', e); });
 }
 
 /* ============================================================================
@@ -1159,27 +1100,21 @@ function setAppMode(mode){
   if(ST.appMode === 'sprint' && ST.sprint.phase !== 'idle' && ST.sprint.phase !== 'done'){
     resetSprint();
   }
-  // leaving unlimited: flush any buffered bundle so nothing is lost
-  if(ST.appMode === 'unlimited' && ST.mode === 'bundled') flushBundle();
 
   ST.appMode = mode;
   $('appSprint').classList.toggle('on', mode === 'sprint');
   $('appUnlimited').classList.toggle('on', mode === 'unlimited');
   clearStatus();
   applyAppModeView();
-  // the active contract (and thus the global counter) may have changed
-  updateContractLink();
-  refreshGlobal();
 }
 
-/* cross-shard demo toggle (Unlimited only). Flips which tap-counter recordTaps
-   targets: shard-0 (intra, fast, default) vs shard-1 (cross-shard, slower). The
-   ephemeral SENDER stays shard 0 in both; only the RECEIVER contract changes, so
-   the cross-shard run shows the extra finality cost of hopping between shards. */
+/* cross-shard demo toggle (Unlimited only). Flips the transfer DESTINATION:
+   intra-shard self-transfer (receiver = the shard-0 sender's own address, fast,
+   default) vs a fixed shard-1 sink (cross-shard, slower). The ephemeral SENDER
+   stays shard 0 in both; only the RECEIVER's shard changes, so the cross-shard
+   run shows the extra finality cost of hopping between shards. */
 function setShardMode(mode){
   if(ST.shardMode === mode) return;
-  // flush any buffered bundle bound for the old contract first
-  if(ST.mode === 'bundled') flushBundle();
   ST.shardMode = mode;
   var cross = mode === 'cross';
   var bIntra = $('shardIntra'), bCross = $('shardCross');
@@ -1189,16 +1124,9 @@ function setShardMode(mode){
   var cap = $('shardCaption');
   cap.classList.toggle('cross', cross);
   cap.innerHTML = cross
-    ? 'Sharding demo: taps now hit a <b>shard-1</b> contract while you send from shard 0 — each transaction has to hop between shards, so finality visibly trails. Same security, more distance.'
-    : 'Sharding demo: taps hit a <b>shard-0</b> contract — same shard as the sender, so they finalize fast.';
-  updateContractLink();
-  refreshGlobal();   // the cross-shard contract has its own global counter
+    ? 'Sharding demo: each tap now sends to a <b>shard-1</b> address while you send from shard 0 — every transaction has to hop between shards, so finality visibly trails. Same security, more distance.'
+    : 'Sharding demo: each tap is a <b>shard-0</b> self-transfer — same shard as the sender, so it finalizes fast.';
   clearStatus();
-}
-
-function updateContractLink(){
-  var cl = $('contractLink');
-  if(cl) cl.href = CFG.explorer + '/accounts/' + activeTapReceiver();
 }
 
 /* ---------- info modal ("why not instant?") ---------- */
@@ -1217,9 +1145,7 @@ function applyAppModeView(){
   card.style.display = showingResults ? 'none' : '';
   // counters strip is the Unlimited session view
   $('counters').style.display = sprint ? 'none' : '';
-  // Unlimited sub-toggle (per-tap/bundled) + note + cross-shard demo
-  $('modeRow').hidden = sprint;
-  $('modeNote').hidden = sprint;
+  // cross-shard demo toggle (Unlimited only)
   $('shardRow').classList.toggle('show', !sprint);
   // sprint-only widgets
   $('ringWrap').hidden = !sprint || ph === 'idle' || ph === 'done';
@@ -2039,9 +1965,6 @@ function openXIntent(text){
    wire-up
    ============================================================================ */
 (function init(){
-  // contract explorer link in the footer (the active tap-counter for the mode)
-  updateContractLink();
-
   // tap interactions: pointer (covers mouse + touch), plus spacebar
   var btn = $('tapBtn');
   btn.addEventListener('pointerdown', function(ev){
@@ -2066,10 +1989,6 @@ function openXIntent(text){
   // top-level app-mode toggle
   $('appSprint').addEventListener('click', function(){ setAppMode('sprint'); });
   $('appUnlimited').addEventListener('click', function(){ setAppMode('unlimited'); });
-
-  // Unlimited sub-toggle (per-tap / bundled)
-  $('modePerTap').addEventListener('click', function(){ setMode('pertap'); });
-  $('modeBundled').addEventListener('click', function(){ setMode('bundled'); });
 
   // sprint results: leaderboard submit, share, play again, switch to unlimited
   $('lbSubmitBtn').addEventListener('click', function(){
