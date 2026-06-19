@@ -146,9 +146,6 @@ body{
 .counter .cn.sent{color:var(--text);}
 .counter .cn.fin{color:var(--mint);text-shadow:0 0 16px rgba(35,247,221,.4);}
 .counter .cs{font-size:11px;color:var(--text-faint);margin-top:6px;}
-.counter.global{grid-column:1 / -1;background:linear-gradient(180deg,var(--surface-2),var(--surface));}
-.counter.global .cn{font-size:34px;color:var(--text);}
-.counter.global .cn .g-mint{color:var(--mint);}
 
 /* the tap zone */
 .tap-card{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:22px 20px 24px;display:flex;flex-direction:column;align-items:center;gap:14px;}
@@ -451,7 +448,6 @@ body{
   .tap-btn{width:172px;height:172px;}
   .tap-btn svg{width:66px;}
   .counter .cn{font-size:26px;}
-  .counter.global .cn{font-size:29px;}
 }
 @media (max-width:380px){
   .lane-spec{display:none;}
@@ -508,11 +504,6 @@ body{
       <div class="cl">Confirmed onchain · live <button class="info-btn" id="infoBtn2" type="button" aria-label="What you're watching">i</button></div>
       <div class="cn fin" id="cFinal">0</div>
       <div class="cs" id="cFinalSub">real transactions, confirmed onchain</div>
-    </div>
-    <div class="counter global">
-      <div class="cl">Everyone · global onchain counter</div>
-      <div class="cn"><span class="g-mint" id="cGlobal">—</span> <span style="font-size:14px;color:var(--text-faint);font-weight:400">real transactions on MultiversX</span></div>
-      <div class="cs" id="cGlobalSub">read live from the tap-counter contract</div>
     </div>
   </section>
 
@@ -723,7 +714,6 @@ var ST = {
   sent: 0,               // txs broadcast this session (Unlimited counters)
   finalized: 0,          // txs that reached finality this session
   pending: 0,            // sent but not yet finalized (local view)
-  global: null,          // global counter from the contract
   feed: [],              // recent { hash, state, sentAt, finalMs, count }
   warnedUnavailable: false,
   // ---- sprint sub-state ----
@@ -923,7 +913,6 @@ async function pollToFinality(entry){
         renderCounters();
       }
       renderFeed();
-      refreshGlobal(); // the global counter just grew
       return;
     }
     if(status === 'fail' || status === 'invalid'){
@@ -951,33 +940,6 @@ async function fetchTxStatus(hash){
   } catch(e){ return 'pending'; }
 }
 
-/* ---------- global counter (read live from the contract) ---------- */
-async function refreshGlobal(){
-  try {
-    var body = { scAddress: activeTapReceiver(), funcName: 'getGlobalTaps', args: [] };
-    var r = await fetch(CFG.api + '/vm-values/query', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body)
-    });
-    if(!r.ok) return;
-    var j = await r.json();
-    var data = j && j.data && j.data.data ? j.data.data : null;
-    if(!data || data.returnCode !== 'ok') return;
-    var parts = data.returnData || [];
-    var b64 = parts[0] || '';
-    ST.global = b64 ? decodeU64(b64) : 0;
-    renderGlobal();
-  } catch(e){ /* leave the last known value */ }
-}
-
-/* decode a base64 big-endian u64 into a JS number (safe for our magnitudes) */
-function decodeU64(b64){
-  var bin = atob(b64);
-  var v = 0n;
-  for(var i=0;i<bin.length;i++){ v = (v<<8n) | BigInt(bin.charCodeAt(i)); }
-  return Number(v);
-}
-
 /* ---------- rendering ---------- */
 function fmt(n){ return (n==null) ? '—' : Number(n).toLocaleString('en-US'); }
 
@@ -988,9 +950,6 @@ function renderCounters(){
   $('cFinalSub').textContent = trailing > 0
     ? (trailing + ' still confirming — the API runs a beat behind')
     : 'real transactions, confirmed onchain';
-}
-function renderGlobal(){
-  $('cGlobal').textContent = fmt(ST.global);
 }
 function renderFeed(){
   var list = $('feedList');
@@ -2060,9 +2019,6 @@ function openXIntent(text){
       if(r.ok){ await r.json(); /* network confirmed; pill stays "testnet" */ }
     } catch(e){ /* leave the static label */ }
   })();
-
-  refreshGlobal();
-  setInterval(refreshGlobal, CFG.globalRefreshMs);
 })();
 </script>
 </body>
