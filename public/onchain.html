@@ -1460,9 +1460,15 @@ function showSprintResults(){
   $('resFired').textContent = fmt(s.tapsFired);
   $('resFinalized').textContent = fmt(score);
 
-  // estimated finality — sub-second (intra-shard, ~250ms), NOT the API-confirm
-  // time the player watched. Clearly an estimate (sourced in the info modal).
-  $('resFinEst').textContent = '~250ms';
+  // estimated finality for THIS run: average tap-to-final from the same 250ms
+  // intra-shard model the comparison uses (Supernova block-inclusion wait + the
+  // 250ms finality), computed over the player's real tap timings — a concrete
+  // per-run number, not a static spec figure. NOT the API-confirm time watched.
+  var mvxSim = CHAINS[0];
+  var estSum = 0;
+  for(var ei = 0; ei < s.taps.length; ei++){ estSum += lifecycle(s.taps[ei], mvxSim).finalAt - s.taps[ei]; }
+  var estAvg = s.taps.length ? (estSum / s.taps.length) : mvxSim.finalityMs;
+  $('resFinEst').textContent = '~' + (estAvg < 1000 ? (Math.round(estAvg / 10) * 10) + 'ms' : (estAvg / 1000).toFixed(2) + 's');
   // "landed after the buzzer" — real, but excluded from the score (the honest tally)
   $('resLanded').textContent = fmt(s.finalizedLate);
 
