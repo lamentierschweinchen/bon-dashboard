@@ -92,6 +92,9 @@
 }
 
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+/* the [hidden] attribute must win over component display rules (e.g. .mode-row
+   is display:flex; without this it would stay visible when hidden in Sprint) */
+[hidden]{display:none !important;}
 html,body{min-height:100%;}
 body{
   font-family:'Roobert PRO',system-ui,sans-serif;
@@ -606,6 +609,7 @@ var ST = {
   // ---- sprint sub-state ----
   sprint: {
     phase: 'idle',       // 'idle' | 'countdown' | 'running' | 'settling' | 'done'
+    runId: 0,            // bumped each run; stragglers from a prior run can't score
     tapsFired: 0,        // recordTaps txs broadcast during this run
     finalized: 0,        // of those, how many have finalized (the SCORE)
     inFlight: [],        // entries still being polled to finality
@@ -757,7 +761,7 @@ async function fireTaps(count){
 
   // SENT: the relayer broadcast it. Count it and track it to finality.
   var inSprint = (ST.appMode === 'sprint');
-  var entry = { hash: out.txHash, state: 'pending', sentAt: Date.now(), finalMs: null, count: count, sprint: inSprint };
+  var entry = { hash: out.txHash, state: 'pending', sentAt: Date.now(), finalMs: null, count: count, sprint: inSprint, runId: ST.sprint.runId };
 
   if(inSprint){
     ST.sprint.tapsFired += count;
@@ -1101,6 +1105,9 @@ function resetSprint(){
   var s = ST.sprint;
   if(s.rafId){ cancelAnimationFrame(s.rafId); s.rafId = null; }
   if(s.settleTimer){ clearTimeout(s.settleTimer); s.settleTimer = null; }
+  // bump the run id so any still-polling entries from the run we're leaving
+  // become stragglers and can no longer touch the (now-zeroed) score
+  s.runId += 1;
   s.phase = 'idle'; s.tapsFired = 0; s.finalized = 0;
   s.inFlight = []; s.finalityTimes = []; s.startTime = 0;
   $('tapCard').classList.remove('danger');
@@ -1111,7 +1118,9 @@ function resetSprint(){
 function startSprint(){
   var s = ST.sprint;
   if(s.phase === 'countdown' || s.phase === 'running' || s.phase === 'settling') return;
-  // fresh run: clear any leftover sprint feed/state
+  // fresh run: bump the run id and clear any leftover sprint state. Stragglers
+  // from a previous run carry the old id and are ignored when they resolve.
+  s.runId += 1;
   s.phase = 'countdown'; s.tapsFired = 0; s.finalized = 0;
   s.inFlight = []; s.finalityTimes = []; s.startTime = 0;
   clearStatus();
@@ -1192,6 +1201,8 @@ function buzzer(){
 /* called by pollToFinality when a sprint tx resolves (final or not) */
 function onSprintTxResolved(entry, ok){
   var s = ST.sprint;
+  // ignore stragglers from a previous run (they can't move the current score)
+  if(entry.runId !== s.runId) return;
   // remove from in-flight
   var idx = s.inFlight.indexOf(entry);
   if(idx !== -1) s.inFlight.splice(idx, 1);
