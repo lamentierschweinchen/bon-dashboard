@@ -22,36 +22,35 @@
   transaction on MultiversX testnet (the public network currently running
   Supernova, 600ms rounds) and the page counts the ones that actually finalize.
 
-  This is a NEW page. It does NOT touch the live /supernova-sprint game or the
-  live leaderboard contract. It uses its own contract (the tap-counter) and the
-  same gasless relayer, extended additively to relay `recordTaps`.
+  Each tap is a value-0, EMPTY-DATA TRANSFER (a bare move-balance tx), not a
+  contract call. A transfer has no VM execution and no storage writes, so it
+  finalizes faster than a contract call — that contrast is the finality demo.
 
-  THE PIPELINE (per tap, default mode)
+  This is a NEW page. It does NOT touch the live /supernova-sprint game or the
+  live leaderboard contract. It uses the same gasless relayer, extended to relay
+  data-less transfers alongside the leaderboard's submitScore.
+
+  THE PIPELINE (per tap)
   --------------------------------------------------------------------------------
-    1. tap → build a recordTaps(1) transaction
+    1. tap → build a value-0, empty-data transfer. Intra-shard (default): the
+       receiver is the ephemeral sender's OWN shard-0 address (a self-transfer).
+       Cross-shard (the Unlimited toggle): the receiver is a fixed shard-1 sink.
     2. sign it with an ephemeral in-browser key, LOCAL nonce increment
-       (never wait between rapid taps — the nonce is tracked client-side)
+       (never wait between rapid taps — the nonce is tracked client-side). For an
+       empty-data tx the signed JSON OMITS the data key (see signingString).
     3. POST the signed tx to /api/relay; the relayer adds its signature and
        pays the testnet gas, so the player pays nothing
     4. mark it "sent", then poll the tx status; when it finalizes, bump the
        "finalized onchain" count. Finalized trails sent by the real finality
        time (sub-second to ~1.8s) — that lag IS the demo.
-    5. headline a global on-chain counter read from the contract:
-       "players have fired N real transactions on MultiversX".
-
-  BUNDLED MODE (toggle / fallback)
-    Buffers taps over a short window and flushes them as one recordTaps(count)
-    tx. Default is per-tap (the visceral "every tap is a transaction"); bundled
-    keeps per-sender pending low at mash speed (the gateway caps ~100 pending
-    per sender), and the page auto-suggests it if pending climbs.
 
   HONEST FRAMING
     - Testnet only. Supernova is LIVE on testnet (600ms rounds) and scheduled
       for mainnet — never claimed as a flat mainnet property.
-    - The count that is REAL is the number of recordTaps txs that finalize. The
-      per-tap count argument is the player's claim and is spoofable; acceptable
-      for a fun community demo on a test network (same caveat as the leaderboard).
-    - Testnet can be reset, which would clear the global counter.
+    - The count that is REAL is the number of transfers that finalize. The taps
+      themselves are 100% real transactions; the score is hard to inflate (each
+      tap is one on-chain tx). Acceptable for a fun community demo on a testnet.
+    - Testnet can be reset, which would clear the leaderboard.
 
   FAIL-SOFT
     Every onchain path is wrapped. If the crypto CDN is down, the relayer key is
@@ -543,7 +542,7 @@ body{
         <button id="shardCross" type="button">Cross-shard</button>
       </div>
       <div class="shard-caption" id="shardCaption">
-        Sharding demo: taps hit a <b>shard-0</b> contract — same shard as the sender, so they finalize fast.
+        Sharding demo: each tap is a <b>shard-0</b> self-transfer — same shard as the sender, so it finalizes fast.
       </div>
     </div>
 
@@ -649,11 +648,10 @@ body{
 
   <p class="foot">
     Testnet only — Supernova is live here (600ms rounds) and scheduled for mainnet.
-    The confirmed count is real onchain transactions; the tap count you send is your
-    own claim (spoofable, and that's fine for a test-network demo). Testnet can be
-    reset, which would clear the global counter.
+    Every tap is a real onchain transaction; the confirmed count is the ones that
+    finalized. Testnet can be reset, which would clear the leaderboard.
     <br>
-    <a id="contractLink" href="#" target="_blank" rel="noopener">tap-counter contract</a>
+    <a id="leaderboardLink" href="#" target="_blank" rel="noopener">leaderboard contract</a>
     <span class="sep">·</span>
     <a href="/supernova-sprint">the original game</a>
   </p>
@@ -720,7 +718,7 @@ var ST = {
   sprint: {
     phase: 'idle',       // 'idle' | 'countdown' | 'running' | 'settling' | 'done'
     runId: 0,            // bumped each run; stragglers from a prior run can't score
-    tapsFired: 0,        // recordTaps txs broadcast during this run
+    tapsFired: 0,        // transfer txs broadcast during this run
     finalized: 0,        // REAL txs confirmed onchain WITHIN the 30s window = the SCORE (N_real)
     finalizedLate: 0,    // REAL txs that confirmed AFTER the buzzer — honest, but excluded from the score
     inFlight: [],        // entries still being polled to finality
@@ -1924,6 +1922,11 @@ function openXIntent(text){
    wire-up
    ============================================================================ */
 (function init(){
+  // footer link → the sprint leaderboard contract (where scores live). Static:
+  // the transfer path touches no contract, so there is no per-tap contract link.
+  var lbLink = $('leaderboardLink');
+  if(lbLink) lbLink.href = CFG.explorer + '/accounts/' + CFG.sprintLeaderboard;
+
   // tap interactions: pointer (covers mouse + touch), plus spacebar
   var btn = $('tapBtn');
   btn.addEventListener('pointerdown', function(ev){
