@@ -258,6 +258,73 @@ body{
 .sprint-live .sl-n.fin{color:var(--mint);text-shadow:0 0 14px rgba(35,247,221,.4);}
 .sprint-live .sl-l{font-family:var(--mono);font-size:9px;letter-spacing:.06em;text-transform:uppercase;color:var(--text-faint);margin-top:7px;}
 
+/* ====================== SPRINT RESULTS ====================== */
+.results{display:none;flex-direction:column;gap:16px;}
+.results.show{display:flex;}
+.res-card{background:linear-gradient(180deg,var(--surface-2),var(--surface));border:1px solid var(--border);border-radius:20px;padding:24px 20px;text-align:center;position:relative;overflow:hidden;}
+.res-card::before{content:"";position:absolute;top:-60px;right:-40px;width:170px;height:170px;border-radius:50%;background:radial-gradient(circle,rgba(35,247,221,.12),transparent 65%);pointer-events:none;}
+.res-kicker{font-family:var(--mono);font-size:10px;letter-spacing:.10em;text-transform:uppercase;color:var(--text-faint);margin-bottom:10px;}
+.res-score{font-family:var(--mono);font-weight:900;font-size:72px;line-height:.95;color:var(--mint);text-shadow:0 0 30px rgba(35,247,221,.4);font-variant-numeric:tabular-nums;}
+.res-score-sub{font-size:13px;color:var(--text-dim);margin-top:8px;}
+.res-score-sub b{color:var(--text);}
+.res-pb{font-size:12px;margin-top:12px;border-radius:10px;padding:8px 12px;display:inline-block;}
+.res-pb.win{background:rgba(35,247,221,.10);border:1px solid rgba(35,247,221,.35);color:#a7eec0;}
+.res-pb.norm{background:var(--surface-3);border:1px solid var(--border);color:var(--text-dim);}
+.res-stats{display:flex;justify-content:center;gap:0;margin-top:18px;border-top:1px solid var(--border-soft);padding-top:16px;}
+.res-stat{flex:1;padding:0 8px;}
+.res-stat .rs-n{font-family:var(--mono);font-weight:700;font-size:18px;color:var(--text);font-variant-numeric:tabular-nums;}
+.res-stat .rs-l{font-size:10px;color:var(--text-faint);margin-top:4px;letter-spacing:.02em;}
+.res-stat + .res-stat{border-left:1px solid var(--border-soft);}
+
+/* result action buttons */
+.res-actions{display:flex;flex-direction:column;gap:10px;}
+.res-btn-row{display:flex;gap:10px;}
+.btn{flex:1;font-family:inherit;font-size:14px;font-weight:600;border-radius:12px;padding:13px 16px;cursor:pointer;border:1px solid var(--border);transition:transform .08s var(--ease-out),background .18s,border-color .18s;display:inline-flex;align-items:center;justify-content:center;gap:8px;}
+.btn:active{transform:scale(.97);}
+.btn-primary{background:var(--mint);color:#04221d;border-color:var(--mint);}
+.btn-primary:hover{background:#3ffbe4;}
+.btn-primary:disabled{opacity:.55;cursor:not-allowed;}
+.btn-ghost{background:var(--surface-2);color:var(--text);}
+.btn-ghost:hover{border-color:var(--mint);color:var(--mint);}
+.btn .spin{margin-right:0;}
+.res-switch{text-align:center;font-size:12px;}
+.res-switch a{color:var(--text-dim);text-decoration:none;border-bottom:1px solid transparent;cursor:pointer;}
+.res-switch a:hover{color:var(--mint);border-bottom-color:var(--mint);}
+
+/* leaderboard submit card */
+.lb-card{background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:18px 16px;}
+.lb-card-head{display:flex;align-items:center;gap:8px;margin-bottom:6px;}
+.lb-card-head .lc-t{font-size:13px;font-weight:600;color:var(--text);}
+.lb-card-head .lc-net{margin-left:auto;font-family:var(--mono);font-size:9px;letter-spacing:.06em;text-transform:uppercase;color:var(--text-faint);background:var(--surface-2);border:1px solid var(--border);border-radius:999px;padding:3px 8px;}
+.lb-card-copy{font-size:12px;line-height:1.5;color:var(--text-dim);margin-bottom:12px;}
+.lb-handle{width:100%;font-family:inherit;font-size:14px;color:var(--text);background:var(--surface-2);border:1px solid var(--border);border-radius:11px;padding:11px 13px;margin-bottom:10px;outline:none;transition:border-color .18s;-webkit-user-select:text;user-select:text;}
+.lb-handle:focus{border-color:var(--mint);}
+.lb-handle::placeholder{color:var(--text-faint);}
+.lb-submit-status{display:none;font-size:12px;line-height:1.45;border-radius:11px;padding:10px 12px;margin-top:10px;background:var(--surface-2);border:1px solid var(--border);color:var(--text-dim);}
+.lb-submit-status.show{display:block;}
+.lb-submit-status.err{border-color:rgba(255,107,157,.4);background:rgba(255,107,157,.07);color:#ffaecb;}
+.lb-submit-status.ok{border-color:rgba(74,222,128,.35);background:rgba(74,222,128,.06);color:#a7eec0;}
+.lb-submit-status .st-t{display:block;font-weight:600;color:var(--text);margin-bottom:3px;}
+.lb-submit-status .st-hash{margin-top:8px;font-family:var(--mono);font-size:11px;display:flex;gap:6px;align-items:baseline;}
+.lb-submit-status .st-hash .st-lbl{color:var(--text-faint);}
+.lb-submit-status a{color:var(--mint);text-decoration:none;word-break:break-all;}
+
+/* leaderboard rows */
+.lb-board{margin-top:14px;border-top:1px solid var(--border-soft);padding-top:12px;}
+.lb-board-head{font-family:var(--mono);font-size:9.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--text-faint);display:flex;align-items:center;gap:6px;margin-bottom:8px;}
+.lb-board-head .dot{width:6px;height:6px;border-radius:50%;background:var(--mint);box-shadow:0 0 7px var(--mint);display:inline-block;}
+.lb-rows{display:flex;flex-direction:column;}
+.lb-empty{font-size:12px;color:var(--text-faint);text-align:center;padding:12px 2px;}
+.lb-row{display:flex;align-items:center;gap:10px;padding:8px 4px;border-bottom:1px solid var(--border-soft);}
+.lb-row:last-child{border-bottom:none;}
+.lb-row.you{background:rgba(35,247,221,.06);border-radius:8px;margin:0 -4px;padding:8px;border-bottom:none;}
+.lb-rank{font-family:var(--mono);font-size:12px;color:var(--text-faint);width:22px;flex:0 0 auto;}
+.lb-row.you .lb-rank{color:var(--mint);}
+.lb-handle-cell{flex:1 1 auto;font-size:13px;color:var(--text-dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.lb-row.you .lb-handle-cell{color:var(--text);font-weight:600;}
+.lb-score-cell{font-family:var(--mono);font-weight:700;font-size:14px;color:var(--text);font-variant-numeric:tabular-nums;flex:0 0 auto;}
+.lb-row.you .lb-score-cell{color:var(--mint);}
+
 @media (max-width:430px){
   .hero h1{font-size:23px;}
   .tap-btn{width:172px;height:172px;}
@@ -360,6 +427,52 @@ body{
     <div class="mode-note" id="modeNote" hidden>One transaction per tap — the visceral version.</div>
 
     <div class="status" id="status"></div>
+  </section>
+
+  <!-- SPRINT RESULTS (shown after a sprint locks) -->
+  <section class="results" id="results">
+    <div class="res-card">
+      <div class="res-kicker">Sprint complete · 30 seconds</div>
+      <div class="res-score" id="resScore">0</div>
+      <div class="res-score-sub"><span id="resFired">0</span> taps fired · <b id="resFinalized">0</b> finalized onchain</div>
+      <div class="res-pb norm" id="resPb"></div>
+      <div class="res-stats">
+        <div class="res-stat"><div class="rs-n" id="resBest">—</div><div class="rs-l">best finality</div></div>
+        <div class="res-stat"><div class="rs-n" id="resAvg">—</div><div class="rs-l">avg finality</div></div>
+        <div class="res-stat"><div class="rs-n" id="resPbNum">0</div><div class="rs-l">personal best</div></div>
+      </div>
+    </div>
+
+    <!-- leaderboard submit + live board -->
+    <div class="lb-card">
+      <div class="lb-card-head">
+        <span aria-hidden="true" style="display:inline-flex"><svg viewBox="0 0 24 24" width="17" height="17" fill="none"><path d="M12 2 L20 6.5 V15 L12 22 L4 15 V6.5 Z" stroke="#23F7DD" stroke-width="1.6" stroke-linejoin="round"/><path d="M9 12 l2.2 2.2 L15 9.5" stroke="#23F7DD" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+        <span class="lc-t">Onchain leaderboard</span>
+        <span class="lc-net">Testnet</span>
+      </div>
+      <div class="lb-card-copy">Put your finalized score on a leaderboard read straight from a MultiversX testnet contract. Gasless, no wallet needed.</div>
+      <input class="lb-handle" id="lbHandle" type="text" maxlength="20" autocomplete="off" spellcheck="false" placeholder="Pick a handle (e.g. novapilot)" />
+      <button class="btn btn-primary" id="lbSubmitBtn" type="button">
+        <span id="lbSubmitIcon" aria-hidden="true"><svg viewBox="0 0 24 24" width="16" height="16" fill="none"><path d="M5 12 h14 M13 6 l6 6 -6 6" stroke="#04221d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+        <span id="lbSubmitLabel">Submit to leaderboard</span>
+      </button>
+      <div class="lb-submit-status" id="lbSubmitStatus"></div>
+
+      <div class="lb-board">
+        <div class="lb-board-head"><span class="dot"></span> Top finalized sprints · live from chain</div>
+        <div class="lb-rows" id="lbRows">
+          <div class="lb-empty">Loading the live board…</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="res-actions">
+      <div class="res-btn-row">
+        <button class="btn btn-ghost" id="resAgainBtn" type="button">Play again</button>
+        <button class="btn btn-ghost" id="resShareBtn" type="button">Share</button>
+      </div>
+    </div>
+    <div class="res-switch"><a id="resToUnlimited">Prefer open-ended? Switch to Unlimited →</a></div>
   </section>
 
   <section class="feed">
@@ -850,17 +963,23 @@ function setAppMode(mode){
 function applyAppModeView(){
   var sprint = ST.appMode === 'sprint';
   var card = $('tapCard');
+  var ph = ST.sprint.phase;
+  var showingResults = sprint && ph === 'done';
+  // results panel takes over when a sprint has locked
+  $('results').classList.toggle('show', showingResults);
+  // the tap card is hidden while results are up; everything else uses it
+  card.style.display = showingResults ? 'none' : '';
   // counters strip is the Unlimited session view
   $('counters').style.display = sprint ? 'none' : '';
   // Unlimited sub-toggle (per-tap/bundled) + note
   $('modeRow').hidden = sprint;
   $('modeNote').hidden = sprint;
   // sprint-only widgets
-  $('ringWrap').hidden = !sprint || ST.sprint.phase === 'idle' || ST.sprint.phase === 'done';
-  $('sprintLive').classList.toggle('show', sprint && (ST.sprint.phase === 'running' || ST.sprint.phase === 'settling'));
-  $('sprintStartHint').style.display = (sprint && (ST.sprint.phase === 'idle' || ST.sprint.phase === 'done')) ? 'flex' : 'none';
-  $('sprintClock').classList.toggle('show', sprint && ST.sprint.phase === 'running');
-  card.classList.toggle('sprint-idle', sprint && (ST.sprint.phase === 'idle' || ST.sprint.phase === 'done'));
+  $('ringWrap').hidden = !sprint || ph === 'idle' || ph === 'done';
+  $('sprintLive').classList.toggle('show', sprint && (ph === 'running' || ph === 'settling'));
+  $('sprintStartHint').style.display = (sprint && ph === 'idle') ? 'flex' : 'none';
+  $('sprintClock').classList.toggle('show', sprint && ph === 'running');
+  card.classList.toggle('sprint-idle', sprint && ph === 'idle');
   if(!sprint){ card.classList.remove('sprint-idle','danger'); }
 
   // hero + hint copy per mode
@@ -1017,13 +1136,10 @@ function lockSprint(){
   if(s.settleTimer){ clearTimeout(s.settleTimer); s.settleTimer = null; }
   s.phase = 'done';
   $('settling').classList.remove('show');
-  $('sprintLive').classList.remove('show');
-  $('ringWrap').hidden = true;
-  $('sprintClock').classList.remove('show');
-  // restore the idle start affordance for "play again"
-  $('sprintStartHint').style.display = 'flex';
-  $('tapCard').classList.add('sprint-idle');
-  showSprintResults();  // defined in Phase 2
+  $('tapCard').classList.remove('danger');
+  showSprintResults();   // populates + reveals the results panel
+  applyAppModeView();    // swap tap card → results
+  window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 function renderSprintLive(){
@@ -1031,13 +1147,302 @@ function renderSprintLive(){
   $('slFin').textContent = fmt(ST.sprint.finalized);
 }
 
-/* Phase-2 replaces this with the full results panel (leaderboard + share).
-   Phase-1 placeholder keeps the sprint loop end-to-end and playable. */
-if(typeof showSprintResults !== 'function'){
-  window.showSprintResults = function(){
-    var s = ST.sprint;
-    setStatus('ok', '<b>Sprint complete.</b> ' + s.tapsFired + ' taps fired · <b style="color:var(--mint)">' + s.finalized + ' finalized onchain</b>. Tap to play again.');
-  };
+/* eased count-up for the results headline */
+function animateNumber(el, from, to, dur){
+  var start = performance.now();
+  function step(now){
+    var p = Math.min(1, (now - start) / dur);
+    var eased = 1 - Math.pow(1 - p, 3);
+    el.textContent = fmt(Math.round(from + (to - from) * eased));
+    if(p < 1) requestAnimationFrame(step);
+    else el.textContent = fmt(to);
+  }
+  requestAnimationFrame(step);
+}
+
+/* "Play again" from the results panel — back to idle, then straight into a run */
+function playAgain(){
+  resetSprint();        // clears state, shows the tap card idle
+  startSprint();        // straight into the 3·2·1 countdown
+}
+
+/* ============================================================================
+   SPRINT RESULTS — score, finality stats, personal best, leaderboard, share
+   ============================================================================ */
+/* personal best — a NEW key, distinct from the main game's PB. The score is the
+   FINALIZED tx count (real, hard to spoof). */
+var SPRINT_PB_KEY = 'mvx_onchain_sprint_pb';
+function getSprintPB(){ var v = parseInt(localStorage.getItem(SPRINT_PB_KEY) || '0', 10); return isNaN(v) ? 0 : v; }
+function setSprintPB(v){ try { localStorage.setItem(SPRINT_PB_KEY, String(v)); } catch(e){} }
+
+function showSprintResults(){
+  var s = ST.sprint;
+  var score = s.finalized;                 // the SCORE = finalized tx count
+  LB.lastScore = score;
+  LB.submitted = false;
+
+  // animate the headline finalized number
+  $('resScore').textContent = '0';
+  animateNumber($('resScore'), 0, score, 800);
+  $('resFired').textContent = fmt(s.tapsFired);
+  $('resFinalized').textContent = fmt(score);
+
+  // best / avg finality time
+  var times = s.finalityTimes.slice();
+  if(times.length){
+    var best = Math.min.apply(null, times);
+    var avg = times.reduce(function(a,b){ return a+b; }, 0) / times.length;
+    $('resBest').textContent = (best/1000).toFixed(2) + 's';
+    $('resAvg').textContent = (avg/1000).toFixed(2) + 's';
+  } else {
+    $('resBest').textContent = '—';
+    $('resAvg').textContent = '—';
+  }
+
+  // personal best
+  var prevPB = getSprintPB();
+  var isPB = score > prevPB;
+  if(isPB) setSprintPB(score);
+  var pbEl = $('resPb');
+  if(isPB && score > 0){ pbEl.className = 'res-pb win'; pbEl.textContent = 'New personal best. Previous: ' + prevPB + '.'; }
+  else if(score > 0){ pbEl.className = 'res-pb norm'; pbEl.textContent = 'Your best: ' + prevPB + '. Go again to beat it.'; }
+  else { pbEl.className = 'res-pb norm'; pbEl.textContent = 'Nothing finalized. Testnet may be busy — try again.'; }
+  $('resPbNum').textContent = fmt(Math.max(score, prevPB));
+
+  // reset the submit control + load the live board
+  LB.reset();
+  lbLoadLeaderboard();
+}
+
+/* ============================================================================
+   ONCHAIN SPRINT LEADERBOARD (testnet, gasless Relayed v3)
+   Lifted from /supernova-sprint's oc* code, retargeted to the SHARD-0 sprint
+   leaderboard. submitScore data encoding is identical to the original. A fresh
+   ephemeral key (shard 0) is generated per submit. Fail-soft on every path.
+   ============================================================================ */
+var LB = {
+  contract: CFG.sprintLeaderboard,   // shard-0 sprint board
+  submitted: false,
+  lastScore: 0,
+  reset: function(){
+    LB.submitted = false;
+    var st = $('lbSubmitStatus'); if(st){ st.className = 'lb-submit-status'; st.innerHTML = ''; }
+    lbSetSubmitting(false);
+    var label = $('lbSubmitLabel'); if(label) label.textContent = 'Submit to leaderboard';
+    var btn = $('lbSubmitBtn'); if(btn) btn.disabled = false;
+  }
+};
+
+function lbStatus(kind, html){
+  var el = $('lbSubmitStatus');
+  if(!el) return;
+  el.className = 'lb-submit-status show' + (kind ? (' '+kind) : '');
+  el.innerHTML = html;
+}
+function lbSetSubmitting(on){
+  var btn = $('lbSubmitBtn'), label = $('lbSubmitLabel'), icon = $('lbSubmitIcon');
+  if(!btn) return;
+  btn.disabled = on;
+  if(on){
+    if(icon) icon.innerHTML = '<span class="spin"></span>';
+    if(label) label.textContent = 'Submitting to testnet…';
+  } else {
+    if(icon) icon.innerHTML = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none"><path d="M5 12 h14 M13 6 l6 6 -6 6" stroke="#04221d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+    if(label) label.textContent = 'Submit to leaderboard';
+  }
+}
+
+/* minimal even-length big-endian hex for a non-negative integer (u64) */
+function lbU64ToHex(n){ var h = BigInt(n).toString(16); if(h.length % 2) h = '0' + h; return h; }
+function lbUtf8ToHex(str){ return bytesToHex(new TextEncoder().encode(str)); }
+
+/* submitScore(handle, score) — score = the FINALIZED tx count */
+async function lbSubmit(){
+  if(LB.submitted) return;
+  var score = LB.lastScore;
+  if(!score || score <= 0){ lbStatus('err', 'Nothing finalized to submit. Play a sprint first.'); return; }
+
+  var handle = ($('lbHandle').value || '').trim();
+  if(!handle){ lbStatus('err', 'Pick a handle so you show up on the leaderboard.'); $('lbHandle').focus(); return; }
+  if(new TextEncoder().encode(handle).length > 32){ lbStatus('err', 'That handle is a bit long. Keep it under 32 characters.'); return; }
+
+  lbSetSubmitting(true);
+  lbStatus('', 'Preparing your transaction…');
+
+  try {
+    var libs = await loadLibs();
+    if(!libs){ throw new Error('crypto-unavailable'); }
+
+    // fresh ephemeral key in the relayer's shard (shard 0), as the original does
+    var key = await generateEphemeral(libs);
+
+    // fetch the ephemeral account's nonce (fresh key => 0, but be correct)
+    var nonce = 0;
+    try {
+      var accRes = await fetch(CFG.api + '/accounts/' + key.address);
+      if(accRes.ok){ var accJson = await accRes.json(); nonce = accJson.nonce || 0; }
+    } catch(e){ /* fresh key, nonce stays 0 */ }
+
+    // build the submitScore tx — EXACT encoding from the original game
+    var dataStr = 'submitScore@' + lbUtf8ToHex(handle) + '@' + lbU64ToHex(score);
+    var dataB64 = btoa(dataStr);
+    var txForSign = {
+      nonce: nonce, value: '0', receiver: LB.contract, sender: key.address,
+      gasPrice: CFG.gasPrice, gasLimit: CFG.lbGasLimit, dataB64: dataB64,
+      chainID: CFG.chainID, version: 2, relayer: CFG.relayer
+    };
+    var sigBytes = await libs.ed.signAsync(new TextEncoder().encode(signingString(txForSign)), key.priv);
+    var plainTx = {
+      nonce: nonce, value: '0', receiver: LB.contract, sender: key.address,
+      senderUsername: undefined, receiverUsername: undefined,
+      gasPrice: CFG.gasPrice, gasLimit: CFG.lbGasLimit, data: dataB64,
+      chainID: CFG.chainID, version: 2, relayer: CFG.relayer,
+      signature: bytesToHex(sigBytes)
+    };
+
+    lbStatus('', 'Relaying (gasless) and waiting for finality…');
+
+    var res = await fetch('/api/relay', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ transaction: plainTx })
+    });
+    var out = await res.json();
+
+    if(!res.ok || out.error){
+      lbStatus('err', lbRelayerErrorMessage(out, res.status));
+      lbSetSubmitting(false);
+      return;
+    }
+
+    // success: real tx hash + explorer link
+    LB.submitted = true;
+    var hash = out.txHash;
+    var url = out.explorerUrl || (CFG.explorer + '/transactions/' + hash);
+    lbStatus('ok',
+      '<span class="st-t">Submitted onchain on MultiversX testnet.</span>' +
+      'Your finalized score is now a real transaction, finalizing on the Supernova clock.' +
+      '<div class="st-hash"><span class="st-lbl">Tx</span>' +
+      '<a href="' + url + '" target="_blank" rel="noopener">' + hash + '</a></div>'
+    );
+    var label = $('lbSubmitLabel'); if(label) label.textContent = 'Submitted';
+    var btn = $('lbSubmitBtn'); if(btn) btn.disabled = true;
+
+    // poll the live board until the new entry lands (don't break on first read)
+    (async function(){
+      for(var i=0;i<9;i++){
+        await new Promise(function(r){ setTimeout(r, 1500); });
+        await lbLoadLeaderboard();
+      }
+    })();
+
+  } catch(err){
+    console.warn('[onchain] sprint submit failed:', err);
+    if(err && err.message === 'crypto-unavailable'){
+      lbStatus('err', 'The onchain libraries could not load. Your sprint still counts here; the leaderboard submission is just unavailable right now.');
+    } else {
+      lbStatus('err', 'Could not submit onchain right now. Your sprint still counts here. ' + (err && err.message ? '('+err.message+')' : ''));
+    }
+    lbSetSubmitting(false);
+  }
+}
+
+function lbRelayerErrorMessage(out, status){
+  var code = out && out.error;
+  if(code === 'relayer_unavailable'){ return 'The gasless relayer is not switched on yet. Your sprint still counts here; onchain submission goes live once the relayer key is set.'; }
+  if(code === 'relayer_misconfigured'){ return 'The relayer is misconfigured. Flagged for the team. Your sprint still counts here.'; }
+  if(code === 'broadcast_failed'){ return 'The network did not accept the transaction. Testnet can be busy or resetting. Try again in a moment.'; }
+  if(code === 'rate_limited'){ return 'Easy, speedrunner. Too many submissions in a short window. Try again in a minute.'; }
+  return 'Onchain submission is unavailable right now (' + (code || ('HTTP '+status)) + '). Your sprint still counts here.';
+}
+
+/* decode one base64 ScoreEntry: address(32) + handleLen(4 BE) + handle(utf8) +
+   score(u64 BE) + timestamp(u64 BE) — identical layout to the main board */
+function lbDecodeEntry(b64, bech32){
+  var bin = atob(b64);
+  var bytes = new Uint8Array(bin.length);
+  for(var i=0;i<bin.length;i++){ bytes[i] = bin.charCodeAt(i); }
+  if(bytes.length < 32 + 4 + 8 + 8) return null;
+  var off = 0;
+  var pub = bytes.slice(off, off+32); off += 32;
+  var hlen = (bytes[off]<<24) | (bytes[off+1]<<16) | (bytes[off+2]<<8) | bytes[off+3]; off += 4;
+  var handle = new TextDecoder().decode(bytes.slice(off, off+hlen)); off += hlen;
+  var score = 0n; for(var s=0;s<8;s++){ score = (score<<8n) | BigInt(bytes[off+s]); } off += 8;
+  var ts = 0n;    for(var t=0;t<8;t++){ ts = (ts<<8n) | BigInt(bytes[off+t]); } off += 8;
+  var address = ''; try { address = addressFromPubkey(bech32, pub); } catch(e){}
+  return { address: address, handle: handle, score: Number(score), timestamp: Number(ts) };
+}
+
+async function lbLoadLeaderboard(){
+  try {
+    var libs = await loadLibs();
+    if(!libs) return;
+    var nHex = (10).toString(16).padStart(2,'0');  // getTopScores(10)
+    var body = { scAddress: LB.contract, funcName: 'getTopScores', args: [nHex] };
+    var res = await fetch(CFG.api + '/vm-values/query', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+    if(!res.ok) return;
+    var json = await res.json();
+    var data = json && json.data && json.data.data ? json.data.data : null;
+    if(!data || data.returnCode !== 'ok') return;
+    var parts = data.returnData || [];
+    var entries = [];
+    for(var i=0;i<parts.length;i++){
+      if(!parts[i]) continue;
+      var e = lbDecodeEntry(parts[i], libs.bech32);
+      if(e) entries.push(e);
+    }
+    lbRenderLeaderboard(entries);
+  } catch(err){
+    console.warn('[onchain] sprint leaderboard read failed:', err);
+  }
+}
+
+function lbEscape(s){
+  return String(s).replace(/[&<>"']/g, function(c){
+    return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c];
+  });
+}
+
+function lbRenderLeaderboard(entries){
+  var rows = $('lbRows');
+  if(!rows) return;
+  if(!entries || entries.length === 0){
+    rows.innerHTML = '<div class="lb-empty">No sprints onchain yet. Submit yours to be first.</div>';
+    return;
+  }
+  var myHandle = ($('lbHandle').value || '').trim();
+  var html = '';
+  for(var i=0;i<entries.length;i++){
+    var e = entries[i];
+    var mine = (LB.submitted && myHandle && e.handle === myHandle);
+    html += '<div class="lb-row' + (mine?' you':'') + '">' +
+      '<span class="lb-rank">' + (i+1) + '</span>' +
+      '<span class="lb-handle-cell">' + lbEscape(e.handle) + '</span>' +
+      '<span class="lb-score-cell">' + e.score + '</span>' +
+    '</div>';
+  }
+  rows.innerHTML = html;
+}
+
+/* ---------- share ---------- */
+function sprintShare(){
+  var score = ST.sprint.finalized;
+  var text =
+    'I fired ' + score + ' real transactions on MultiversX testnet in 30 seconds. ' +
+    'Every tap finalized onchain, sub-second behind my finger. Supernova runs at 600ms. ' +
+    'Beat me 👉 https://supernova-sprint.xyz/onchain';
+  // native share on mobile, X web-intent otherwise
+  if(navigator.share){
+    navigator.share({ text: text }).catch(function(){ openXIntent(text); });
+  } else {
+    openXIntent(text);
+  }
+}
+function openXIntent(text){
+  var url = 'https://twitter.com/intent/tweet?text=' + encodeURIComponent(text);
+  window.open(url, '_blank', 'noopener');
 }
 
 /* ============================================================================
@@ -1076,6 +1481,21 @@ if(typeof showSprintResults !== 'function'){
   // Unlimited sub-toggle (per-tap / bundled)
   $('modePerTap').addEventListener('click', function(){ setMode('pertap'); });
   $('modeBundled').addEventListener('click', function(){ setMode('bundled'); });
+
+  // sprint results: leaderboard submit, share, play again, switch to unlimited
+  $('lbSubmitBtn').addEventListener('click', function(){
+    try { localStorage.setItem('mvx_supernova_handle', ($('lbHandle').value||'').trim()); } catch(e){}
+    lbSubmit();
+  });
+  $('resAgainBtn').addEventListener('click', playAgain);
+  $('resShareBtn').addEventListener('click', sprintShare);
+  $('resToUnlimited').addEventListener('click', function(){ resetSprint(); setAppMode('unlimited'); });
+
+  // prefill the handle with the player's local best-known handle if any
+  try {
+    var savedHandle = localStorage.getItem('mvx_supernova_handle');
+    if(savedHandle && $('lbHandle')){ $('lbHandle').value = savedHandle; }
+  } catch(e){}
 
   // initial view = sprint (default), idle
   initSprintRing();
