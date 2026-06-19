@@ -358,12 +358,111 @@ body{
 .shard-caption b{color:var(--text-dim);font-weight:600;}
 .shard-caption.cross b{color:var(--amber);}
 
+/* ====================== CROSS-CHAIN SIMULATION (reveal) ======================
+   Lifted from /supernova-sprint. This is the apples-to-apples SIMULATION: it
+   replays the player's REAL tap timings at each chain's published finality and
+   counts how many would finalize inside the 30s. MvX uses its ~250ms intra-shard
+   finality — the SIMULATION value, distinct from the real measured count above.
+   Explicitly labeled a simulation/estimate throughout. */
+.compare{margin-top:4px;}
+.compare-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:6px;flex-wrap:wrap;}
+.compare-head .ch-t{font-size:13px;font-weight:600;color:var(--text);line-height:1.4;}
+.compare-head .ch-t .sim-tag{display:inline-block;font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--amber);border:1px solid rgba(245,181,68,.45);background:rgba(245,181,68,.08);border-radius:999px;padding:2px 8px;margin-right:7px;vertical-align:1px;}
+.compare-head .legend{display:flex;gap:13px;font-size:10.5px;color:var(--text-faint);}
+.compare-head .legend span{display:inline-flex;align-items:center;gap:5px;}
+.lg-dot{width:8px;height:8px;border-radius:2px;display:inline-block;flex:0 0 auto;}
+.lg-sub{background:var(--text-faint);}
+.lg-inc{background:var(--amber);box-shadow:0 0 6px rgba(245,181,68,.5);}
+.lg-fin{background:var(--mint);box-shadow:0 0 7px rgba(35,247,221,.7);}
+.compare-sub{font-size:11.5px;color:var(--text-faint);line-height:1.5;margin-bottom:12px;}
+.compare-sub b{color:var(--text-dim);font-weight:600;}
+
+/* the bridge banner: REAL measured count vs MvX SIMULATED, side by side */
+.bridge{display:flex;align-items:stretch;gap:10px;margin-bottom:14px;}
+.bridge-cell{flex:1;border-radius:13px;padding:13px 14px;position:relative;overflow:hidden;}
+.bridge-cell .bc-tag{font-family:var(--mono);font-size:8.5px;font-weight:700;letter-spacing:.10em;text-transform:uppercase;margin-bottom:6px;display:inline-flex;align-items:center;gap:5px;}
+.bridge-cell .bc-n{font-family:var(--mono);font-weight:900;font-size:30px;line-height:1;font-variant-numeric:tabular-nums;}
+.bridge-cell .bc-l{font-size:10.5px;color:var(--text-dim);margin-top:6px;line-height:1.4;}
+.bridge-cell.real{background:linear-gradient(180deg,rgba(35,247,221,.10),var(--surface));border:1px solid rgba(35,247,221,.40);}
+.bridge-cell.real .bc-tag{color:var(--mint);}
+.bridge-cell.real .bc-tag::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--mint);box-shadow:0 0 8px var(--mint);}
+.bridge-cell.real .bc-n{color:var(--mint);text-shadow:0 0 16px rgba(35,247,221,.4);}
+.bridge-cell.sim{background:linear-gradient(180deg,rgba(245,181,68,.07),var(--surface));border:1px solid rgba(245,181,68,.32);}
+.bridge-cell.sim .bc-tag{color:var(--amber);}
+.bridge-cell.sim .bc-n{color:var(--text);}
+.bridge-note{font-size:11.5px;color:var(--text-dim);line-height:1.55;margin-bottom:14px;padding:0 2px;}
+.bridge-note b{color:var(--mint);font-weight:700;}
+
+/* lanes (one per chain) */
+.lanes{display:flex;flex-direction:column;gap:9px;}
+.lane{border:1px solid var(--border);border-radius:14px;background:var(--surface);padding:11px 13px;position:relative;overflow:hidden;opacity:0;transform:translateY(10px);}
+.lane.in{opacity:1;transform:translateY(0);transition:opacity .42s ease, transform .42s var(--ease-out);}
+.lane.mvx{border-color:rgba(35,247,221,.45);background:linear-gradient(100deg, rgba(35,247,221,.07), var(--surface) 55%);box-shadow:0 0 0 1px rgba(35,247,221,.08), 0 8px 30px rgba(35,247,221,.06);}
+.lane-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:9px;}
+.lane-id{display:flex;align-items:center;gap:9px;min-width:0;}
+.lane-badge{width:22px;height:22px;border-radius:6px;flex:0 0 auto;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:11px;color:#06070A;}
+.lane-name{font-weight:600;font-size:14px;color:var(--text);white-space:nowrap;}
+.lane-spec{font-size:10px;color:var(--text-faint);font-family:var(--mono);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.lane-tag{font-size:9px;font-weight:600;letter-spacing:.04em;color:var(--mint);border:1px solid rgba(35,247,221,.4);border-radius:999px;padding:2px 8px;white-space:nowrap;background:rgba(35,247,221,.05);}
+.lane-tag .tip-underline{border-bottom-color:rgba(35,247,221,.5);}
+/* MvX intra-shard / cross-shard finality toggle (Supernova lane only) */
+.mvx-toggle{display:inline-flex;align-items:center;gap:0;margin:-2px 0 10px;border:1px solid rgba(35,247,221,.35);border-radius:999px;padding:2px;background:rgba(35,247,221,.05);}
+.mvx-toggle button{font-family:inherit;font-size:9.5px;font-weight:600;letter-spacing:.02em;color:var(--text-dim);background:none;border:none;cursor:pointer;border-radius:999px;padding:4px 11px;transition:background .18s, color .18s;white-space:nowrap;}
+.mvx-toggle button.on{background:var(--mint);color:#04221F;}
+.mvx-toggle button:not(.on):hover{color:var(--mint);}
+.lane-final{display:flex;align-items:baseline;gap:5px;flex:0 0 auto;}
+.lane-final .n{font-family:var(--mono);font-weight:900;font-size:23px;line-height:1;color:var(--text);font-variant-numeric:tabular-nums;}
+.lane-final.good .n{color:var(--mint);text-shadow:0 0 14px rgba(35,247,221,.5);}
+.lane-final .of{font-size:11px;color:var(--text-faint);font-family:var(--mono);}
+.lane-final .lab{font-size:9px;color:var(--text-faint);text-transform:uppercase;letter-spacing:.1em;margin-left:2px;}
+/* the pipeline track */
+.track{position:relative;height:34px;border-radius:9px;background:var(--surface-2);overflow:hidden;box-shadow:inset 0 0 0 1px var(--border-soft);}
+.track .seg-labels{position:absolute;inset:0;display:flex;pointer-events:none;}
+.track .seg-labels div{flex:1;display:flex;align-items:center;justify-content:center;font-size:8px;letter-spacing:.09em;text-transform:uppercase;color:rgba(155,163,180,.32);border-right:1px dashed rgba(30,35,48,.9);}
+.track .seg-labels div:last-child{border-right:none;}
+.track .final-zone{position:absolute;top:0;right:0;bottom:0;width:30%;background:linear-gradient(90deg,transparent,rgba(35,247,221,.05));pointer-events:none;}
+.dot-tx{position:absolute;top:50%;width:8px;height:8px;border-radius:50%;transform:translate(-50%,-50%);transition:left .45s linear, background .35s, box-shadow .35s;}
+.dot-sub{background:var(--text-faint);}
+.dot-inc{background:var(--amber);box-shadow:0 0 6px rgba(245,181,68,.55);}
+.dot-fin{background:var(--mint);box-shadow:0 0 9px rgba(35,247,221,.8);}
+.lane-counts{display:flex;gap:16px;margin-top:8px;font-size:10.5px;font-family:var(--mono);color:var(--text-faint);font-variant-numeric:tabular-nums;}
+.lane-counts span{display:inline-flex;align-items:center;gap:5px;}
+.lane-counts b{font-weight:700;}
+.lane-counts .c-fin b{color:var(--mint);}
+.lane-counts .c-inc b{color:var(--amber);}
+.lane-counts .cdot{width:7px;height:7px;border-radius:2px;display:inline-block;}
+/* honest line under the lanes */
+.compare-line{text-align:center;font-size:12.5px;color:var(--text-dim);line-height:1.55;padding:14px 8px 2px;}
+.compare-line b{color:var(--text);font-weight:600;}
+.compare-line .mvx-h{color:var(--mint);font-weight:700;}
+.compare-foot{font-size:10px;color:var(--text-faint);line-height:1.5;padding:10px 4px 2px;text-align:center;border-top:1px solid var(--border-soft);margin-top:12px;}
+.compare-foot b{color:var(--text-dim);font-weight:600;}
+
+/* tooltip system (hover on desktop, tap-to-toggle on touch) — ported */
+.tip{position:relative;cursor:help;}
+.tip-underline{border-bottom:1px dotted var(--text-faint);}
+.tip::after{content:attr(data-tip);position:absolute;left:50%;bottom:calc(100% + 9px);transform:translateX(-50%) translateY(4px);width:max-content;max-width:230px;background:var(--surface-3);color:var(--text);border:1px solid var(--border);border-radius:10px;padding:9px 12px;font-size:11.5px;font-weight:400;line-height:1.45;letter-spacing:0;text-transform:none;text-align:left;box-shadow:0 10px 30px rgba(0,0,0,.55), 0 0 0 1px rgba(35,247,221,.06);opacity:0;pointer-events:none;z-index:60;transition:opacity .16s ease, transform .16s var(--ease-out);}
+.tip::before{content:"";position:absolute;left:50%;bottom:calc(100% + 4px);transform:translateX(-50%) rotate(45deg);width:9px;height:9px;background:var(--surface-3);border-right:1px solid var(--border);border-bottom:1px solid var(--border);opacity:0;pointer-events:none;z-index:61;transition:opacity .16s ease;}
+@media (hover:hover){.tip:hover::after{opacity:1;transform:translateX(-50%) translateY(0);}.tip:hover::before{opacity:1;}}
+.tip.tip-open::after{opacity:1;transform:translateX(-50%) translateY(0);}
+.tip.tip-open::before{opacity:1;}
+.tip.tip-left::after{left:0;transform:translateX(0) translateY(4px);}
+.tip.tip-left.tip-open::after{left:0;transform:translateX(0) translateY(0);}
+@media(hover:hover){.tip.tip-left:hover::after{left:0;transform:translateX(0) translateY(0);}}
+
 @media (max-width:430px){
   .hero h1{font-size:23px;}
   .tap-btn{width:172px;height:172px;}
   .tap-btn svg{width:66px;}
   .counter .cn{font-size:26px;}
   .counter.global .cn{font-size:29px;}
+}
+@media (max-width:380px){
+  .lane-spec{display:none;}
+  .bridge-cell .bc-n{font-size:26px;}
+}
+@media (prefers-reduced-motion:reduce){
+  .lane{opacity:1;transform:none;}
 }
 </style>
 </head>
@@ -476,16 +575,56 @@ body{
   <!-- SPRINT RESULTS (shown after a sprint locks) -->
   <section class="results" id="results">
     <div class="res-card">
-      <div class="res-kicker">Sprint complete · 30 seconds</div>
+      <div class="res-kicker">Real · live · 30 seconds</div>
       <div class="res-score" id="resScore">0</div>
-      <div class="res-score-sub"><span id="resFired">0</span> taps fired · <b id="resFinalized">0</b> finalized onchain</div>
+      <div class="res-score-sub"><b id="resFinalized">0</b> real transactions confirmed onchain · <span id="resFired">0</span> taps fired</div>
       <div class="res-pb norm" id="resPb"></div>
       <div class="res-stats">
-        <div class="res-stat"><div class="rs-n" id="resBest">—</div><div class="rs-l">best finality</div></div>
-        <div class="res-stat"><div class="rs-n" id="resAvg">—</div><div class="rs-l">avg finality</div></div>
+        <div class="res-stat"><div class="rs-n" id="resFinEst">~250ms</div><div class="rs-l">est. finality <button class="info-btn" id="infoBtn3" type="button" aria-label="How is finality estimated?">i</button></div></div>
+        <div class="res-stat"><div class="rs-n" id="resLanded">0</div><div class="rs-l">landed after buzzer</div></div>
         <div class="res-stat"><div class="rs-n" id="resPbNum">0</div><div class="rs-l">personal best</div></div>
       </div>
     </div>
+
+    <!-- CROSS-CHAIN SIMULATION: the apples-to-apples comparison (clearly labeled) -->
+    <section class="compare">
+      <div class="compare-head">
+        <div class="ch-t"><span class="sim-tag">Simulated</span>At each chain's finality, how many of your taps finalize in 30 seconds</div>
+        <div class="legend">
+          <span><i class="lg-dot lg-inc"></i> in block</span>
+          <span><i class="lg-dot lg-fin"></i> final</span>
+        </div>
+      </div>
+      <div class="compare-sub">
+        An apples-to-apples estimate: your <b>real tap timings</b> replayed at each chain's published
+        block time and finality. Not throughput — latency only. MultiversX is shown at its
+        <b>~250ms intra-shard finality</b> (the Supernova target).
+      </div>
+
+      <!-- the bridge: REAL measured count vs MvX SIMULATED, side by side -->
+      <div class="bridge">
+        <div class="bridge-cell real">
+          <div class="bc-tag">Real · live</div>
+          <div class="bc-n" id="brReal">0</div>
+          <div class="bc-l">confirmed onchain in the 30s — you watched these land</div>
+        </div>
+        <div class="bridge-cell sim">
+          <div class="bc-tag">Simulated · MvX 250ms</div>
+          <div class="bc-n" id="brSim">0</div>
+          <div class="bc-l">would finalize at ~250ms intra-shard finality</div>
+        </div>
+      </div>
+      <div class="bridge-note" id="bridgeNote">
+        MultiversX is the only one where this isn't hypothetical — you just watched
+        <b id="brBridgeN">0</b> of them confirm live.
+      </div>
+
+      <!-- per-chain lanes (simulation) -->
+      <div class="lanes" id="lanes"></div>
+
+      <div class="compare-line" id="compareLine"></div>
+      <div class="compare-foot" id="compareFoot"></div>
+    </section>
 
     <!-- leaderboard submit + live board -->
     <div class="lb-card">
@@ -1287,37 +1426,32 @@ function playAgain(){
 }
 
 /* ============================================================================
-   SPRINT RESULTS — score, finality stats, personal best, leaderboard, share
+   SPRINT RESULTS — real in-window score, the simulation, personal best,
+   leaderboard, share
    ============================================================================ */
 /* personal best — a NEW key, distinct from the main game's PB. The score is the
-   FINALIZED tx count (real, hard to spoof). */
+   in-window REAL confirmed tx count (real, hard to spoof). */
 var SPRINT_PB_KEY = 'mvx_onchain_sprint_pb';
 function getSprintPB(){ var v = parseInt(localStorage.getItem(SPRINT_PB_KEY) || '0', 10); return isNaN(v) ? 0 : v; }
 function setSprintPB(v){ try { localStorage.setItem(SPRINT_PB_KEY, String(v)); } catch(e){} }
 
 function showSprintResults(){
   var s = ST.sprint;
-  var score = s.finalized;                 // the SCORE = finalized tx count
+  var score = s.finalized;                 // the SCORE = REAL in-window confirmed count (N_real)
   LB.lastScore = score;
   LB.submitted = false;
 
-  // animate the headline finalized number
+  // animate the headline real in-window number
   $('resScore').textContent = '0';
   animateNumber($('resScore'), 0, score, 800);
   $('resFired').textContent = fmt(s.tapsFired);
   $('resFinalized').textContent = fmt(score);
 
-  // best / avg finality time
-  var times = s.finalityTimes.slice();
-  if(times.length){
-    var best = Math.min.apply(null, times);
-    var avg = times.reduce(function(a,b){ return a+b; }, 0) / times.length;
-    $('resBest').textContent = (best/1000).toFixed(2) + 's';
-    $('resAvg').textContent = (avg/1000).toFixed(2) + 's';
-  } else {
-    $('resBest').textContent = '—';
-    $('resAvg').textContent = '—';
-  }
+  // estimated finality — sub-second (intra-shard, ~250ms), NOT the API-confirm
+  // time the player watched. Clearly an estimate (sourced in the info modal).
+  $('resFinEst').textContent = '~250ms';
+  // "landed after the buzzer" — real, but excluded from the score (the honest tally)
+  $('resLanded').textContent = fmt(s.finalizedLate);
 
   // personal best
   var prevPB = getSprintPB();
@@ -1326,12 +1460,316 @@ function showSprintResults(){
   var pbEl = $('resPb');
   if(isPB && score > 0){ pbEl.className = 'res-pb win'; pbEl.textContent = 'New personal best. Previous: ' + prevPB + '.'; }
   else if(score > 0){ pbEl.className = 'res-pb norm'; pbEl.textContent = 'Your best: ' + prevPB + '. Go again to beat it.'; }
-  else { pbEl.className = 'res-pb norm'; pbEl.textContent = 'Nothing finalized. Testnet may be busy — try again.'; }
+  else { pbEl.className = 'res-pb norm'; pbEl.textContent = 'Nothing confirmed in the window. Testnet may be busy — try again.'; }
   $('resPbNum').textContent = fmt(Math.max(score, prevPB));
+
+  // build the cross-chain SIMULATION (lanes + the bridge to the real count)
+  buildCompare();
 
   // reset the submit control + load the live board
   LB.reset();
   lbLoadLeaderboard();
+}
+
+/* ============================================================================
+   CROSS-CHAIN SIMULATION model — lifted from /supernova-sprint.
+   --------------------------------------------------------------------------------
+   THIS IS A SIMULATION, NOT A MEASUREMENT. It replays the player's REAL tap
+   timings (ST.sprint.taps, in ms-from-GO) at each chain's PUBLISHED block time
+   and finality, and counts how many would finalize inside the 30s window. Latency
+   only (block time + finality) — never throughput.
+
+   The MvX lane uses its ~250ms intra-shard finality TARGET — the simulation value,
+   deliberately distinct from the real measured count (ST.sprint.finalized). The
+   bridge surfaces both: MvX is the one chain where the simulation is also reality,
+   because the player just watched the real ones confirm live.
+   ============================================================================ */
+var SIM_WINDOW_MS = CFG.sprintMs;     // the 30s window the simulation finalizes within
+var MVX_INTRA_FINALITY_MS = 250;      // intra-shard finality target (Supernova)
+var MVX_CROSS_FINALITY_MS = 1800;     // cross-shard end-to-end target (~3 x 600ms blocks)
+
+var CHAINS = [
+  { key:'mvx', name:'MultiversX', badge:'X', color:'#23F7DD',
+    blockMs:600, finalityMs:MVX_INTRA_FINALITY_MS,
+    spec:'~600ms block · 250ms intra-shard final',
+    tag:'Supernova · intra-shard finality', isMvx:true, mvxMode:'intra' },
+  { key:'sol', name:'Solana', badge:'S', color:'#A78BFA',
+    blockMs:400, finalityMs:12800, spec:'~400ms slot · ~12.8s final', tag:null, isMvx:false },
+  { key:'eth', name:'Ethereum', badge:'E', color:'#5B8DEF',
+    blockMs:12000, finalityMs:768000, spec:'12s slot · ~12.8min final', tag:null, isMvx:false },
+  { key:'btc', name:'Bitcoin', badge:'B', color:'#F5B544',
+    blockMs:600000, finalityMs:3600000, spec:'~10min block · ~60min final', tag:null, isMvx:false },
+  { key:'trx', name:'Tron', badge:'T', color:'#FF6B9D',
+    blockMs:3000, finalityMs:57000, spec:'~3s block · ~57s final', tag:null, isMvx:false }
+];
+
+/* apply the MvX lane finality mode (intra ~250ms / cross ~1.8s — both simulated) */
+function setMvxMode(mode){
+  var c = CHAINS[0];
+  c.mvxMode = mode;
+  if(mode === 'cross'){
+    c.finalityMs = MVX_CROSS_FINALITY_MS;
+    c.spec = '~600ms block · ~1.8s cross-shard final';
+    c.tag = 'Supernova · cross-shard finality';
+  } else {
+    c.finalityMs = MVX_INTRA_FINALITY_MS;
+    c.spec = '~600ms block · 250ms intra-shard final';
+    c.tag = 'Supernova · intra-shard finality';
+  }
+}
+
+/* for a tap at time t (ms from GO): when it lands in a block, and when it is
+   final. INCLUDED at the next block boundary after t; FINAL = inclusion + finality. */
+function lifecycle(tapT, chain){
+  var included = Math.ceil((tapT + 1) / chain.blockMs) * chain.blockMs;
+  var finalAt = included + chain.finalityMs;
+  return { included: included, finalAt: finalAt };
+}
+
+/* count of the player's taps that finalize WITHIN the 30s window on a given chain */
+function countFinalized(taps, chain){
+  var n = 0;
+  for(var i=0;i<taps.length;i++){ if(lifecycle(taps[i], chain).finalAt <= SIM_WINDOW_MS) n++; }
+  return n;
+}
+
+/* finalized counts by chain key, order-independent */
+function finalizedByKey(results){
+  var out = { mvx:0, sol:0, eth:0, btc:0, trx:0 };
+  results.forEach(function(r){ out[r.chain.key] = r.finalized; });
+  return out;
+}
+
+var simResult = null;   // { tapsTotal, results:[{chain, finalized}] }
+
+/* build + reveal the simulation: per-chain lanes + the bridge to the real count */
+function buildCompare(){
+  var taps = ST.sprint.taps.slice();
+  var tapsTotal = taps.length;       // the simulation's denominator (your N taps)
+  var nReal = ST.sprint.finalized;   // the REAL in-window confirmed count (the score)
+
+  // per-chain finalized-in-window counts (honest, computed from the real timings)
+  var results = CHAINS.map(function(c){ return { chain:c, finalized: countFinalized(taps, c) }; });
+  simResult = { tapsTotal: tapsTotal, results: results };
+
+  // the bridge: REAL measured vs MvX SIMULATED, side by side
+  var fin = finalizedByKey(results);
+  $('brReal').textContent = '0'; animateNumber($('brReal'), 0, nReal, 800);
+  $('brSim').textContent = '0';  animateNumber($('brSim'), 0, fin.mvx, 800);
+  $('brBridgeN').textContent = fmt(nReal);
+  $('bridgeNote').innerHTML = (nReal > 0)
+    ? 'MultiversX is the only one where this isn’t hypothetical — you just watched <b>' + fmt(nReal) + '</b> of them confirm live.'
+    : 'MultiversX is the only one where this isn’t hypothetical — the real ones confirm live, on the same Supernova clock the simulation uses.';
+
+  // build the per-chain lanes (hidden; staged in below)
+  var wrap = $('lanes');
+  wrap.innerHTML = '';
+  var laneEls = results.map(function(res){
+    var el = makeLane(res.chain, res.finalized, tapsTotal);
+    wrap.appendChild(el);
+    return el;
+  });
+
+  // honest summary sentence (simulation), looked up by key so it is order-independent
+  $('compareLine').innerHTML =
+    'Finalized in 30s (simulated): <span class="mvx-h">MultiversX ' + fin.mvx + '</span> &middot; <b>Solana ' + fin.sol + '</b> &middot; <b>Ethereum ' + fin.eth + '</b> &middot; <b>Bitcoin ' + fin.btc + '</b> &middot; <b>Tron ' + fin.trx + '</b>.';
+
+  // sources footnote — block time + finality (not throughput), with the MvX 250ms source
+  $('compareFoot').innerHTML =
+    '<b>Simulation, not measurement.</b> A latency comparison of block time and finality, not throughput. ' +
+    'Sources: ethereum.org, solana.com, Bitcoin Wiki, Tron DPoS docs; MultiversX ~600ms block / ~250ms intra-shard finality from Supernova (Battle of Nodes telemetry).';
+
+  // stage the reveal so the contrast breathes: MvX lands almost instantly, then
+  // the slow lanes drop in and visibly stall. Deterministic, no reliance on sampling.
+  var STAGGER = 460;
+  laneEls.forEach(function(el, idx){
+    var delay = 220 + idx * STAGGER;
+    setTimeout(function(){ el.classList.add('in'); replayLane(el); }, delay);
+  });
+}
+
+/* one simulation lane (chain row): header, the pipeline track, live counts */
+function makeLane(chain, finalized, tapsTotal){
+  var lane = document.createElement('div');
+  lane.className = 'lane' + (chain.isMvx ? ' mvx' : '');
+  lane.setAttribute('data-key', chain.key);
+
+  var good = chain.isMvx || (tapsTotal > 0 && finalized / tapsTotal > 0.5);
+
+  var tagTip = '';
+  if(chain.isMvx){
+    tagTip = chain.mvxMode === 'cross'
+      ? 'Cross-shard: between shards. Settled across about three blocks. Simulated.'
+      : 'Intra-shard: sender and receiver on the same shard. Simulated.';
+  }
+  var tagHtml = chain.tag
+    ? '<span class="lane-tag tip" data-tip="' + tagTip + '"><span class="tip-underline">' + chain.tag + '</span></span>'
+    : '';
+
+  var toggleHtml = '';
+  if(chain.isMvx){
+    var intraOn = chain.mvxMode !== 'cross';
+    toggleHtml =
+      '<div class="mvx-toggle" role="group" aria-label="MultiversX finality mode (simulated)">' +
+        '<button type="button" data-mode="intra" class="' + (intraOn ? 'on' : '') + '">intra-shard 250ms</button>' +
+        '<button type="button" data-mode="cross" class="' + (intraOn ? '' : 'on') + '">cross-shard ~1.8s</button>' +
+      '</div>';
+  }
+
+  lane.innerHTML =
+    '<div class="lane-head">' +
+      '<div class="lane-id">' +
+        '<span class="lane-badge" style="background:' + chain.color + ';">' + chain.badge + '</span>' +
+        '<span class="lane-name">' + chain.name + '</span>' +
+        '<span class="lane-spec">' + chain.spec + '</span>' +
+      '</div>' +
+      '<div class="lane-final' + (good ? ' good' : '') + '">' +
+        '<span class="n" data-fin="' + finalized + '">0</span>' +
+        '<span class="of">/ ' + tapsTotal + '</span>' +
+        '<span class="lab">final</span>' +
+      '</div>' +
+    '</div>' +
+    (tagHtml ? ('<div style="margin:-2px 0 8px;">' + tagHtml + '</div>') : '') +
+    toggleHtml +
+    '<div class="track">' +
+      '<div class="final-zone"></div>' +
+      '<div class="seg-labels">' +
+        '<div class="tip tip-left" data-tip="Sent. Instant on every chain.">Submitted</div>' +
+        '<div class="tip" data-tip="Landed in a block. Still reversible.">In block</div>' +
+        '<div class="tip" data-tip="Irreversible. The number that matters.">Final</div>' +
+      '</div>' +
+    '</div>' +
+    '<div class="lane-counts">' +
+      '<span class="c-sub"><i class="cdot" style="background:var(--text-faint)"></i>sent <b>' + tapsTotal + '</b></span>' +
+      '<span class="c-inc"><i class="cdot" style="background:var(--amber)"></i>in block <b class="inc-n">0</b></span>' +
+      '<span class="c-fin"><i class="cdot" style="background:var(--mint)"></i>final <b class="fin-n">0</b></span>' +
+    '</div>';
+  return lane;
+}
+
+/* replay the player's burst through one lane, time-compressed. The HONEST
+   finalized count (data-fin, from countFinalized) is authoritative: the headline
+   animates to it and the live counts settle to it. Sampling only affects how many
+   DOTS are drawn, never the numbers. */
+var REPLAY_MS = 4600;
+function replayLane(lane){
+  if(lane._raf){ cancelAnimationFrame(lane._raf); lane._raf = null; }
+
+  var key = lane.getAttribute('data-key');
+  var chain = CHAINS.filter(function(c){ return c.key === key; })[0];
+  var track = lane.querySelector('.track');
+  var incN = lane.querySelector('.inc-n');
+  var finN = lane.querySelector('.fin-n');
+  var finBig = lane.querySelector('.lane-final .n');
+  var exactFin = parseInt(finBig.getAttribute('data-fin'), 10) || 0;
+
+  var old = track.querySelectorAll('.dot-tx');
+  for(var j=0;j<old.length;j++){ old[j].remove(); }
+
+  var taps = ST.sprint.taps.slice();
+  var tapsTotal = taps.length;
+  if(tapsTotal === 0){ finN.textContent = '0'; incN.textContent = '0'; finBig.textContent = '0'; return; }
+
+  // cap rendered dots for performance/readability; sample evenly if huge
+  var MAX_DOTS = 56;
+  var rendered = taps;
+  if(taps.length > MAX_DOTS){
+    rendered = [];
+    var step = taps.length / MAX_DOTS;
+    for(var i=0;i<MAX_DOTS;i++){ rendered.push(taps[Math.floor(i*step)]); }
+  }
+  var dotScale = taps.length / rendered.length;
+
+  var dots = rendered.map(function(tapT, idx){
+    var d = document.createElement('div');
+    d.className = 'dot-tx dot-sub';
+    d.style.left = '4%';
+    var vy = 50 + ((idx % 5) - 2) * 13;
+    d.style.top = vy + '%';
+    track.appendChild(d);
+    var lc = lifecycle(tapT, chain);
+    return { el:d, tapT:tapT, included:lc.included, finalAt:lc.finalAt, jx:(idx%7)/7 };
+  });
+
+  function xFor(stage, frac, jx){
+    if(stage === 0) return 4 + frac*26;
+    if(stage === 1) return 37 + jx*24 + frac*2;
+    return 72 + 6 + jx*18;
+  }
+
+  var animStart = performance.now();
+  function frame(){
+    var rt = performance.now() - animStart;
+    var prog = Math.min(1, rt / REPLAY_MS);
+    var vtMax = SIM_WINDOW_MS * 1.18;     // window + tail so MvX dots finalize on screen
+    var vt = prog * vtMax;
+
+    var incCount = 0, finCount = 0;
+    dots.forEach(function(o){
+      var stage, frac;
+      if(vt < o.tapT){ stage = 0; frac = 0; }
+      else if(vt < o.included){ stage = 0; frac = Math.min(1, (vt-o.tapT)/Math.max(1,(o.included-o.tapT))); }
+      else if(vt < o.finalAt){ stage = 1; frac = Math.min(1, (vt-o.included)/Math.max(1,(o.finalAt-o.included))); incCount++; }
+      else { stage = 2; frac = 1; finCount++; }
+      o.el.style.left = xFor(stage, frac, o.jx).toFixed(2) + '%';
+      var cls = stage === 0 ? 'dot-sub' : (stage === 1 ? 'dot-inc' : 'dot-fin');
+      if(o.el.className !== 'dot-tx ' + cls) o.el.className = 'dot-tx ' + cls;
+    });
+
+    incN.textContent = Math.round(incCount * dotScale);
+    finN.textContent = Math.round(finCount * dotScale);
+
+    if(prog < 1){ lane._raf = requestAnimationFrame(frame); }
+    else {
+      lane._raf = null;
+      // settle on the HONEST numbers (exact, not sampled)
+      finN.textContent = exactFin;
+      incN.textContent = Math.max(0, tapsTotal - exactFin);
+      animateNumber(finBig, 0, exactFin, 650);
+      // settle dots to match the honest counts
+      var finalDots = Math.round((exactFin/Math.max(1, tapsTotal)) * dots.length);
+      dots.forEach(function(o, i){
+        var isFin = i < finalDots;
+        o.el.style.left = xFor(isFin?2:1, 1, o.jx).toFixed(2) + '%';
+        o.el.className = 'dot-tx ' + (isFin ? 'dot-fin' : 'dot-inc');
+      });
+    }
+  }
+  lane._raf = requestAnimationFrame(frame);
+}
+
+/* MvX lane intra/cross toggle: recompute its simulated count, rebuild + replay
+   just that lane, and refresh the bridge + summary. Other lanes untouched. */
+function onMvxModeToggle(mode){
+  if(CHAINS[0].mvxMode === mode) return;
+  setMvxMode(mode);
+
+  var mvxChain = CHAINS[0];
+  var tapsTotal = simResult ? simResult.tapsTotal : ST.sprint.taps.length;
+  var finalized = countFinalized(ST.sprint.taps, mvxChain);
+
+  if(simResult){
+    for(var i=0;i<simResult.results.length;i++){
+      if(simResult.results[i].chain.key === 'mvx'){ simResult.results[i].finalized = finalized; }
+    }
+  }
+
+  // replace just the MvX lane, preserving its position
+  var oldLane = document.querySelector('.lane[data-key="mvx"]');
+  if(oldLane){
+    var newLane = makeLane(mvxChain, finalized, tapsTotal);
+    newLane.classList.add('in');
+    oldLane.parentNode.replaceChild(newLane, oldLane);
+    replayLane(newLane);
+  }
+
+  // refresh the simulated MvX bridge cell + summary sentence
+  $('brSim').textContent = '0'; animateNumber($('brSim'), 0, finalized, 500);
+  if(simResult){
+    var fin = finalizedByKey(simResult.results);
+    $('compareLine').innerHTML =
+      'Finalized in 30s (simulated): <span class="mvx-h">MultiversX ' + fin.mvx + '</span> &middot; <b>Solana ' + fin.sol + '</b> &middot; <b>Ethereum ' + fin.eth + '</b> &middot; <b>Bitcoin ' + fin.btc + '</b> &middot; <b>Tron ' + fin.trx + '</b>.';
+  }
 }
 
 /* ============================================================================
@@ -1548,11 +1986,20 @@ function lbRenderLeaderboard(entries){
 
 /* ---------- share ---------- */
 function sprintShare(){
-  var score = ST.sprint.finalized;
-  var text =
-    'I fired ' + score + ' real transactions on MultiversX testnet in 30 seconds. ' +
-    'Every tap finalized onchain, sub-second behind my finger. Supernova runs at 600ms. ' +
-    'Beat me 👉 https://supernova-sprint.xyz/onchain';
+  var score = ST.sprint.finalized;   // N_real — confirmed onchain in the 30s (the honest number)
+  var lines = [
+    score + ' of my taps confirmed onchain on MultiversX testnet in 30 seconds — real transactions, watched them land live.'
+  ];
+  // add the simulated cross-chain line if we have it (clearly labeled)
+  if(simResult){
+    var fin = finalizedByKey(simResult.results);
+    lines.push('');
+    lines.push('Same taps, simulated at each chain’s finality in 30s:');
+    lines.push('MultiversX ' + fin.mvx + ' · Solana ' + fin.sol + ' · Ethereum ' + fin.eth + ' · Bitcoin ' + fin.btc + ' · Tron ' + fin.trx);
+  }
+  lines.push('');
+  lines.push('Beat me 👉 https://supernova-sprint.xyz/onchain');
+  var text = lines.join('\n');
   // native share on mobile, X web-intent otherwise
   if(navigator.share){
     navigator.share({ text: text }).catch(function(){ openXIntent(text); });
@@ -1617,9 +2064,36 @@ function openXIntent(text){
   // info button(s) → modal
   $('infoBtn1').addEventListener('click', openInfo);
   $('infoBtn2').addEventListener('click', openInfo);
+  var ib3 = $('infoBtn3'); if(ib3) ib3.addEventListener('click', openInfo);
   $('infoClose').addEventListener('click', closeInfo);
   $('infoModal').addEventListener('click', function(e){ if(e.target === $('infoModal')) closeInfo(); });
   document.addEventListener('keydown', function(e){ if(e.key === 'Escape') closeInfo(); });
+
+  // simulation: MvX intra/cross finality toggle (delegated — buttons live in the lane)
+  var lanesEl = $('lanes');
+  if(lanesEl){
+    lanesEl.addEventListener('click', function(e){
+      var btn = e.target.closest ? e.target.closest('.mvx-toggle button') : null;
+      if(!btn) return;
+      onMvxModeToggle(btn.getAttribute('data-mode'));
+    });
+  }
+
+  // tooltip tap-to-toggle for touch devices (hover handles desktop)
+  (function(){
+    var isTouch = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+    document.addEventListener('click', function(e){
+      var tip = e.target.closest ? e.target.closest('.tip') : null;
+      var open = document.querySelectorAll('.tip.tip-open');
+      for(var i=0;i<open.length;i++){ if(open[i] !== tip) open[i].classList.remove('tip-open'); }
+      if(tip && isTouch){
+        var willOpen = !tip.classList.contains('tip-open');
+        var r = tip.getBoundingClientRect();
+        tip.classList.toggle('tip-left', r.left > window.innerWidth*0.6);
+        tip.classList.toggle('tip-open', willOpen);
+      }
+    });
+  })();
 
   // prefill the handle with the player's local best-known handle if any
   try {
