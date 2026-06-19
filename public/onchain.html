@@ -325,6 +325,36 @@ body{
 .lb-score-cell{font-family:var(--mono);font-weight:700;font-size:14px;color:var(--text);font-variant-numeric:tabular-nums;flex:0 0 auto;}
 .lb-row.you .lb-score-cell{color:var(--mint);}
 
+/* ====================== INFO BUTTON + POPOVER ====================== */
+.info-btn{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:50%;border:1px solid var(--border);background:var(--surface-2);color:var(--text-faint);font-size:11px;font-weight:700;cursor:pointer;flex:0 0 auto;transition:border-color .18s,color .18s;font-family:var(--mono);line-height:1;padding:0;-webkit-user-select:none;user-select:none;}
+.info-btn:hover{border-color:var(--mint);color:var(--mint);}
+/* modal backdrop + sheet */
+.info-modal{position:fixed;inset:0;z-index:50;display:none;align-items:flex-end;justify-content:center;background:rgba(4,6,10,.66);backdrop-filter:blur(3px);padding:0;}
+.info-modal.open{display:flex;}
+.info-sheet{background:var(--surface);border:1px solid var(--border);border-top-left-radius:20px;border-top-right-radius:20px;width:100%;max-width:560px;padding:22px 20px 28px;position:relative;animation:sheetUp .28s var(--ease-out);}
+@keyframes sheetUp{from{transform:translateY(40px);opacity:0;}to{transform:translateY(0);opacity:1;}}
+.info-sheet h3{font-size:15px;font-weight:700;color:var(--text);margin-bottom:10px;display:flex;align-items:center;gap:8px;}
+.info-sheet h3 svg{width:18px;height:18px;}
+.info-sheet p{font-size:13.5px;line-height:1.6;color:var(--text-dim);}
+.info-sheet p b{color:var(--text);}
+.info-close{position:absolute;top:14px;right:16px;width:30px;height:30px;border:none;background:var(--surface-2);border-radius:8px;color:var(--text-dim);font-size:20px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+.info-close:hover{color:var(--text);}
+@media (min-width:560px){
+  .info-modal{align-items:center;}
+  .info-sheet{border-radius:18px;}
+}
+
+/* ====================== CROSS-SHARD TOGGLE (Unlimited only) ====================== */
+.shard-row{display:none;flex-direction:column;align-items:center;gap:7px;width:100%;}
+.shard-row.show{display:flex;}
+.shard-toggle{display:inline-flex;background:var(--surface-2);border:1px solid var(--border);border-radius:999px;padding:3px;}
+.shard-toggle button{font-family:inherit;font-size:11px;font-weight:600;color:var(--text-dim);background:none;border:none;cursor:pointer;border-radius:999px;padding:6px 13px;transition:background .18s,color .18s;display:inline-flex;align-items:center;gap:6px;}
+.shard-toggle button.on{background:var(--mint);color:#04221d;}
+.shard-toggle button.on.cross{background:var(--amber);color:#2a1f06;}
+.shard-caption{font-size:10.5px;line-height:1.45;color:var(--text-faint);text-align:center;max-width:42ch;}
+.shard-caption b{color:var(--text-dim);font-weight:600;}
+.shard-caption.cross b{color:var(--amber);}
+
 @media (max-width:430px){
   .hero h1{font-size:23px;}
   .tap-btn{width:172px;height:172px;}
@@ -377,7 +407,7 @@ body{
       <div class="cs" id="cSentSub">transactions broadcast this session</div>
     </div>
     <div class="counter">
-      <div class="cl">Finalized onchain</div>
+      <div class="cl">Finalized onchain <button class="info-btn" id="infoBtn2" type="button" aria-label="Why not instant?">i</button></div>
       <div class="cn fin" id="cFinal">0</div>
       <div class="cs" id="cFinalSub">irreversible on the Supernova clock</div>
     </div>
@@ -411,7 +441,7 @@ body{
     <!-- sprint live mini-stats -->
     <div class="sprint-live" id="sprintLive">
       <div class="sl-cell"><div class="sl-n fired" id="slFired">0</div><div class="sl-l">taps fired</div></div>
-      <div class="sl-cell"><div class="sl-n fin" id="slFin">0</div><div class="sl-l">finalized onchain</div></div>
+      <div class="sl-cell"><div class="sl-n fin" id="slFin">0</div><div class="sl-l">finalized onchain <button class="info-btn" id="infoBtn1" type="button" aria-label="Why not instant?">i</button></div></div>
     </div>
 
     <!-- settling banner (sprint, after buzzer) -->
@@ -425,6 +455,17 @@ body{
       </div>
     </div>
     <div class="mode-note" id="modeNote" hidden>One transaction per tap — the visceral version.</div>
+
+    <!-- CROSS-SHARD toggle (Unlimited only): a live demo of MultiversX sharding -->
+    <div class="shard-row" id="shardRow">
+      <div class="shard-toggle" role="group" aria-label="Shard routing demo">
+        <button id="shardIntra" class="on" type="button">Intra-shard (fast)</button>
+        <button id="shardCross" type="button">Cross-shard</button>
+      </div>
+      <div class="shard-caption" id="shardCaption">
+        Sharding demo: taps hit a <b>shard-0</b> contract — same shard as the sender, so they finalize fast.
+      </div>
+    </div>
 
     <div class="status" id="status"></div>
   </section>
@@ -493,6 +534,15 @@ body{
     <a href="/supernova-sprint">the original game</a>
   </p>
 </main>
+
+<!-- INFO MODAL: why finality isn't instant -->
+<div class="info-modal" id="infoModal" role="dialog" aria-modal="true" aria-label="Why not instant?">
+  <div class="info-sheet">
+    <button class="info-close" id="infoClose" aria-label="Close">&times;</button>
+    <h3><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9.2" stroke="#23F7DD" stroke-width="1.6"/><path d="M12 11v5M12 7.6v.2" stroke="#23F7DD" stroke-width="1.9" stroke-linecap="round"/></svg> Why not instant?</h3>
+    <p>Each tap routes through a gasless relayer so you can play with no wallet and no funds — the relayer co-signs and pays the gas, which adds a small hop on top of Supernova's 600ms rounds. The transactions are 100% real and final. (Flip the cross-shard toggle to feel the extra cost when a transaction has to hop between shards.)</p>
+  </div>
+</div>
 
 <script>
 /* ============================================================================
@@ -773,7 +823,7 @@ async function fetchTxStatus(hash){
 /* ---------- global counter (read live from the contract) ---------- */
 async function refreshGlobal(){
   try {
-    var body = { scAddress: CFG.contract, funcName: 'getGlobalTaps', args: [] };
+    var body = { scAddress: activeTapContract(), funcName: 'getGlobalTaps', args: [] };
     var r = await fetch(CFG.api + '/vm-values/query', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body)
@@ -957,7 +1007,43 @@ function setAppMode(mode){
   $('appUnlimited').classList.toggle('on', mode === 'unlimited');
   clearStatus();
   applyAppModeView();
+  // the active contract (and thus the global counter) may have changed
+  updateContractLink();
+  refreshGlobal();
 }
+
+/* cross-shard demo toggle (Unlimited only). Flips which tap-counter recordTaps
+   targets: shard-0 (intra, fast, default) vs shard-1 (cross-shard, slower). The
+   ephemeral SENDER stays shard 0 in both; only the RECEIVER contract changes, so
+   the cross-shard run shows the extra finality cost of hopping between shards. */
+function setShardMode(mode){
+  if(ST.shardMode === mode) return;
+  // flush any buffered bundle bound for the old contract first
+  if(ST.mode === 'bundled') flushBundle();
+  ST.shardMode = mode;
+  var cross = mode === 'cross';
+  var bIntra = $('shardIntra'), bCross = $('shardCross');
+  bIntra.classList.toggle('on', !cross);
+  bCross.classList.toggle('on', cross);
+  bCross.classList.toggle('cross', cross);
+  var cap = $('shardCaption');
+  cap.classList.toggle('cross', cross);
+  cap.innerHTML = cross
+    ? 'Sharding demo: taps now hit a <b>shard-1</b> contract while you send from shard 0 — each transaction has to hop between shards, so finality visibly trails. Same security, more distance.'
+    : 'Sharding demo: taps hit a <b>shard-0</b> contract — same shard as the sender, so they finalize fast.';
+  updateContractLink();
+  refreshGlobal();   // the cross-shard contract has its own global counter
+  clearStatus();
+}
+
+function updateContractLink(){
+  var cl = $('contractLink');
+  if(cl) cl.href = CFG.explorer + '/accounts/' + activeTapContract();
+}
+
+/* ---------- info modal ("why not instant?") ---------- */
+function openInfo(){ $('infoModal').classList.add('open'); }
+function closeInfo(){ $('infoModal').classList.remove('open'); }
 
 /* show/hide the right UI for the active app mode */
 function applyAppModeView(){
@@ -971,9 +1057,10 @@ function applyAppModeView(){
   card.style.display = showingResults ? 'none' : '';
   // counters strip is the Unlimited session view
   $('counters').style.display = sprint ? 'none' : '';
-  // Unlimited sub-toggle (per-tap/bundled) + note
+  // Unlimited sub-toggle (per-tap/bundled) + note + cross-shard demo
   $('modeRow').hidden = sprint;
   $('modeNote').hidden = sprint;
+  $('shardRow').classList.toggle('show', !sprint);
   // sprint-only widgets
   $('ringWrap').hidden = !sprint || ph === 'idle' || ph === 'done';
   $('sprintLive').classList.toggle('show', sprint && (ph === 'running' || ph === 'settling'));
@@ -1450,8 +1537,7 @@ function openXIntent(text){
    ============================================================================ */
 (function init(){
   // contract explorer link in the footer (the active tap-counter for the mode)
-  var cl = $('contractLink');
-  if(cl) cl.href = CFG.explorer + '/accounts/' + activeTapContract();
+  updateContractLink();
 
   // tap interactions: pointer (covers mouse + touch), plus spacebar
   var btn = $('tapBtn');
@@ -1490,6 +1576,17 @@ function openXIntent(text){
   $('resAgainBtn').addEventListener('click', playAgain);
   $('resShareBtn').addEventListener('click', sprintShare);
   $('resToUnlimited').addEventListener('click', function(){ resetSprint(); setAppMode('unlimited'); });
+
+  // cross-shard demo toggle (Unlimited)
+  $('shardIntra').addEventListener('click', function(){ setShardMode('intra'); });
+  $('shardCross').addEventListener('click', function(){ setShardMode('cross'); });
+
+  // info button(s) → modal
+  $('infoBtn1').addEventListener('click', openInfo);
+  $('infoBtn2').addEventListener('click', openInfo);
+  $('infoClose').addEventListener('click', closeInfo);
+  $('infoModal').addEventListener('click', function(e){ if(e.target === $('infoModal')) closeInfo(); });
+  document.addEventListener('keydown', function(e){ if(e.key === 'Escape') closeInfo(); });
 
   // prefill the handle with the player's local best-known handle if any
   try {
