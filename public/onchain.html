@@ -571,7 +571,7 @@ body{
         <button id="shardCross" type="button">Cross-shard</button>
       </div>
       <div class="shard-caption" id="shardCaption">
-        Sharding demo: taps hit a <b>shard-0</b> contract — same shard as the sender, so they finalize fast.
+        Sharding demo: taps hit a <b>shard-0</b> contract. Same shard as the sender, so they finalize fast.
       </div>
     </div>
 
@@ -1192,8 +1192,8 @@ function setShardMode(mode){
   var cap = $('shardCaption');
   cap.classList.toggle('cross', cross);
   cap.innerHTML = cross
-    ? 'Sharding demo: taps now hit a <b>shard-1</b> contract while you send from shard 0 — each transaction has to hop between shards, so finality visibly trails. Same security, more distance.'
-    : 'Sharding demo: taps hit a <b>shard-0</b> contract — same shard as the sender, so they finalize fast.';
+    ? 'Sharding demo: taps now hit a <b>shard-1</b> contract while you send from shard 0. Each transaction has to hop between shards, so finality visibly trails. Same security, more distance.'
+    : 'Sharding demo: taps hit a <b>shard-0</b> contract. Same shard as the sender, so they finalize fast.';
   updateContractLink();
   refreshGlobal();   // the cross-shard contract has its own global counter
   clearStatus();
