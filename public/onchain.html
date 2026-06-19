@@ -520,11 +520,6 @@ body{
       <div class="cn fin" id="cFinal">0</div>
       <div class="cs" id="cFinalSub">real transactions, confirmed onchain</div>
     </div>
-    <div class="counter global">
-      <div class="cl">Everyone · global onchain counter</div>
-      <div class="cn"><span class="g-mint" id="cGlobal">—</span> <span style="font-size:14px;color:var(--text-faint);font-weight:400">real transactions on MultiversX</span></div>
-      <div class="cs" id="cGlobalSub">read live from the tap-counter contract</div>
-    </div>
   </section>
 
   <section class="tap-card sprint-idle" id="tapCard">
@@ -673,6 +668,15 @@ body{
     <div class="feed-note">Live confirmation via the public API, a beat behind. True finality is sub-second.</div>
     <div class="feed-list" id="feedList">
       <div class="feed-empty" id="feedEmpty">Your transactions will appear here with live testnet explorer links.</div>
+    </div>
+  </section>
+
+  <!-- UNLIMITED: the live global tap-counter, moved below the feed -->
+  <section id="globalBar" style="display:none;margin-bottom:16px;">
+    <div class="counter global">
+      <div class="cl">Total Sprint Transactions</div>
+      <div class="cn"><span class="g-mint" id="cGlobal">—</span></div>
+      <div class="cs" id="cGlobalSub">live from the tap-counter contract, across every player</div>
     </div>
   </section>
 
@@ -1221,6 +1225,8 @@ function applyAppModeView(){
   card.style.display = showingResults ? 'none' : '';
   // counters strip is the Unlimited session view
   $('counters').style.display = sprint ? 'none' : '';
+  // the live global tap-counter sits below the feed, Unlimited only
+  $('globalBar').style.display = sprint ? 'none' : '';
   // Unlimited sub-toggle (per-tap/bundled) + note + cross-shard demo
   $('modeRow').hidden = sprint;
   $('modeNote').hidden = sprint;
@@ -1290,6 +1296,7 @@ function startSprint(){
   $('tapCard').classList.remove('danger');
   $('sprintStartHint').style.display = 'none';
   $('counters').style.display = 'none';
+  $('globalBar').style.display = 'none';
   $('ringWrap').hidden = false;
   $('sprintClock').classList.remove('show');
   $('sprintLive').classList.remove('show');
