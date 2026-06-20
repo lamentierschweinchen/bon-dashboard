@@ -108,6 +108,23 @@ const RELAY_OPS: Record<string, RelayOp> = {
     maxGasLimit: RECORD_TAPS_GAS_LIMIT + 100_000,
     rateMax: 1200, // taps (or bundles) per IP per window
   },
+  // The uncheatable sprint-score path: one recordTap = one real tx (no claimable
+  // count argument). Shard-0 tap-counter only (the scored board); the cross-shard
+  // demo stays on recordTaps. Same high per-IP budget as recordTaps.
+  recordTap: {
+    receivers: [TAP_COUNTER_CONTRACT],
+    maxGasLimit: RECORD_TAPS_GAS_LIMIT + 100_000,
+    rateMax: 1200,
+  },
+  // Username for the caller's address, set once at the end of a run. The client
+  // reuses the leaderboard gas budget (lbGasLimit = SUBMIT_GAS_LIMIT), so cap it
+  // to match. setHandle is light and consumes far less; the relayer only pays the
+  // gas actually consumed. Low rate budget.
+  setHandle: {
+    receivers: [TAP_COUNTER_CONTRACT],
+    maxGasLimit: SUBMIT_GAS_LIMIT + 100_000,
+    rateMax: 30,
+  },
 };
 
 // Lightweight in-memory rate limit per client IP, scoped PER FUNCTION. The
@@ -221,12 +238,13 @@ export async function POST(request: Request) {
     );
   }
 
-  // function must be one we relay. Both relayed functions take arguments, so the
-  // data field is `fn@arg...`; take the function name before the first `@` and
-  // require at least one argument (matches the prior `startsWith("fn@")` check).
+  // function must be one we relay. The data field is `fn@arg...` for functions
+  // with arguments (submitScore, recordTaps, setHandle) and just `fn` for a no-arg
+  // function (recordTap). Take the name before the first `@`, or the whole data
+  // when there is no `@`. Empty data yields an empty name and is rejected below.
   const data = Buffer.from(tx.data ?? new Uint8Array()).toString("utf8");
   const atIndex = data.indexOf("@");
-  const fnName = atIndex === -1 ? "" : data.slice(0, atIndex);
+  const fnName = atIndex === -1 ? data : data.slice(0, atIndex);
   const op = fnName ? RELAY_OPS[fnName] : undefined;
   if (!op) {
     return NextResponse.json(

@@ -881,7 +881,10 @@ async function fireTaps(count){
   var nonce = ST.nonce++;            // LOCAL increment — claim this nonce now
   var receiver = activeTapContract(); // intra-shard (default) or cross-shard (Unlimited toggle)
 
-  var dataStr = CFG.fn + '@' + u32ToHex(count);
+  // Intra-shard per-tap is the UNCHEATABLE scored path: one recordTap = one tx,
+  // no claimable count. The cross-shard demo and any bundled flush keep
+  // recordTaps(count) (throughput stat only, never the leaderboard score).
+  var dataStr = (receiver === CFG.contract && count === 1) ? 'recordTap' : (CFG.fn + '@' + u32ToHex(count));
   var dataB64 = btoa(dataStr);
   var txForSign = {
     nonce: nonce, value: '0', receiver: receiver, sender: key.address,
@@ -1815,7 +1818,7 @@ function onMvxModeToggle(mode){
    ephemeral key (shard 0) is generated per submit. Fail-soft on every path.
    ============================================================================ */
 var LB = {
-  contract: CFG.sprintLeaderboard,   // shard-0 sprint board
+  contract: CFG.contract,   // the upgraded tap-counter (shard 0): bestScore + handle per address
   submitted: false,
   lastScore: 0,
   reset: function(){
@@ -1850,7 +1853,9 @@ function lbSetSubmitting(on){
 function lbU64ToHex(n){ var h = BigInt(n).toString(16); if(h.length % 2) h = '0' + h; return h; }
 function lbUtf8ToHex(str){ return bytesToHex(new TextEncoder().encode(str)); }
 
-/* submitScore(handle, score) — score = the FINALIZED tx count */
+/* setHandle(handle) — attaches a username to the address that holds the onchain
+   score. The score itself is already onchain (the count of real recordTap txs),
+   so it is never submitted as a number; this just labels it. */
 async function lbSubmit(){
   if(LB.submitted) return;
   var score = LB.lastScore;
@@ -1859,6 +1864,7 @@ async function lbSubmit(){
   var handle = ($('lbHandle').value || '').trim();
   if(!handle){ lbStatus('err', 'Pick a handle so you show up on the leaderboard.'); $('lbHandle').focus(); return; }
   if(new TextEncoder().encode(handle).length > 32){ lbStatus('err', 'That handle is a bit long. Keep it under 32 characters.'); return; }
+  if(!ST.key){ lbStatus('err', 'No run to submit yet. Play a sprint first.'); return; }
 
   lbSetSubmitting(true);
   lbStatus('', 'Preparing your transaction…');
@@ -1867,18 +1873,13 @@ async function lbSubmit(){
     var libs = await loadLibs();
     if(!libs){ throw new Error('crypto-unavailable'); }
 
-    // fresh ephemeral key in the relayer's shard (shard 0), as the original does
-    var key = await generateEphemeral(libs);
+    // setHandle is sent by the SAME ephemeral key that fired the taps — that
+    // address holds the onchain bestScore, so the username attaches to the score
+    // that earned it. No score in the data: it is already onchain, unforgeable.
+    var key = ST.key;
+    var nonce = ST.nonce++;
 
-    // fetch the ephemeral account's nonce (fresh key => 0, but be correct)
-    var nonce = 0;
-    try {
-      var accRes = await fetch(CFG.api + '/accounts/' + key.address);
-      if(accRes.ok){ var accJson = await accRes.json(); nonce = accJson.nonce || 0; }
-    } catch(e){ /* fresh key, nonce stays 0 */ }
-
-    // build the submitScore tx — EXACT encoding from the original game
-    var dataStr = 'submitScore@' + lbUtf8ToHex(handle) + '@' + lbU64ToHex(score);
+    var dataStr = 'setHandle@' + lbUtf8ToHex(handle);
     var dataB64 = btoa(dataStr);
     var txForSign = {
       nonce: nonce, value: '0', receiver: LB.contract, sender: key.address,
