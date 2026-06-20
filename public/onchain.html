@@ -322,7 +322,7 @@ body{
 .lb-board{margin-top:14px;border-top:1px solid var(--border-soft);padding-top:12px;}
 .lb-board-head{font-family:var(--mono);font-size:9.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--text-faint);display:flex;align-items:center;gap:6px;margin-bottom:8px;}
 .lb-board-head .dot{width:6px;height:6px;border-radius:50%;background:var(--mint);box-shadow:0 0 7px var(--mint);display:inline-block;}
-.lb-rows{display:flex;flex-direction:column;}
+.lb-rows{display:flex;flex-direction:column;max-height:300px;overflow-y:auto;overscroll-behavior:contain;}
 .lb-empty{font-size:12px;color:var(--text-faint);text-align:center;padding:12px 2px;}
 .lb-row{display:flex;align-items:center;gap:10px;padding:8px 4px;border-bottom:1px solid var(--border-soft);}
 .lb-row:last-child{border-bottom:none;}
@@ -333,6 +333,9 @@ body{
 .lb-row.you .lb-handle-cell{color:var(--text);font-weight:600;}
 .lb-score-cell{font-family:var(--mono);font-weight:700;font-size:14px;color:var(--text);font-variant-numeric:tabular-nums;flex:0 0 auto;}
 .lb-row.you .lb-score-cell{color:var(--mint);}
+.lb-you{display:none;margin-top:8px;padding-top:8px;border-top:1px dashed var(--border);}
+.lb-you.show{display:block;}
+.lb-you-label{font-family:var(--mono);font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:var(--text-faint);margin-bottom:3px;}
 
 /* ====================== INFO BUTTON + POPOVER ====================== */
 .info-btn{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:50%;border:1px solid var(--border);background:var(--surface-2);color:var(--text-faint);font-size:11px;font-weight:700;cursor:pointer;flex:0 0 auto;transition:border-color .18s,color .18s;font-family:var(--mono);line-height:1;padding:0;-webkit-user-select:none;user-select:none;}
@@ -606,6 +609,7 @@ body{
         <div class="lb-rows" id="lbRows">
           <div class="lb-empty">Loading the live board…</div>
         </div>
+        <div class="lb-you" id="lbYou"></div>
       </div>
     </div>
 
@@ -2005,8 +2009,9 @@ function lbEscape(s){
 }
 
 function lbRenderLeaderboard(entries){
-  var rows = $('lbRows');
+  var rows = $('lbRows'), you = $('lbYou');
   if(!rows) return;
+  if(you){ you.className = 'lb-you'; you.innerHTML = ''; }
   if(!entries || entries.length === 0){
     rows.innerHTML = '<div class="lb-empty">No sprints onchain yet. Submit yours to be first.</div>';
     return;
@@ -2026,16 +2031,16 @@ function lbRenderLeaderboard(entries){
       '<span class="lb-score-cell">' + e.score + '</span>' +
     '</div>';
   };
-  var TOP = 10;
-  var limit = Math.min(TOP, entries.length);
+  // render up to the top 100 into the scrollable list (DOM-bounded); the box scrolls
+  var CAP = 100, limit = Math.min(CAP, entries.length);
   var html = '';
   for(var i=0;i<limit;i++){ html += rowHtml(entries[i], i + 1, (i === myIdx)); }
-  // player ranked below the top 10: pin their own row beneath a separator so it always shows
-  if(myIdx >= TOP){
-    html += '<div class="lb-row-sep" style="text-align:center;color:var(--text-faint);font-size:14px;letter-spacing:3px;padding:4px 0 2px;line-height:1;" aria-hidden="true">⋯</div>';
-    html += rowHtml(entries[myIdx], myIdx + 1, true);
-  }
   rows.innerHTML = html;
+  // when the player is below the visible top, keep their rank pinned below the scroll
+  if(you && myIdx >= 8){
+    you.innerHTML = '<div class="lb-you-label">Your rank</div>' + rowHtml(entries[myIdx], myIdx + 1, true);
+    you.className = 'lb-you show';
+  }
 }
 
 /* ---------- share ---------- */
