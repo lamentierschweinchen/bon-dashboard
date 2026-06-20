@@ -1964,25 +1964,34 @@ function lbDecodeEntry(b64, bech32){
 
 async function lbLoadLeaderboard(){
   try {
-    var libs = await loadLibs();
-    if(!libs) return;
-    var nHex = (100).toString(16).padStart(2,'0');  // getTopScores(100): deep enough to locate the player's own rank below the top 10
-    var body = { scAddress: LB.contract, funcName: 'getTopScores', args: [nHex] };
-    var res = await fetch(CFG.api + '/vm-values/query', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body)
-    });
+    // The contract's getTopScores view sorts ALL players on-chain (insertion sort
+    // + 3 storage reads each); past ~150 players that blows the view gas budget
+    // ("out of gas"), which breaks the board. So read the raw storage once and
+    // sort client-side: no on-chain compute, scales with the player count.
+    // Storage layout: bestScore<addr32> = u64 score, handle<addr32> = utf8 handle.
+    var res = await fetch(CFG.api + '/address/' + LB.contract + '/keys');
     if(!res.ok) return;
     var json = await res.json();
-    var data = json && json.data && json.data.data ? json.data.data : null;
-    if(!data || data.returnCode !== 'ok') return;
-    var parts = data.returnData || [];
+    var pairs = (json && json.data && json.data.pairs) || {};
+    var toHex = function(s){ var h=''; for(var i=0;i<s.length;i++){ h += s.charCodeAt(i).toString(16).padStart(2,'0'); } return h; };
+    var hexUtf8 = function(h){ try { var b=new Uint8Array(h.length/2); for(var i=0;i<b.length;i++){ b[i]=parseInt(h.substr(i*2,2),16); } return new TextDecoder().decode(b); } catch(e){ return ''; } };
+    var PS = toHex('bestScore'), PH = toHex('handle');
+    var LS = PS.length + 64, LH = PH.length + 64;   // mapper prefix + 32-byte address (64 hex chars)
+    var byAddr = {};
+    Object.keys(pairs).forEach(function(k){
+      if(k.length === LS && k.indexOf(PS) === 0){
+        var a = k.slice(PS.length); (byAddr[a] = byAddr[a] || {}).score = parseInt(pairs[k], 16) || 0;
+      } else if(k.length === LH && k.indexOf(PH) === 0){
+        var a2 = k.slice(PH.length); (byAddr[a2] = byAddr[a2] || {}).handle = hexUtf8(pairs[k]);
+      }
+    });
     var entries = [];
-    for(var i=0;i<parts.length;i++){
-      if(!parts[i]) continue;
-      var e = lbDecodeEntry(parts[i], libs.bech32);
-      if(e) entries.push(e);
-    }
+    Object.keys(byAddr).forEach(function(a){
+      var v = byAddr[a];
+      if(!v || v.score == null || !v.handle) return;
+      entries.push({ address: '', handle: v.handle, score: v.score, timestamp: 0 });
+    });
+    entries.sort(function(a, b){ return b.score - a.score; });
     lbRenderLeaderboard(entries);
   } catch(err){
     console.warn('[onchain] sprint leaderboard read failed:', err);
