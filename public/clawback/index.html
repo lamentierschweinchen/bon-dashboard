@@ -30,17 +30,8 @@
 -->
 <style>
   /* Clawback inherits the canon (Roobert, #06070A cosmos, mint, surfaces, buttons,
-     leaderboard, reset) from /arcade.css. Only its game-specific accents are remapped
-     onto the canon here: drains = coral, credits/saves = green, whale = amber. */
-  :root {
-    --gold: var(--amber);   /* whale / big drain */
-    --loss: var(--coral);   /* drains, balance-down */
-    --save: var(--green);   /* clawed back, balance-up */
-    --credit: var(--green); /* green inflows */
-    --unstake: var(--coral);
-    --xfer: var(--coral);
-    --fee: var(--coral);
-  }
+     leaderboard, reset) from /arcade.css. Game-specific accents map straight onto the
+     canon tokens: drains/loss = --coral, clawed-back/credits = --green, whale = --amber. */
   .wrap { max-width: 460px; display: flex; flex-direction: column; gap: 13px; }
   header { text-align: center; }
   h1 { margin: 0; font-size: 30px; letter-spacing: -0.01em; font-weight: 800; color: var(--text); }
@@ -92,9 +83,9 @@
   .card .amt .m { font-size: 10px; opacity: 0.7; font-weight: 700; }
   .card .bar { height: 4px; border-radius: 3px; background: rgba(255,255,255,0.12); margin-top: 6px; overflow: hidden; }
   .card .bar > i { display: block; height: 100%; width: 100%; transform-origin: left; background: var(--coral); }
-  /* drains (coral family — tap them) */
-  .card.t-unstake, .card.t-loss, .card.t-xfer, .card.t-fee { border-color: rgba(255,107,157,0.5); }
-  .card.t-unstake .ty, .card.t-loss .ty, .card.t-xfer .ty, .card.t-fee .ty { color: var(--coral); }
+  /* drains (coral family — tap them); one class covers every drain label */
+  .card.drain { border-color: rgba(255,107,157,0.5); }
+  .card.drain .ty { color: var(--coral); }
   .card.drain .amt { color: var(--text); }
   /* credits (green — leave them) */
   .card.credit { border-color: rgba(74,222,128,0.5); background: linear-gradient(160deg, rgba(74,222,128,0.12), rgba(14,17,23,0.7)); }
@@ -126,6 +117,17 @@
   .arena .center .legend .r { color: var(--coral); } .arena .center .legend .g { color: var(--green); }
   .arena .center .final { font-size: 13px; color: var(--text-dim); }
   .arena .center .final b { font-family: var(--mono); font-size: 40px; color: var(--mint); display: block; font-variant-numeric: tabular-nums; font-weight: 800; text-shadow: 0 0 16px rgba(35,247,221,0.4); }
+  /* end-of-round breakdown: what got through vs what you saved + kept */
+  .tally { width: 100%; max-width: 290px; display: flex; flex-direction: column; gap: 8px; margin: 2px 0; }
+  .tally .tr { display: grid; grid-template-columns: 16px 1fr auto; align-items: baseline; gap: 9px; font-size: 13.5px; color: var(--text-dim); text-align: left; }
+  .tally .tr .ico { font-size: 13px; line-height: 1; }
+  .tally .tr .lab { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+  .tally .tr .lab em { font-style: normal; font-size: 10.5px; color: var(--text-faint); }
+  .tally .tr b { font-family: var(--mono); font-weight: 800; font-variant-numeric: tabular-nums; font-size: 15px; }
+  .tally .tr.lost b { color: var(--coral); } .tally .tr.lost .ico { color: var(--coral); }
+  .tally .tr.save b { color: var(--green); } .tally .tr.save .ico { color: var(--green); }
+  .tally .tr.gain b { color: var(--green); } .tally .tr.gain .ico { color: var(--green); }
+  .tally .rule { height: 1px; background: var(--border); margin: 1px 0; }
   .spin { width: 26px; height: 26px; border-radius: 50%; border: 3px solid rgba(255,255,255,0.15); border-top-color: var(--mint); animation: spin 0.8s linear infinite; }
   @keyframes spin { to { transform: rotate(360deg); } }
 
@@ -254,14 +256,24 @@ const $ = (id) => document.getElementById(id);
 const arcade = createArcade(ARCADE_CONFIG);
 
 // config defaults mirror the contract; onchain mode overrides from getScheduleParams
-const DEFAULTS = { roundLengthMs: 60_000, settleWindowMs: 8_000, outflows: 440, startStack: 1_000, creditPermil: 130 };
+// practice/preview config mirrors the contract defaults, incl. the difficulty ramp
+// (rampPermil 500 = sparse/slow open, dense/fast finish; lateWindowShrinkPermil 0 = off).
+// Onchain mode overrides this from getScheduleParams so the client always matches the
+// deployed contract exactly.
+const DEFAULTS = { roundLengthMs: 60_000, settleWindowMs: 8_000, outflows: 440, startStack: 1_000, creditPermil: 130, rampPermil: 500, lateWindowShrinkPermil: 0 };
+// real, money-losing things (funny). Every one of these genuinely lowers the
+// balance — no "moves funds but keeps them" actions. Picked per item by id.
 const DRAIN_TYPES = [
-  { name: "Unstake", cls: "t-unstake" },
-  { name: "Realize loss", cls: "t-loss" },
-  { name: "Transfer out", cls: "t-xfer" },
-  { name: "Pay fee", cls: "t-fee" },
+  "Aped a memecoin",
+  "Overpaid for a JPG",
+  "Got rugged",
+  "Bought the top",
+  "Liquidated",
+  "FOMO'd a presale",
+  "Got sandwiched",
+  "Tipped a streamer",
 ];
-const CREDIT_TYPES = ["Staking reward", "Refund", "Airdrop"];
+const CREDIT_TYPES = ["Airdrop hit", "Sold the top", "Staking reward"];
 const COLS = 3;
 
 let cfg = { ...DEFAULTS };
@@ -270,7 +282,7 @@ let onchain = false;
 const G = {
   phase: "idle", seed: 0n, startMs: 0, roundId: 0,
   schedule: [], visibleFall: 2800, settleLineY: 280, arenaH: 384,
-  nextIdx: 0, savedCount: 0, lostCount: 0, spawnSeq: 0,
+  nextIdx: 0, savedCount: 0, lostCount: 0, savedAmt: 0, forfeitAmt: 0, forfeitCount: 0, spawnSeq: 0,
   cards: new Map(), trueBalance: 0, dispBalance: 0, raf: null,
 };
 
@@ -330,6 +342,7 @@ async function startOnchain() {
 }
 function fallbackToPractice(msg) {
   onchain = false;
+  cfg = { ...DEFAULTS }; // practice previews the intended (ramped) game
   setMode(false, "Practice · fallback");
   setStatus("err", msg);
   startLocal();
@@ -341,7 +354,7 @@ function beginRound({ seed, startMs, roundId }) {
   G.visibleFall = Math.max(1500, Math.min(2000, cfg.settleWindowMs - 2500));
   G.arenaH = $("arena").clientHeight || 384;
   G.settleLineY = G.arenaH - 40 - 58;
-  G.nextIdx = 0; G.savedCount = 0; G.lostCount = 0; G.spawnSeq = 0;
+  G.nextIdx = 0; G.savedCount = 0; G.lostCount = 0; G.savedAmt = 0; G.forfeitAmt = 0; G.forfeitCount = 0; G.spawnSeq = 0;
   G.trueBalance = cfg.startStack; G.dispBalance = cfg.startStack;
   $("savedStat").textContent = "0";
   $("lostStat").textContent = "0";
@@ -375,9 +388,9 @@ function tick() {
     const p = age / G.visibleFall;
     c.el.style.transform = `translateY(${(p * G.settleLineY).toFixed(1)}px)`;
     c.barFill.style.transform = `scaleX(${(1 - p).toFixed(3)})`;
-    if (!c.o.credit) { // urgency colour on drains
-      if (p > 0.72) c.barFill.style.background = "var(--loss)";
-      else if (p > 0.45) c.barFill.style.background = "var(--gold)";
+    if (!c.o.credit) { // urgency colour on drains (canon tokens)
+      if (p > 0.72) c.barFill.style.background = "var(--coral)";
+      else if (p > 0.45) c.barFill.style.background = "var(--amber)";
     }
   }
   renderBalance();
@@ -407,8 +420,8 @@ function spawnCard(o, age) {
     label = CREDIT_TYPES[Number(BigInt(o.id) % BigInt(CREDIT_TYPES.length))];
     sign = "+"; cls = "credit";
   } else {
-    const ty = DRAIN_TYPES[Number(BigInt(o.id) % 4n)];
-    label = ty.name; sign = "−"; cls = "drain " + ty.cls + (o.amount >= 9 ? " big" : "");
+    label = DRAIN_TYPES[Number(BigInt(o.id) % BigInt(DRAIN_TYPES.length))];
+    sign = "−"; cls = "drain" + (o.amount >= 9 ? " big" : "");
   }
   el.className = "card " + cls;
   const col = G.spawnSeq++ % COLS;
@@ -431,6 +444,7 @@ function tapCard(c) {
   if (c.o.credit) {
     // mis-tap: you cancelled an inflow → forfeit it
     G.trueBalance -= c.o.amount;
+    G.forfeitAmt += c.o.amount; G.forfeitCount++;
     flashBalance("down");
     floatText(c.el, "−" + c.o.amount, "loss");
     blip(150, 0.12, "sawtooth"); vibrate(22);
@@ -438,6 +452,7 @@ function tapCard(c) {
   } else {
     // recall a drain in time → save it
     G.savedCount++;
+    G.savedAmt += c.o.amount;
     G.trueBalance += c.o.amount;
     $("savedStat").textContent = G.savedCount;
     flashBalance("up");
@@ -508,41 +523,59 @@ async function endRoundFlow() {
   if (!onchain) return reveal(localFinal(), 0, true);
 
   showCenter(`<div class="spin"></div><p>Round over. Tallying your final balance onchain…</p>`);
-  for (let i = 0; i < 3; i++) {
-    try { await arcade.endRound(G.roundId); break; } catch (err) { if (i === 2) break; await wait(1500); }
-  }
-  let final = localFinal();
-  let claimable = 0;
-  for (let i = 0; i < 6; i++) {
+  // endRound must actually EXECUTE (not just relay) to record the score and put you
+  // on the board. It only succeeds once the BLOCK timestamp passes start+length —
+  // Supernova blocks trail wall-clock slightly, so the first send can revert as
+  // "round not over yet". Resend until getRound reports ended (not until relay-ack).
+  let ended = false;
+  for (let i = 0; i < 12 && !ended; i++) {
+    try { await arcade.endRound(G.roundId); } catch (err) { /* relay hiccup — retry */ }
     await wait(1500);
-    const f = await arcade.getFinal().catch(() => null);
-    if (f != null) final = f;
     const r = await arcade.getRound().catch(() => null);
-    if (r && r.ended) { claimable = (await arcade.getClaimable().catch(() => 0)) || 0; break; }
+    if (r && r.ended) ended = true;
   }
-  if (!claimable) claimable = (await arcade.getClaimable().catch(() => 0)) || 0;
-  reveal(final, claimable, false);
+  // authoritative reads once the contract has tallied
+  let final = ended ? await arcade.getFinal().catch(() => null) : null;
+  if (final == null) final = localFinal();
+  const claimable = (await arcade.getClaimable().catch(() => 0)) || 0;
+  reveal(final, claimable, false, ended);
   refreshBoard();
 }
 
 // the live projection converges to the contract's final; use it as the local score
 function localFinal() { return Math.max(0, Math.round(G.trueBalance)); }
 
-function reveal(final, claimable, practice) {
+function reveal(final, claimable, practice, ended = true) {
   setPhase("done");
   G.trueBalance = final; G.dispBalance = final;
   $("bal").firstChild.textContent = fmt(final);
   $("stackFill").style.transform = `scaleX(${Math.max(0, Math.min(1, final / cfg.startStack)).toFixed(3)})`;
-  const kept = Math.round((final / cfg.startStack) * 100);
-  let html = `<div class="final">Final balance${practice ? " (practice)" : " (onchain)"}<b>${fmt(final)} NOVA</b>` +
-    `<span>${kept}% of the stack • clawed ${G.savedCount} • drained ${G.lostCount}</span></div>` +
-    `<div class="row" style="margin-top:6px"><button class="btn" id="againBtn">Play again</button>`;
+
+  // breakdown — what got through vs what you saved + kept (amounts, off the schedule)
+  let totalDrain = 0, totalCredit = 0;
+  for (const o of G.schedule) { if (o.credit) totalCredit += o.amount; else totalDrain += o.amount; }
+  const saved = G.savedAmt;
+  const lost = Math.max(0, totalDrain - saved);
+  const gained = Math.max(0, totalCredit - G.forfeitAmt);
+
+  const tag = practice ? " (practice)" : " (onchain)";
+  let html =
+    `<div class="final">Final balance${tag}<b>${fmt(final)} NOVA</b></div>` +
+    `<div class="tally">` +
+      `<div class="tr lost"><span class="ico">▼</span><span class="lab">Drained away<em>${G.lostCount} got through</em></span><b>−${fmt(lost)}</b></div>` +
+      `<div class="tr save"><span class="ico">✦</span><span class="lab">Clawed back<em>${G.savedCount} recall${G.savedCount === 1 ? "" : "s"} in time</em></span><b>${fmt(saved)}</b></div>` +
+      `<div class="tr gain"><span class="ico">▲</span><span class="lab">Inflows kept${G.forfeitCount ? `<em>${G.forfeitCount} cancelled by mistake</em>` : ""}</span><b>+${fmt(gained)}</b></div>` +
+    `</div>` +
+    `<div class="row" style="margin-top:2px"><button class="btn" id="againBtn">Play again</button>`;
   if (onchain && claimable > 0) html += `<button class="btn gold" id="claimNovaBtn">Claim ${fmt(claimable)} NOVA</button>`;
   html += `</div>`;
   showCenter(html);
   $("againBtn").addEventListener("click", onDefend);
   if (onchain && claimable > 0) $("claimNovaBtn").addEventListener("click", () => claimNova(claimable));
-  if (onchain && final > 0) { $("claim").classList.add("show"); $("handle").focus({ preventScroll: true }); }
+
+  // a board spot only opens when the score is actually recorded onchain (round ended)
+  if (onchain && ended && final > 0) { $("claim").classList.add("show"); $("handle").focus({ preventScroll: true }); }
+  else if (onchain && !ended) setStatus("err", "Couldn't finalize onchain in time. Your balance shows, but the score didn't record. Play again to land on the board.");
   else if (!onchain) setStatus("", "Practice round. Scores and NOVA go onchain once the cabinet is live.");
 }
 
@@ -572,7 +605,9 @@ async function claimHandle() {
     localStorage.setItem("clawback_handle", handle);
     const r = await arcade.setHandle(handle);
     setStatus("ok", `On the board. <a href="${r.explorerUrl}" target="_blank" rel="noopener">View tx ↗</a>`);
-    refreshBoard();
+    $("claimBtn").textContent = "On the board ✓";
+    // the handle takes a moment to index; keep refreshing so your row fills in
+    for (let i = 0; i < 6; i++) { await wait(1500); await refreshBoard(); }
   } catch (err) {
     $("claimBtn").disabled = false;
     setStatus("err", friendlyError(err));

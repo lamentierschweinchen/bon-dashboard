@@ -46,18 +46,46 @@ export function amountOf(seed, i) {
   return Number(1n + ((h >> 8n) % 6n)); // 1..=6 (small)
 }
 
-/** The ms offset (from round start) at which item `i` appears. */
+/** Difficulty-ramp default. Per-mille strength of the concave time-warp below.
+ *  500 makes the round's last items arrive ~3x as fast as the first. 0 = uniform. */
+const DEFAULT_RAMP_PERMIL = 500n;
+
+/** Concave time-warp for the difficulty ramp. Maps index i in [0,n] onto a spawn
+ *  time in [0, span] via g(f) = f + r*f*(1-f), r = ramp/1000 — SPARSE + slow early,
+ *  DENSE + fast late ("forgiving open, frantic finish"). Integer BigInt math so it
+ *  matches the contract's u64/u128 path exactly. */
+function warp(i, n, span, ramp) {
+  const lin = (span * i) / n;
+  const bump = (ramp * span * i * (n - i)) / (1000n * n * n);
+  return lin + bump;
+}
+
+/** The ms offset (from round start) at which item `i` appears. Ramped (see warp);
+ *  jitter fills its local slot. Spans [0, length-window] so every settle window
+ *  still ends inside the round. */
 export function spawnOf(seed, i, params) {
   const length = BigInt(params.roundLengthMs);
   const window = BigInt(params.settleWindowMs);
   const n = BigInt(params.outflows);
-  const step = length / n;
-  const base = BigInt(i) * step;
-  const jitter = step === 0n ? 0n : spawnHash(BigInt(seed), BigInt(i)) % step;
-  let spawn = base + jitter;
-  const maxSpawn = length - window;
-  if (spawn > maxSpawn) spawn = maxSpawn;
-  return Number(spawn);
+  const ramp = BigInt(params.rampPermil ?? DEFAULT_RAMP_PERMIL);
+  const span = length - window;
+  const bi = BigInt(i);
+  const ti = warp(bi, n, span, ramp);
+  const tnext = warp(bi + 1n, n, span, ramp);
+  const local = tnext - ti;
+  const jitter = local === 0n ? 0n : spawnHash(BigInt(seed), bi) % local;
+  return Number(ti + jitter);
+}
+
+/** The settle window (ms) for item `i`. With late_window_shrink_permil = 0
+ *  (default) it is a constant `settleWindowMs`; a positive value linearly shrinks
+ *  the window toward the end of the round (tighter timing late). Integer math. */
+export function windowOf(i, params) {
+  const base = BigInt(params.settleWindowMs);
+  const shrink = BigInt(params.lateWindowShrinkPermil ?? 0);
+  if (shrink === 0n) return base;
+  const n = BigInt(params.outflows);
+  return (base * (1000n * n - shrink * BigInt(i))) / (1000n * n);
 }
 
 /** One item: kind, when it appears, how much, when it settles. */
@@ -68,7 +96,7 @@ export function deriveOutflow(seed, i, params) {
     spawnMs,
     amount: amountOf(seed, i),
     credit: isCredit(seed, i, params.creditPermil),
-    deadlineMs: spawnMs + Number(params.settleWindowMs),
+    deadlineMs: spawnMs + Number(windowOf(i, params)),
   };
 }
 
