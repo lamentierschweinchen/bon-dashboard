@@ -12,6 +12,7 @@
     { "source": "/canvas", "destination": "/canvas.html" },
     { "source": "/button", "destination": "/button.html" },
     { "source": "/reaction", "destination": "/reaction.html" },
-    { "source": "/clawback", "destination": "/clawback/index.html" }
+    { "source": "/clawback", "destination": "/clawback/index.html" },
+    { "source": "/degen-dash", "destination": "/degen-dash/index.html" }
   ]
 }
