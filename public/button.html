@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <title>The Button · Supernova Arcade</title>
     <meta name="description" content="One button, one shared 60-second timer. Every press is a real onchain transaction that resets it. How long dare you wait?" />
     <link rel="stylesheet" href="/arcade.css" />
@@ -13,9 +13,11 @@
         height: 280px;
         margin: 6px auto 2px;
       }
+      /* The Button surfaces. Canon (Roobert, cosmos, mint, buttons) comes from
+         /arcade.css. States: normal = mint, caution = amber, urgent = coral, revive = blue. */
       .ring { position: absolute; inset: 0; transform: rotate(-90deg); }
       .ring circle { fill: none; stroke-width: 12; stroke-linecap: round; }
-      .ring .track { stroke: rgba(255, 255, 255, 0.07); }
+      .ring .track { stroke: var(--surface-2); }
       .ring .prog { transition: stroke 0.4s; }
       .press-btn {
         position: absolute;
@@ -27,12 +29,13 @@
         border-radius: 50%;
         border: none;
         cursor: pointer;
-        color: #1a0a02;
+        color: #04221F;
+        font-family: inherit;
         font-weight: 800;
         font-size: 17px;
         letter-spacing: 0.04em;
-        background: radial-gradient(circle at 42% 36%, #fff, var(--flare-orange) 48%, var(--supernova-orange) 86%);
-        box-shadow: 0 10px 34px rgba(232, 96, 28, 0.5), inset 0 -8px 18px rgba(0, 0, 0, 0.25);
+        background: radial-gradient(circle at 48% 36%, #9bfff2, var(--mint) 52%, #0e9c8c 92%);
+        box-shadow: 0 0 36px rgba(35, 247, 221, 0.4), inset 0 -10px 16px rgba(0, 0, 0, 0.28);
         transition: transform 0.08s ease, box-shadow 0.2s;
         touch-action: manipulation;
         user-select: none;
@@ -40,15 +43,17 @@
       .press-btn:active { transform: translate(-50%, -50%) scale(0.94); }
       .press-btn .big {
         display: block;
+        font-family: var(--mono);
         font-variant-numeric: tabular-nums;
-        font-size: 40px;
+        font-weight: 900;
+        font-size: 42px;
         line-height: 1;
         margin-bottom: 2px;
       }
       .press-btn .sub { font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; opacity: 0.8; }
       .stage-urgent .press-btn {
-        background: radial-gradient(circle at 42% 36%, #fff, #ff6b6b 48%, #d6336c 90%);
-        box-shadow: 0 10px 38px rgba(214, 51, 108, 0.6), inset 0 -8px 18px rgba(0, 0, 0, 0.25);
+        background: radial-gradient(circle at 48% 36%, #ffd0e2, var(--coral) 50%, #c83e72 92%);
+        box-shadow: 0 0 40px rgba(255, 107, 157, 0.5), inset 0 -10px 16px rgba(0, 0, 0, 0.28);
         animation: pulse-btn 0.7s ease-in-out infinite;
       }
       @keyframes pulse-btn {
@@ -56,32 +61,41 @@
         50% { transform: translate(-50%, -50%) scale(1.035); }
       }
       .stage-idle .press-btn {
-        background: radial-gradient(circle at 42% 36%, #cfe9ff, #4dabf7 50%, #1c7ed6 90%);
-        box-shadow: 0 10px 30px rgba(28, 126, 214, 0.45), inset 0 -8px 18px rgba(0, 0, 0, 0.25);
+        background: radial-gradient(circle at 48% 36%, #cfe0ff, var(--blue) 52%, #2f5fb0 92%);
+        box-shadow: 0 0 32px rgba(91, 141, 239, 0.45), inset 0 -10px 16px rgba(0, 0, 0, 0.28);
         color: #04121f;
       }
+      /* states legend */
+      .states { display: flex; gap: 7px; justify-content: center; flex-wrap: wrap; margin-top: 14px; }
+      .stp { display: inline-flex; align-items: center; gap: 6px; font-size: 11px; color: var(--text-faint); border: 1px solid var(--border); border-radius: 999px; padding: 4px 10px; }
+      .stp i { width: 8px; height: 8px; border-radius: 50%; }
       .result {
         text-align: center;
         font-weight: 600;
         font-size: 13.5px;
-        padding: 8px;
+        padding: 9px;
         border-radius: 10px;
-        background: var(--panel-2);
-        border: 1px solid var(--line);
+        background: rgba(35, 247, 221, 0.04);
+        border: 1px solid var(--border-soft);
         margin-top: 12px;
-        color: var(--muted);
+        color: var(--text-dim);
       }
+      @media (prefers-reduced-motion: reduce) { .stage-urgent .press-btn { animation: none; } }
     </style>
   </head>
   <body>
     <div class="wrap">
       <div class="topbar">
-        <a class="back" href="/arcade">← Arcade</a>
-        <div class="brand"><b>Supernova</b> Arcade</div>
+        <a class="back" href="/arcade"><span aria-hidden="true">&larr;</span> Arcade</a>
+        <span class="lockup">
+          <svg class="lk-x xmark" viewBox="0 0 192 148" aria-hidden="true"><path d="M106.4,74L192,28L177.6,0.2L99.2,32.1c-2,0.8-4.3,0.8-6.3,0L14.5,0.2L0.1,28l85.6,46l-85.6,46l14.4,27.8l78.4-31.9c2-0.8,4.3-0.8,6.3,0l78.4,31.9l14.4-27.8L106.4,74z"/></svg>
+          <span class="lk-name">The Button</span>
+        </span>
       </div>
 
       <h1>The Button</h1>
-      <p class="subtitle">One button, one shared 60-second timer. Every press is a real onchain transaction that resets it to full. The longer you dare wait before pressing, the braver — and it's all scored onchain.</p>
+      <p class="subtitle">One button, one shared 60-second timer. Every press is a real onchain transaction that resets it to full. The longer you dare wait before pressing, the braver, and it's all scored onchain.</p>
+      <div class="onetap"><span class="ic"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M13 2 3 14h7l-1 8 10-12h-7z" stroke="#23F7DD" stroke-width="1.6" stroke-linejoin="round"/></svg></span><span class="ot-t"><b>No wallet, just play.</b> A key is created in your browser and we cover the gas.</span></div>
 
       <div class="card">
         <div class="button-stage stage-idle" id="stage">
@@ -97,7 +111,14 @@
         <div class="result hidden" id="result"></div>
       </div>
 
-      <div class="stats">
+      <div class="states">
+        <span class="stp"><i style="background:#23F7DD;box-shadow:0 0 7px #23F7DD"></i>Safe</span>
+        <span class="stp"><i style="background:#F5B544;box-shadow:0 0 7px #F5B544"></i>Caution</span>
+        <span class="stp"><i style="background:#FF6B9D;box-shadow:0 0 7px #FF6B9D"></i>Urgent</span>
+        <span class="stp"><i style="background:#5B8DEF;box-shadow:0 0 7px #5B8DEF"></i>Revive</span>
+      </div>
+
+      <div class="stats" style="margin-top: 14px">
         <div class="stat"><div class="num" id="yourBest">0s</div><div class="lbl">Your best wait</div></div>
         <div class="stat"><div class="num" id="presses">0</div><div class="lbl">Round presses</div></div>
         <div class="stat"><div class="num" id="globalActions">0</div><div class="lbl">Total presses</div></div>
@@ -124,7 +145,7 @@
       </div>
 
       <p class="foot">
-        MultiversX testnet — the public network scheduled to run Supernova (600ms rounds). Gasless via a relayer that co-signs and pays the gas, so you play with no wallet. The shared timer reads about a beat behind real time, so a press elsewhere reaches you within ~2s. Testnet can be reset, which clears the state.
+        <span class="sn">Experience Supernova</span> before mainnet, on MultiversX testnet (600ms rounds). Gasless via a relayer that co-signs and pays the gas, so you play with no wallet. The shared timer is read straight from the chain. Testnet can be reset, which clears the state.
       </p>
     </div>
 
@@ -133,7 +154,7 @@
 
       const client = createArcadeClient("button");
       const $ = (id) => document.getElementById(id);
-      const fmt = (n) => (n == null ? "—" : Number(n).toLocaleString("en-US"));
+      const fmt = (n) => (n == null ? "···" : Number(n).toLocaleString("en-US"));
       const DURATION = 60000;
       // Frontend display margin: show the timer reaching 0 this much BEFORE the
       // real deadline, so a press made while time is on screen has headroom to
@@ -201,7 +222,7 @@
 
         // ring (matches the shown timer)
         $("prog").style.strokeDashoffset = C * (1 - frac);
-        const hue = frac > 0.5 ? "var(--mvx-cyan)" : frac > 0.25 ? "var(--flare-orange)" : "#ff6b6b";
+        const hue = frac > 0.5 ? "var(--mint)" : frac > 0.25 ? "var(--amber)" : "var(--coral)";
         $("prog").style.stroke = idle ? "rgba(255,255,255,0.18)" : hue;
 
         // time + stage
@@ -221,7 +242,7 @@
         const r = v.lastResult;
         const rEl = $("result");
         if (r && r.roundId > 0) {
-          rEl.textContent = `Round ${r.roundId} expired — ${fmt(r.presses)} presses, closest call ${(r.minRemaining / 1000).toFixed(1)}s.`;
+          rEl.textContent = `Round ${r.roundId} expired. ${fmt(r.presses)} presses, closest call ${(r.minRemaining / 1000).toFixed(1)}s.`;
           rEl.classList.remove("hidden");
         } else {
           rEl.classList.add("hidden");
@@ -323,8 +344,8 @@
 
       function handleSendError(err) {
         const code = err && err.code;
-        if (code === "rate_limited") setStatus("warn", "Going fast — you hit the relayer's per-minute limit. Your press still shows here; onchain resumes in a moment.");
-        else if (code === "relayer_unavailable" || code === "not_deployed") setStatus("warn", "The onchain layer is <b>scheduled</b> — your presses show here for now and go onchain once it activates.");
+        if (code === "rate_limited") setStatus("warn", "Going fast. You hit the relayer's per-minute limit. Your press still shows here; onchain resumes in a moment.");
+        else if (code === "relayer_unavailable" || code === "not_deployed") setStatus("warn", "The onchain layer is <b>warming up</b>. Your presses show here for now and go onchain shortly.");
         else if (code === "network") setStatus("err", "Network hiccup reaching the relayer. Your press still shows here.");
         else setStatus("warn", "Onchain submission is unavailable this moment. Your press still shows here.");
       }
@@ -391,7 +412,7 @@
       async function saveName() {
         const name = $("nameInput").value.trim();
         if (!name) return;
-        if (!client.deployed) { S.named = true; $("nameRow").classList.add("hidden"); setStatus("ok", "Name saved here. It goes onchain with the board once it activates."); return; }
+        if (!client.deployed) { S.named = true; $("nameRow").classList.add("hidden"); setStatus("ok", "Name saved here. It goes onchain with the board once the cabinet is live."); return; }
         try {
           await client.sendAction("setHandle", [client.strToHex(name)]);
           S.named = true; $("nameRow").classList.add("hidden");
@@ -404,7 +425,7 @@
 
       (async function () {
         if (!client.deployed) {
-          setStatus("warn", "Local preview — the onchain layer is <b>scheduled</b>. A ghost presser keeps the button alive; press to reset the timer. Presses go onchain once it activates.");
+          setStatus("warn", "Local preview. A ghost presser keeps the button alive; press to reset the timer. Presses go onchain once the cabinet is live.");
         } else {
           setStatus("ok", "One tap, no wallet. Every press is a real transaction that resets the shared timer.");
           client.ensureKey().then((ok) => { if (!ok) setStatus("warn", "Onchain layer unavailable right now. Your presses still show here."); });

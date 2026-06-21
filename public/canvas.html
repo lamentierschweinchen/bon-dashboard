@@ -2,19 +2,21 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <title>Supernova Canvas · Supernova Arcade</title>
     <meta name="description" content="A shared pixel grid. Each pixel you place is a real onchain transaction. A persistent community artifact on MultiversX, gasless and no wallet." />
     <link rel="stylesheet" href="/arcade.css" />
     <style>
+      /* Supernova Canvas surfaces. Canon (Roobert, cosmos, mint, buttons) comes
+         from /arcade.css. Palette rebuilt on the Sprint accent family (see JS). */
       .board-wrap {
         position: relative;
         width: 100%;
         aspect-ratio: 1 / 1;
         border-radius: 14px;
         overflow: hidden;
-        border: 1px solid var(--line);
-        background: #0c1626;
+        border: 1px solid var(--border-soft);
+        background: #0a0d13;
         touch-action: manipulation;
       }
       #board {
@@ -25,6 +27,20 @@
         image-rendering: crisp-edges;
         cursor: crosshair;
       }
+      /* selected-cell aim preview — helps thumbs on the tiny cells */
+      .sel-cell {
+        position: absolute;
+        width: calc(100% / 32);
+        height: calc(100% / 32);
+        border: 2px solid var(--mint);
+        box-shadow: 0 0 8px rgba(35, 247, 221, 0.6);
+        border-radius: 2px;
+        pointer-events: none;
+        opacity: 0;
+        transition: opacity 0.12s;
+        z-index: 2;
+      }
+      .sel-cell.show { opacity: 1; }
       .palette {
         display: grid;
         grid-template-columns: repeat(8, 1fr);
@@ -35,18 +51,18 @@
         aspect-ratio: 1 / 1;
         border-radius: 8px;
         cursor: pointer;
-        border: 2px solid transparent;
-        transition: transform 0.06s, border-color 0.12s;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        transition: transform 0.06s, box-shadow 0.12s;
       }
       .swatch:active { transform: scale(0.9); }
       .swatch.sel {
-        border-color: #fff;
-        box-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+        border-color: transparent;
+        box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--mint), 0 0 12px rgba(35, 247, 221, 0.5);
       }
       .cooldown {
         height: 4px;
         border-radius: 4px;
-        background: rgba(255, 255, 255, 0.08);
+        background: var(--surface-2);
         overflow: hidden;
         margin-top: 10px;
       }
@@ -54,16 +70,18 @@
         display: block;
         height: 100%;
         width: 100%;
-        background: linear-gradient(90deg, var(--mvx-cyan), var(--mvx-blue));
+        background: linear-gradient(90deg, var(--mint), var(--mint-dim));
+        box-shadow: 0 0 10px rgba(35, 247, 221, 0.5);
         transform-origin: left;
         transform: scaleX(0);
       }
       .coord {
+        font-family: var(--mono);
         font-variant-numeric: tabular-nums;
         font-size: 12px;
-        color: var(--muted-2);
+        color: var(--text-faint);
         text-align: center;
-        margin-top: 6px;
+        margin-top: 8px;
         min-height: 16px;
       }
     </style>
@@ -71,16 +89,21 @@
   <body>
     <div class="wrap">
       <div class="topbar">
-        <a class="back" href="/arcade">← Arcade</a>
-        <div class="brand"><b>Supernova</b> Arcade</div>
+        <a class="back" href="/arcade"><span aria-hidden="true">&larr;</span> Arcade</a>
+        <span class="lockup">
+          <svg class="lk-x xmark" viewBox="0 0 192 148" aria-hidden="true"><path d="M106.4,74L192,28L177.6,0.2L99.2,32.1c-2,0.8-4.3,0.8-6.3,0L14.5,0.2L0.1,28l85.6,46l-85.6,46l14.4,27.8l78.4-31.9c2-0.8,4.3-0.8,6.3,0l78.4,31.9l14.4-27.8L106.4,74z"/></svg>
+          <span class="lk-name">Canvas</span>
+        </span>
       </div>
 
       <h1>Supernova Canvas</h1>
-      <p class="subtitle">A shared pixel grid. Pick a color, tap a pixel — each placement is a real onchain transaction. The board is a persistent community artifact; it refreshes about every two seconds.</p>
+      <p class="subtitle">A shared pixel grid. Pick a color, tap a pixel. Each placement is a real onchain transaction, and the board is a persistent community artifact.</p>
+      <div class="onetap"><span class="ic"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M13 2 3 14h7l-1 8 10-12h-7z" stroke="#23F7DD" stroke-width="1.6" stroke-linejoin="round"/></svg></span><span class="ot-t"><b>No wallet, just play.</b> A key is created in your browser and we cover the gas.</span></div>
 
       <div class="card">
         <div class="board-wrap">
           <canvas id="board" width="512" height="512"></canvas>
+          <div class="sel-cell" id="selCell"></div>
         </div>
         <div class="palette" id="palette"></div>
         <div class="cooldown"><span id="cooldownBar"></span></div>
@@ -114,7 +137,7 @@
       </div>
 
       <p class="foot">
-        MultiversX testnet — the public network scheduled to run Supernova (600ms rounds). Gasless via a relayer that co-signs and pays the gas, so you play with no wallet. The board reads about a beat behind real time. Testnet can be reset, which clears the canvas.
+        <span class="sn">Experience Supernova</span> before mainnet, on MultiversX testnet (600ms rounds). Gasless via a relayer that co-signs and pays the gas, so you play with no wallet. The shared board is read straight from the chain. Testnet can be reset, which clears the canvas.
       </p>
     </div>
 
@@ -123,14 +146,15 @@
 
       const client = createArcadeClient("canvas");
       const $ = (id) => document.getElementById(id);
-      const fmt = (n) => (n == null ? "—" : Number(n).toLocaleString("en-US"));
+      const fmt = (n) => (n == null ? "···" : Number(n).toLocaleString("en-US"));
 
       const GRID = 32;
       const NUM_PIXELS = GRID * GRID;
       const COOLDOWN_MS = 500; // mirrors the contract
+      // palette on the Sprint accent family (index 0 = empty cell, index 2 = mint default)
       const PALETTE = [
-        "#0c1626", "#ffffff", "#23f0c7", "#00b4d8", "#ff8c42", "#e8601c", "#ff4d6d", "#ffd23f",
-        "#8ce99a", "#b197fc", "#4dabf7", "#f783ac", "#ffa94d", "#63e6be", "#868e96", "#000000",
+        "#0e1320", "#F4F6FA", "#23F7DD", "#5B8DEF", "#A78BFA", "#F5B544", "#FF6B9D", "#4ADE80",
+        "#9BA3B4", "#6B7385", "#1ec8b4", "#3a6fc4", "#7a5bd0", "#c98f2e", "#cf4f7e", "#2fae5f",
       ];
 
       const cv = $("board");
@@ -139,7 +163,7 @@
 
       const S = {
         board: new Uint8Array(NUM_PIXELS), // color index per pixel
-        color: 2, // selected palette index (cyan)
+        color: 2, // selected palette index (mint)
         yourPixels: 0,
         global: 0,
         players: 0,
@@ -207,6 +231,16 @@
         return row * GRID + col;
       }
 
+      // selected-cell aim preview — show which cell a tap/hover lands on
+      const sel = $("selCell");
+      function showAim(index) {
+        if (index < 0) { sel.classList.remove("show"); return; }
+        sel.style.left = ((index % GRID) / GRID) * 100 + "%";
+        sel.style.top = (Math.floor(index / GRID) / GRID) * 100 + "%";
+        sel.classList.add("show");
+      }
+      function aim(ev) { showAim(cellFromEvent(ev)); }
+
       async function place(ev) {
         ev.preventDefault();
         const now = Date.now();
@@ -216,6 +250,7 @@
         }
         const index = cellFromEvent(ev);
         if (index < 0) return;
+        showAim(index);
 
         // optimistic local paint
         S.board[index] = S.color;
@@ -271,9 +306,9 @@
       function handleSendError(err) {
         const code = err && err.code;
         if (code === "rate_limited") {
-          setStatus("warn", "Going fast — you hit the relayer's per-minute limit. Your pixels still show here; onchain resumes in a moment.");
+          setStatus("warn", "Going fast. You hit the relayer's per-minute limit. Your pixels still show here; onchain resumes in a moment.");
         } else if (code === "relayer_unavailable" || code === "not_deployed") {
-          setStatus("warn", "The onchain layer is <b>scheduled</b> — your pixels show here for now and go onchain once it activates.");
+          setStatus("warn", "The onchain layer is <b>warming up</b>. Your pixels show here for now and go onchain shortly.");
         } else if (code === "network") {
           setStatus("err", "Network hiccup reaching the relayer. Your pixels still show here.");
         } else {
@@ -347,7 +382,7 @@
         if (!client.deployed) {
           S.named = true;
           $("nameRow").classList.add("hidden");
-          setStatus("ok", "Name saved here. It goes onchain with the board once it activates.");
+          setStatus("ok", "Name saved here. It goes onchain with the board once the cabinet is live.");
           return;
         }
         try {
@@ -363,6 +398,9 @@
       // ---------- wire ----------
       cv.addEventListener("click", place);
       cv.addEventListener("touchstart", place, { passive: false });
+      cv.addEventListener("pointermove", aim);
+      cv.addEventListener("pointerdown", aim);
+      cv.addEventListener("pointerleave", () => sel.classList.remove("show"));
       $("nameBtn").addEventListener("click", saveName);
 
       (async function () {
@@ -370,7 +408,7 @@
         drawBoard();
         render();
         if (!client.deployed) {
-          setStatus("warn", "Local preview — the onchain layer is <b>scheduled</b>. Paint freely; placements go onchain as a shared board once it activates.");
+          setStatus("warn", "Local preview. Paint freely; placements go onchain as a shared board once the cabinet is live.");
         } else {
           setStatus("ok", "One tap, no wallet. Each pixel is a real transaction, gasless.");
           client.ensureKey().then((ok) => {

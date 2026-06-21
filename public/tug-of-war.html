@@ -2,31 +2,33 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <title>Tug-of-War · Supernova Arcade</title>
     <meta name="description" content="Pick a side. Every tap is a real onchain transaction pulling the rope your way. A collective faction battle on MultiversX, gasless and no wallet." />
     <link rel="stylesheet" href="/arcade.css" />
     <style>
+      /* Tug-of-War surfaces. Canon (Roobert, cosmos, mint, buttons) comes from
+         /arcade.css. Faction accents: Nova = mint, Flare = amber. */
       /* ── rope ── */
       .rope-wrap {
         position: relative;
-        height: 92px;
+        height: 96px;
         margin: 4px 0 2px;
         border-radius: 16px;
-        background: var(--panel-2);
-        border: 1px solid var(--line);
+        background: radial-gradient(120% 80% at 50% 0%, rgba(35,247,221,0.05), transparent 60%), var(--surface-2);
+        border: 1px solid var(--border-soft);
         overflow: hidden;
       }
       .rope-line {
         position: absolute;
         top: 50%;
-        left: 6%;
-        right: 6%;
-        height: 4px;
+        left: 8%;
+        right: 8%;
+        height: 3px;
         transform: translateY(-50%);
         border-radius: 4px;
-        background: linear-gradient(90deg, var(--mvx-cyan), rgba(255,255,255,0.25), var(--flare-orange));
-        opacity: 0.55;
+        background: linear-gradient(90deg, var(--mint), #5c6f6e 50%, var(--amber));
+        opacity: 0.7;
       }
       .zone {
         position: absolute;
@@ -35,8 +37,8 @@
         width: 14%;
         opacity: 0.16;
       }
-      .zone.a { left: 0; background: linear-gradient(90deg, var(--mvx-cyan), transparent); }
-      .zone.b { right: 0; background: linear-gradient(270deg, var(--flare-orange), transparent); }
+      .zone.a { left: 0; background: linear-gradient(90deg, var(--mint), transparent); }
+      .zone.b { right: 0; background: linear-gradient(270deg, var(--amber), transparent); }
       .center-mark {
         position: absolute;
         top: 8px;
@@ -44,7 +46,7 @@
         left: 50%;
         width: 1px;
         transform: translateX(-50%);
-        background: rgba(255,255,255,0.18);
+        background: rgba(255,255,255,0.14);
       }
       .knot {
         position: absolute;
@@ -55,31 +57,33 @@
         transform: translate(-50%, -50%);
         transition: left 0.65s cubic-bezier(.34,1.4,.5,1);
         border-radius: 50%;
-        background: radial-gradient(circle at 40% 35%, #fff, var(--flare-orange) 55%, var(--supernova-orange) 90%);
-        box-shadow: 0 0 22px rgba(255,140,66,0.7), 0 0 6px #fff;
+        background: radial-gradient(circle at 50% 40%, rgba(35,247,221,0.25), rgba(14,17,23,0.9));
+        border: 1.5px solid var(--mint);
+        box-shadow: 0 0 18px rgba(35,247,221,0.5);
         display: grid;
         place-items: center;
-        font-size: 18px;
       }
+      .knot svg { width: 18px; height: 14px; }
       .side-tally {
         position: absolute;
         top: 8px;
+        font-family: var(--mono);
         font-variant-numeric: tabular-nums;
         font-weight: 800;
-        font-size: 18px;
+        font-size: 19px;
       }
-      .side-tally.a { left: 12px; color: var(--mvx-cyan); }
-      .side-tally.b { right: 12px; color: var(--flare-orange); }
+      .side-tally.a { left: 12px; color: var(--mint); text-shadow: 0 0 12px rgba(35,247,221,0.4); }
+      .side-tally.b { right: 12px; color: var(--amber); text-shadow: 0 0 12px rgba(245,181,68,0.4); }
       .side-name {
         position: absolute;
         bottom: 8px;
-        font-size: 10px;
-        letter-spacing: 0.14em;
+        font-size: 11px;
+        letter-spacing: 0.12em;
         text-transform: uppercase;
-        color: var(--muted-2);
+        font-weight: 600;
       }
-      .side-name.a { left: 12px; }
-      .side-name.b { right: 12px; }
+      .side-name.a { left: 12px; color: var(--mint-dim); }
+      .side-name.b { right: 12px; color: #c79a44; }
 
       /* ── side picker ── */
       .sides { display: flex; gap: 10px; margin: 12px 0; }
@@ -89,45 +93,52 @@
         border-radius: 14px;
         padding: 14px 10px;
         text-align: center;
-        border: 1.5px solid var(--line);
-        background: var(--panel-2);
+        border: 1.5px solid var(--border);
+        background: var(--surface-2);
         transition: border-color 0.15s, background 0.15s, transform 0.06s;
         user-select: none;
       }
       .side-btn:active { transform: scale(0.98); }
-      .side-btn .tag { font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted-2); }
-      .side-btn .nm { font-size: 18px; font-weight: 800; margin-top: 2px; }
-      .side-btn.a .nm { color: var(--mvx-cyan); }
-      .side-btn.b .nm { color: var(--flare-orange); }
-      .side-btn.sel.a { border-color: var(--mvx-cyan); background: rgba(35,240,199,0.1); box-shadow: 0 0 18px rgba(35,240,199,0.18); }
-      .side-btn.sel.b { border-color: var(--flare-orange); background: rgba(255,140,66,0.1); box-shadow: 0 0 18px rgba(255,140,66,0.18); }
+      .side-btn .tag { font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-faint); }
+      .side-btn .nm { font-size: 18px; font-weight: 700; margin-top: 2px; }
+      .side-btn.a .nm { color: var(--mint); }
+      .side-btn.b .nm { color: var(--amber); }
+      .side-btn.sel.a { border-color: var(--mint); background: rgba(35,247,221,0.1); box-shadow: 0 0 18px rgba(35,247,221,0.18); }
+      .side-btn.sel.b { border-color: var(--amber); background: rgba(245,181,68,0.1); box-shadow: 0 0 18px rgba(245,181,68,0.18); }
 
-      .timer { font-variant-numeric: tabular-nums; font-weight: 800; font-size: 16px; color: var(--core-white); }
-      .pull-btn.a { background: linear-gradient(135deg, var(--mvx-cyan), var(--mvx-blue)); color: #04201b; }
-      .pull-btn.b { background: linear-gradient(135deg, var(--flare-orange), var(--supernova-orange)); color: #1a0a02; }
+      .timer { font-family: var(--mono); font-variant-numeric: tabular-nums; font-weight: 700; font-size: 16px; color: var(--text); }
+      .pull-btn.a { background: var(--mint); color: #04221F; box-shadow: 0 0 0 1px rgba(35,247,221,0.4), 0 8px 24px rgba(35,247,221,0.26); border-bottom: 3px solid #0e9c8c; }
+      .pull-btn.b { background: var(--amber); color: #2a1c02; box-shadow: 0 0 0 1px rgba(245,181,68,0.4), 0 8px 24px rgba(245,181,68,0.24); border-bottom: 3px solid #b9842a; }
       .result {
         text-align: center;
-        font-weight: 700;
-        font-size: 14px;
-        padding: 8px;
+        font-weight: 600;
+        font-size: 13.5px;
+        padding: 9px;
         border-radius: 10px;
-        background: var(--panel-2);
-        border: 1px solid var(--line);
+        background: rgba(35,247,221,0.04);
+        border: 1px solid var(--border-soft);
         margin-top: 10px;
+        color: var(--text-dim);
       }
-      .result .a { color: var(--mvx-cyan); }
-      .result .b { color: var(--flare-orange); }
+      .result .a { color: var(--mint); }
+      .result .b { color: var(--amber); }
+
+      @media (prefers-reduced-motion: reduce) { .knot { transition: none; } }
     </style>
   </head>
   <body>
     <div class="wrap">
       <div class="topbar">
-        <a class="back" href="/arcade">← Arcade</a>
-        <div class="brand"><b>Supernova</b> Arcade</div>
+        <a class="back" href="/arcade"><span aria-hidden="true">&larr;</span> Arcade</a>
+        <span class="lockup">
+          <svg class="lk-x xmark" viewBox="0 0 192 148" aria-hidden="true"><path d="M106.4,74L192,28L177.6,0.2L99.2,32.1c-2,0.8-4.3,0.8-6.3,0L14.5,0.2L0.1,28l85.6,46l-85.6,46l14.4,27.8l78.4-31.9c2-0.8,4.3-0.8,6.3,0l78.4,31.9l14.4-27.8L106.4,74z"/></svg>
+          <span class="lk-name">Tug of War</span>
+        </span>
       </div>
 
       <h1>Tug-of-War</h1>
       <p class="subtitle">Pick a side. Every tap is a real onchain transaction pulling the rope your way. The tally is shared and onchain; it settles in about two seconds.</p>
+      <div class="onetap"><span class="ic"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M13 2 3 14h7l-1 8 10-12h-7z" stroke="#23F7DD" stroke-width="1.6" stroke-linejoin="round"/></svg></span><span class="ot-t"><b>No wallet, just play.</b> A key is created in your browser and we cover the gas.</span></div>
 
       <!-- rope -->
       <div class="card">
@@ -144,7 +155,7 @@
           <div class="side-tally b" id="tallyB">0</div>
           <div class="side-name a">Nova</div>
           <div class="side-name b">Flare</div>
-          <div class="knot" id="knot">☄</div>
+          <div class="knot" id="knot"><svg class="xmark" viewBox="0 0 192 148" aria-hidden="true"><path d="M106.4,74L192,28L177.6,0.2L99.2,32.1c-2,0.8-4.3,0.8-6.3,0L14.5,0.2L0.1,28l85.6,46l-85.6,46l14.4,27.8l78.4-31.9c2-0.8,4.3-0.8,6.3,0l78.4,31.9l14.4-27.8L106.4,74z"/></svg></div>
         </div>
         <div class="result hidden" id="result"></div>
       </div>
@@ -195,7 +206,7 @@
       </div>
 
       <p class="foot">
-        MultiversX testnet — the public network scheduled to run Supernova (600ms rounds). Gasless via a relayer that co-signs and pays the gas, so you play with no wallet. The onchain tally reads about a beat behind real time. Testnet can be reset, which clears the board.
+        <span class="sn">Experience Supernova</span> before mainnet, on MultiversX testnet (600ms rounds). Gasless via a relayer that co-signs and pays the gas, so you play with no wallet. The shared tally is read straight from the chain. Testnet can be reset, which clears the board.
       </p>
     </div>
 
@@ -204,7 +215,7 @@
 
       const client = createArcadeClient("tugofwar");
       const $ = (id) => document.getElementById(id);
-      const fmt = (n) => (n == null ? "—" : Number(n).toLocaleString("en-US"));
+      const fmt = (n) => (n == null ? "···" : Number(n).toLocaleString("en-US"));
       const ROUND_MS = 120000; // mirrors ROUND_DURATION_MS
       const COLORS = ["Nova", "Flare"];
 
@@ -381,9 +392,9 @@
       function handleSendError(err) {
         const code = err && err.code;
         if (code === "rate_limited") {
-          setStatus("warn", "Going fast — you hit the relayer's per-minute limit. Your pulls still register here; onchain resumes in a moment.");
+          setStatus("warn", "Going fast. You hit the relayer's per-minute limit. Your pulls still register here; onchain resumes in a moment.");
         } else if (code === "relayer_unavailable" || code === "not_deployed") {
-          setStatus("warn", "The onchain layer is <b>scheduled</b> — your pulls register here for now and go onchain once it activates.");
+          setStatus("warn", "The onchain layer is <b>warming up</b>. Your pulls register here for now and go onchain shortly.");
         } else if (code === "network") {
           setStatus("err", "Network hiccup reaching the relayer. Your pulls still count here.");
         } else {
@@ -467,7 +478,7 @@
         if (!client.deployed) {
           S.named = true;
           $("nameRow").classList.add("hidden");
-          setStatus("ok", "Name saved here. It goes onchain with the board once it activates.");
+          setStatus("ok", "Name saved here. It goes onchain with the board once the cabinet is live.");
           return;
         }
         try {
@@ -489,7 +500,7 @@
       // boot
       (async function () {
         if (!client.deployed) {
-          setStatus("warn", "Local preview — the onchain layer is <b>scheduled</b>. Pick a side and pull; a practice bot answers. Pulls go onchain once it activates.");
+          setStatus("warn", "Local preview. Pick a side and pull; a practice bot answers. Pulls go onchain once the cabinet is live.");
         } else {
           setStatus("ok", "One tap, no wallet. Each pull is a real transaction, gasless.");
           client.ensureKey().then((ok) => {

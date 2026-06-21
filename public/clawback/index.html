@@ -3,7 +3,10 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<title>Clawback — Supernova Arcade</title>
+<title>Clawback · Supernova Arcade</title>
+<meta name="description" content="Red drains pull a valueless game token out of your account. Tap to claw them back before they settle. A real onchain game on MultiversX, gasless and no wallet." />
+<link rel="icon" href="/favicon.svg" />
+<link rel="stylesheet" href="/arcade.css" />
 <!--
   CLAWBACK — a Supernova Arcade game (model A: the contract is the referee).
 
@@ -26,98 +29,83 @@
   and PRACTICE (no contract configured — fully playable locally, nothing onchain).
 -->
 <style>
+  /* Clawback inherits the canon (Roobert, #06070A cosmos, mint, surfaces, buttons,
+     leaderboard, reset) from /arcade.css. Only its game-specific accents are remapped
+     onto the canon here: drains = coral, credits/saves = green, whale = amber. */
   :root {
-    --bg: #080b11;
-    --surface: #111824;
-    --surface-2: #18212f;
-    --line: #263243;
-    --text: #eaf1f8;
-    --muted: #8aa0b4;
-    --mint: #23f7dd;
-    --mint-dim: #12b9a6;
-    --gold: #ffd66b;
-    --loss: #ff5a72;
-    --save: #36f5a0;
-    --credit: #34e29a;
-    --unstake: #ffb454;
-    --xfer: #5ac8ff;
-    --fee: #b99bff;
+    --gold: var(--amber);   /* whale / big drain */
+    --loss: var(--coral);   /* drains, balance-down */
+    --save: var(--green);   /* clawed back, balance-up */
+    --credit: var(--green); /* green inflows */
+    --unstake: var(--coral);
+    --xfer: var(--coral);
+    --fee: var(--coral);
   }
-  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-  html, body { margin: 0; height: 100%; }
-  body {
-    background: radial-gradient(1100px 640px at 50% -12%, #14202f 0%, var(--bg) 58%);
-    color: var(--text);
-    font: 16px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-    display: flex; flex-direction: column; align-items: center;
-    padding: 16px 14px 44px; gap: 13px; min-height: 100%;
-  }
-  .wrap { width: 100%; max-width: 460px; display: flex; flex-direction: column; gap: 13px; }
+  .wrap { max-width: 460px; display: flex; flex-direction: column; gap: 13px; }
   header { text-align: center; }
-  h1 { margin: 0; font-size: 27px; letter-spacing: 0.01em; font-weight: 800; }
-  h1 .x { color: var(--loss); }
-  .sub { color: var(--muted); font-size: 13px; margin-top: 3px; }
-  .mode { display: inline-block; margin-top: 7px; font-size: 11px; font-weight: 700;
-    letter-spacing: 0.06em; text-transform: uppercase; padding: 3px 9px; border-radius: 999px;
-    border: 1px solid var(--line); color: var(--muted); }
-  .mode.onchain { color: var(--mint); border-color: rgba(35,247,221,0.4); }
-  .mode.practice { color: var(--gold); border-color: rgba(255,214,107,0.35); }
+  h1 { margin: 0; font-size: 30px; letter-spacing: -0.01em; font-weight: 800; color: var(--text); }
+  h1 .x { color: var(--coral); }
+  .sub { color: var(--text-dim); font-size: 13px; margin-top: 4px; line-height: 1.5; }
+  .mode { display: inline-flex; align-items: center; gap: 6px; margin-top: 8px; font-size: 11px; font-weight: 600;
+    letter-spacing: 0.05em; text-transform: uppercase; padding: 4px 11px; border-radius: 999px;
+    border: 1px solid var(--border); color: var(--text-dim); }
+  .mode.onchain { color: var(--mint); border-color: rgba(35,247,221,0.4); background: rgba(35,247,221,0.05); }
+  .mode.practice { color: var(--amber); border-color: rgba(245,181,68,0.4); }
 
   /* balance hero */
-  .hero { background: linear-gradient(180deg, var(--surface-2), var(--surface));
-    border: 1px solid var(--line); border-radius: 18px; padding: 16px 18px 14px; text-align: center;
+  .hero { background: radial-gradient(120% 80% at 80% -10%, rgba(35,247,221,0.10), transparent 55%), var(--surface);
+    border: 1px solid var(--border); border-radius: 18px; padding: 16px 18px 14px; text-align: center;
     position: relative; overflow: hidden; }
-  .hero .cap { color: var(--muted); font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.09em; font-weight: 700; }
-  .bal { font-size: 50px; font-weight: 800; font-variant-numeric: tabular-nums; line-height: 1.05;
-    letter-spacing: -0.02em; margin: 2px 0 0; transition: color 0.18s ease; }
-  .bal .unit { font-size: 17px; color: var(--muted); font-weight: 700; margin-left: 5px; letter-spacing: 0; }
-  .bal.flash-down { color: var(--loss); }
-  .bal.flash-up { color: var(--save); }
+  .hero .cap { color: var(--text-faint); font-size: 11px; text-transform: uppercase; letter-spacing: 0.12em; font-weight: 600; }
+  .bal { font-family: var(--mono); font-size: 48px; font-weight: 800; font-variant-numeric: tabular-nums; line-height: 1.05;
+    letter-spacing: -0.02em; margin: 4px 0 0; transition: color 0.18s ease; color: var(--text); }
+  .bal .unit { font-family: 'Roobert PRO', system-ui, sans-serif; font-size: 16px; color: var(--text-dim); font-weight: 600; margin-left: 6px; letter-spacing: 0; }
+  .bal.flash-down { color: var(--coral); }
+  .bal.flash-up { color: var(--green); }
   .bal.shake { animation: shake 0.32s ease; }
   @keyframes shake { 0%,100%{transform:translateX(0)} 20%{transform:translateX(-6px)} 40%{transform:translateX(5px)} 60%{transform:translateX(-3px)} 80%{transform:translateX(2px)} }
-  .stack { height: 8px; border-radius: 6px; background: #0c1119; margin: 11px 0 4px; overflow: hidden; border: 1px solid var(--line); }
-  .stack > i { display: block; height: 100%; width: 100%; border-radius: 6px;
-    background: linear-gradient(90deg, var(--loss) 0%, var(--gold) 45%, var(--mint) 100%);
-    transform-origin: left; transition: transform 0.12s linear; }
-  .meta { display: flex; justify-content: space-between; font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
-  .meta b { color: var(--text); }
-  .meta .saved b { color: var(--save); }
-  .meta .lost b { color: var(--loss); }
-  .rtimer { height: 5px; border-radius: 4px; background: #0c1119; overflow: hidden; border: 1px solid var(--line); }
-  .rtimer > i { display: block; height: 100%; width: 100%; background: var(--mint); transform-origin: left; }
+  .stack { height: 7px; border-radius: 5px; background: #0c1119; margin: 11px 0 4px; overflow: hidden; border: 1px solid var(--border); }
+  .stack > i { display: block; height: 100%; width: 100%; border-radius: 5px;
+    background: linear-gradient(90deg, var(--coral) 0%, var(--amber) 45%, var(--mint) 100%);
+    transform-origin: left; transition: transform 0.12s linear; box-shadow: 0 0 12px rgba(35,247,221,0.2); }
+  .meta { display: flex; justify-content: space-between; font-size: 11.5px; color: var(--text-faint); font-variant-numeric: tabular-nums; margin-top: 9px; }
+  .meta b { font-family: var(--mono); color: var(--text); }
+  .meta .saved b { color: var(--green); }
+  .meta .lost b { color: var(--coral); }
+  .rtimer { height: 4px; border-radius: 4px; background: #0c1119; overflow: hidden; border: 1px solid var(--border); margin-top: 9px; }
+  .rtimer > i { display: block; height: 100%; width: 100%; background: linear-gradient(90deg, var(--mint), var(--mint-dim)); transform-origin: left; }
 
   /* arena */
-  .arena { position: relative; height: 384px; border: 1px solid var(--line); border-radius: 16px;
-    background: linear-gradient(180deg, rgba(35,247,221,0.04), rgba(0,0,0,0) 22%), linear-gradient(180deg, var(--surface), #0d131c);
+  .arena { position: relative; height: 384px; border: 1px solid var(--border); border-radius: 16px;
+    background: linear-gradient(180deg, rgba(35,247,221,0.04), rgba(0,0,0,0) 22%), linear-gradient(180deg, var(--surface), #0a0d13);
     overflow: hidden; touch-action: manipulation; user-select: none; }
-  .settle-line { position: absolute; left: 0; right: 0; bottom: 40px; height: 0; border-top: 1px dashed rgba(255,90,114,0.5); }
-  .settle-label { position: absolute; right: 8px; bottom: 44px; font-size: 10px; color: var(--loss); letter-spacing: 0.05em; text-transform: uppercase; opacity: 0.75; }
-  .danger { position: absolute; left: 0; right: 0; bottom: 0; height: 40px; background: linear-gradient(180deg, rgba(255,90,114,0) 0%, rgba(255,90,114,0.12) 100%); pointer-events: none; }
+  .settle-line { position: absolute; left: 0; right: 0; bottom: 40px; height: 0; border-top: 1px dashed rgba(255,107,157,0.5); }
+  .settle-label { position: absolute; right: 8px; bottom: 44px; font-size: 10.5px; color: var(--coral); letter-spacing: 0.08em; text-transform: uppercase; opacity: 0.8; }
+  .danger { position: absolute; left: 0; right: 0; bottom: 0; height: 40px; background: linear-gradient(180deg, rgba(255,107,157,0) 0%, rgba(255,107,157,0.12) 100%); pointer-events: none; }
 
-  .card { position: absolute; width: 30%; will-change: transform; cursor: pointer;
-    border-radius: 11px; padding: 7px 8px 8px; border: 1px solid var(--line);
+  .card { position: absolute; width: 30%; margin: 0; will-change: transform; cursor: pointer;
+    border-radius: 11px; padding: 7px 8px 8px; border: 1px solid var(--border);
     background: linear-gradient(180deg, #1b2433, #141c28); box-shadow: 0 6px 16px -8px rgba(0,0,0,0.6); }
   .card:active { transform: scale(0.95); }
   .card .ty { font-size: 9.5px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; opacity: 0.92; }
-  .card .amt { font-size: 18px; font-weight: 800; font-variant-numeric: tabular-nums; margin-top: 1px; }
+  .card .amt { font-family: var(--mono); font-size: 18px; font-weight: 800; font-variant-numeric: tabular-nums; margin-top: 1px; }
   .card .amt .m { font-size: 10px; opacity: 0.7; font-weight: 700; }
   .card .bar { height: 4px; border-radius: 3px; background: rgba(255,255,255,0.12); margin-top: 6px; overflow: hidden; }
-  .card .bar > i { display: block; height: 100%; width: 100%; transform-origin: left; background: var(--mint); }
-  /* drains (RED family, tap them) */
-  .card.t-unstake { border-color: rgba(255,180,84,0.55); } .card.t-unstake .ty { color: var(--unstake); }
-  .card.t-loss { border-color: rgba(255,90,114,0.55); } .card.t-loss .ty { color: var(--loss); }
-  .card.t-xfer { border-color: rgba(90,200,255,0.55); } .card.t-xfer .ty { color: var(--xfer); }
-  .card.t-fee { border-color: rgba(185,155,255,0.55); } .card.t-fee .ty { color: var(--fee); }
+  .card .bar > i { display: block; height: 100%; width: 100%; transform-origin: left; background: var(--coral); }
+  /* drains (coral family — tap them) */
+  .card.t-unstake, .card.t-loss, .card.t-xfer, .card.t-fee { border-color: rgba(255,107,157,0.5); }
+  .card.t-unstake .ty, .card.t-loss .ty, .card.t-xfer .ty, .card.t-fee .ty { color: var(--coral); }
   .card.drain .amt { color: var(--text); }
-  /* credits (GREEN, leave them) */
-  .card.credit { border-color: rgba(52,226,154,0.7); background: linear-gradient(180deg, #12281f, #0f1f19); }
-  .card.credit .ty { color: var(--credit); }
-  .card.credit .amt { color: var(--credit); }
-  .card.credit .bar > i { background: var(--credit); }
-  /* big drains — the whales, prioritize */
-  .card.big { box-shadow: 0 0 0 1px var(--gold), 0 8px 22px -8px rgba(255,214,107,0.5); animation: bigpulse 1s ease-in-out infinite; }
-  .card.big .amt { color: var(--gold); }
-  @keyframes bigpulse { 0%,100%{box-shadow:0 0 0 1px rgba(255,214,107,0.7),0 8px 22px -10px rgba(255,214,107,0.45)} 50%{box-shadow:0 0 0 2px rgba(255,214,107,1),0 10px 26px -8px rgba(255,214,107,0.7)} }
+  /* credits (green — leave them) */
+  .card.credit { border-color: rgba(74,222,128,0.5); background: linear-gradient(160deg, rgba(74,222,128,0.12), rgba(14,17,23,0.7)); }
+  .card.credit .ty { color: var(--green); }
+  .card.credit .amt { color: var(--green); }
+  .card.credit .bar > i { background: var(--green); }
+  /* big drains — the whales (amber), prioritize */
+  .card.big { box-shadow: 0 0 0 1px var(--amber), 0 8px 22px -8px rgba(245,181,68,0.5); animation: bigpulse 1s ease-in-out infinite; }
+  .card.big .ty { color: var(--amber); }
+  .card.big .amt { color: var(--amber); }
+  @keyframes bigpulse { 0%,100%{box-shadow:0 0 0 1px rgba(245,181,68,0.7),0 8px 22px -10px rgba(245,181,68,0.45)} 50%{box-shadow:0 0 0 2px rgba(245,181,68,1),0 10px 26px -8px rgba(245,181,68,0.7)} }
   .card.saved { animation: flyup 0.4s ease-out forwards; pointer-events: none; }
   @keyframes flyup { to { transform: translateY(-46px) scale(1.08); opacity: 0; } }
   .card.lost { animation: die 0.34s ease-out forwards; pointer-events: none; }
@@ -125,69 +113,83 @@
   .card.banked { animation: bank 0.4s ease-out forwards; pointer-events: none; }
   @keyframes bank { to { transform: scale(0.9); opacity: 0; } }
 
-  .float { position: absolute; pointer-events: none; font-weight: 800; font-size: 16px; z-index: 5;
+  .float { position: absolute; pointer-events: none; font-family: var(--mono); font-weight: 800; font-size: 16px; z-index: 5;
     animation: rise 0.7s ease-out forwards; font-variant-numeric: tabular-nums; }
-  .float.save { color: var(--save); } .float.loss { color: var(--loss); }
+  .float.save { color: var(--green); } .float.loss { color: var(--coral); }
   @keyframes rise { from { opacity: 1; transform: translateY(0) scale(1); } to { opacity: 0; transform: translateY(-34px) scale(1.2); } }
 
   .arena .center { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 22px; gap: 12px; }
   .arena .center.hide { display: none; }
-  .arena .center p { color: var(--muted); font-size: 13px; margin: 0; max-width: 330px; }
+  .arena .center p { color: var(--text-dim); font-size: 13px; margin: 0; max-width: 330px; line-height: 1.5; }
   .arena .center .legend { display: flex; gap: 16px; font-size: 12px; }
   .arena .center .legend b { font-weight: 700; }
-  .arena .center .legend .r { color: var(--loss); } .arena .center .legend .g { color: var(--credit); }
-  .arena .center .final { font-size: 13px; color: var(--muted); }
-  .arena .center .final b { font-size: 40px; color: var(--mint); display: block; font-variant-numeric: tabular-nums; font-weight: 800; }
+  .arena .center .legend .r { color: var(--coral); } .arena .center .legend .g { color: var(--green); }
+  .arena .center .final { font-size: 13px; color: var(--text-dim); }
+  .arena .center .final b { font-family: var(--mono); font-size: 40px; color: var(--mint); display: block; font-variant-numeric: tabular-nums; font-weight: 800; text-shadow: 0 0 16px rgba(35,247,221,0.4); }
   .spin { width: 26px; height: 26px; border-radius: 50%; border: 3px solid rgba(255,255,255,0.15); border-top-color: var(--mint); animation: spin 0.8s linear infinite; }
   @keyframes spin { to { transform: rotate(360deg); } }
 
-  .btn { background: var(--mint); color: #04201d; border: none; border-radius: 12px; padding: 13px 22px; font-weight: 800; font-size: 16px; cursor: pointer; }
-  .btn:disabled { opacity: 0.5; cursor: default; }
-  .btn.gold { background: var(--gold); }
+  /* canon mint pill (glow + 3px lip) comes from /arcade.css; keep auto width for the side-by-side rows */
+  .btn { width: auto; }
+  .btn.gold { background: var(--amber); color: #2a1c02; box-shadow: 0 0 0 1px rgba(245,181,68,0.4), 0 8px 24px rgba(245,181,68,0.24); border-bottom: 3px solid #b9842a; }
 
   .claim { display: none; gap: 8px; margin-top: 4px; }
   .claim.show { display: flex; }
-  .claim input { flex: 1; background: var(--bg); border: 1px solid var(--line); border-radius: 10px; color: var(--text); padding: 11px 12px; font-size: 15px; outline: none; }
+  .claim input { flex: 1; background: var(--bg); border: 1px solid var(--border); border-radius: 10px; color: var(--text); padding: 11px 12px; font-size: 15px; outline: none; }
   .claim input:focus { border-color: var(--mint-dim); }
   .row { display: flex; gap: 8px; justify-content: center; }
-  .status { font-size: 12.5px; min-height: 17px; text-align: center; }
-  .status.ok { color: var(--mint); } .status.err { color: var(--loss); }
+  /* plain centered status line (override the canon status box) */
+  .status { border: none; background: none; padding: 0; min-height: 17px; display: block; font-size: 12.5px; text-align: center; }
+  .status.ok { color: var(--mint); } .status.err { color: var(--coral); }
   .status a { color: var(--mint); }
 
-  .panel { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 14px; }
-  .panel h2 { margin: 0 0 9px; font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); font-weight: 700; }
+  .panel { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 14px; margin: 0; }
+  .panel h2 { margin: 0 0 9px; font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim); font-weight: 600; display: flex; align-items: center; }
   .global { text-align: center; }
-  .global .num { font-size: 32px; font-weight: 800; font-variant-numeric: tabular-nums; }
-  .global .num .g { color: var(--mint); }
-  .global .lbl { color: var(--muted); font-size: 12px; margin-top: 1px; }
-  .lb-row { display: grid; grid-template-columns: 26px 1fr auto; align-items: center; gap: 10px; padding: 7px 4px; font-size: 14px; }
-  .lb-row + .lb-row { border-top: 1px solid var(--line); }
-  .lb-row .rank { color: var(--muted); font-variant-numeric: tabular-nums; }
-  .lb-row .handle { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .lb-row .score { font-weight: 800; font-variant-numeric: tabular-nums; color: var(--mint); }
+  .global .num { font-family: var(--mono); font-size: 32px; font-weight: 800; font-variant-numeric: tabular-nums; }
+  .global .num .g { color: var(--mint); text-shadow: 0 0 16px rgba(35,247,221,0.4); }
+  .global .lbl { color: var(--text-faint); font-size: 12px; margin-top: 2px; }
+  .lb-row { display: grid; grid-template-columns: 26px 1fr auto; align-items: center; gap: 10px; padding: 8px 4px; font-size: 14px; }
+  .lb-row + .lb-row { border-top: 1px solid var(--border-soft); }
+  .lb-row .rank { color: var(--text-faint); font-family: var(--mono); font-variant-numeric: tabular-nums; }
+  .lb-row .handle { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-dim); }
+  .lb-row .score { font-family: var(--mono); font-weight: 700; font-variant-numeric: tabular-nums; color: var(--text-dim); }
   .lb-row.you { background: rgba(35,247,221,0.08); border-radius: 8px; }
+  .lb-row.you .handle { color: var(--mint); }
+  .lb-row.you .score { color: var(--mint); }
   .lb-row.you .handle::after { content: " you"; color: var(--mint); font-size: 11px; }
-  .lb-empty { color: var(--muted); font-size: 13px; text-align: center; padding: 10px 0; }
+  .lb-empty { color: var(--text-faint); font-size: 13px; text-align: center; padding: 10px 0; }
 
-  .how { font-size: 12.5px; color: var(--muted); line-height: 1.55; }
-  .how b { color: var(--text); } .how .r { color: var(--loss); font-weight: 700; } .how .g { color: var(--credit); font-weight: 700; }
-  .foot { color: var(--muted); font-size: 11px; text-align: center; line-height: 1.6; }
-  .foot b { color: #aebccb; font-weight: 600; }
-  .tick { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--mint); margin-right: 5px; vertical-align: middle; animation: pulse 2s ease-in-out infinite; }
+  .how { font-size: 12.5px; color: var(--text-dim); line-height: 1.55; }
+  .how b { color: var(--text); } .how .r { color: var(--coral); font-weight: 700; } .how .g { color: var(--green); font-weight: 700; }
+  .foot { color: var(--text-faint); font-size: 11px; text-align: center; line-height: 1.6; margin-top: 0; }
+  .foot b { color: var(--text-dim); font-weight: 600; }
+  .foot .sn { color: var(--mint); font-weight: 600; }
+  .tick { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--mint); box-shadow: 0 0 7px var(--mint); margin-right: 6px; vertical-align: middle; animation: pulse 2s ease-in-out infinite; }
   @keyframes pulse { 0%,100% { opacity: 0.35; } 50% { opacity: 1; } }
 </style>
 </head>
 <body>
 <div class="wrap">
+  <div class="topbar">
+    <a class="back" href="/arcade"><span aria-hidden="true">&larr;</span> Arcade</a>
+    <span class="lockup">
+      <svg class="lk-x xmark" viewBox="0 0 192 148" aria-hidden="true"><path d="M106.4,74L192,28L177.6,0.2L99.2,32.1c-2,0.8-4.3,0.8-6.3,0L14.5,0.2L0.1,28l85.6,46l-85.6,46l14.4,27.8l78.4-31.9c2-0.8,4.3-0.8,6.3,0l78.4,31.9l14.4-27.8L106.4,74z"/></svg>
+      <span class="lk-name">Clawback</span>
+    </span>
+  </div>
+
   <header>
     <h1>CLAW<span class="x">BACK</span></h1>
-    <div class="sub">Red drains pull funds out. Claw them back before they settle — leave the green inflows.</div>
+    <div class="sub">Red drains pull funds out. Claw them back before they settle. Leave the green inflows.</div>
     <span class="mode" id="modeBadge">connecting…</span>
   </header>
 
+  <div class="onetap"><span class="ic"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M13 2 3 14h7l-1 8 10-12h-7z" stroke="#23F7DD" stroke-width="1.6" stroke-linejoin="round"/></svg></span><span class="ot-t"><b>No wallet, just play.</b> A key is created in your browser and we cover the gas.</span></div>
+
   <section class="hero">
     <div class="cap">Account balance</div>
-    <div class="bal" id="bal">—<span class="unit">NOVA</span></div>
+    <div class="bal" id="bal">···<span class="unit">NOVA</span></div>
     <div class="stack"><i id="stackFill"></i></div>
     <div class="meta">
       <span class="saved">clawed back <b id="savedStat">0</b></span>
@@ -218,27 +220,27 @@
 
   <section class="panel global">
     <h2><span class="tick"></span>Global onchain actions</h2>
-    <div class="num"><span class="g" id="globalNum">—</span></div>
+    <div class="num"><span class="g" id="globalNum">···</span></div>
     <div class="lbl">counter-transactions fired across everyone, read from the chain</div>
   </section>
 
   <section class="panel">
-    <h2><span class="tick"></span>Top defenders — most kept</h2>
+    <h2><span class="tick"></span>Top defenders · most kept</h2>
     <div id="lbRows"><div class="lb-empty">Reading the chain…</div></div>
   </section>
 
   <section class="panel how">
     <h2>How it works</h2>
-    <span class="r">Red</span> transactions are pending drains on a valueless game token — tap one to fire a
+    <span class="r">Red</span> transactions are pending drains on a valueless game token. Tap one to fire a
     <b>real gasless counter-transaction</b> that claws the amount back before its settle window closes.
     <span class="g">Green</span> ones are inflows; leave them (recall one by mistake and you forfeit it).
     You are not reversing a settled transaction; you are countering it fast enough. The round seed and your
-    final balance are computed <b>onchain</b>, so the score can't be faked — and every run is unique.
+    final balance are computed <b>onchain</b>, so the score can't be faked, and every run is unique.
   </section>
 
   <div class="foot">
-    Onchain reads tick ~2s. <b>Supernova is scheduled to activate on MultiversX.</b><br />
-    NOVA is a valueless in-game token — no real funds are ever at stake. A testnet experiment; the board can reset with testnet.
+    <span class="sn">Experience Supernova</span> before mainnet, on MultiversX testnet. Counter-transactions read straight from the chain.<br />
+    NOVA is a valueless in-game token. No real funds are ever at stake. A testnet experiment; the board can reset with testnet.
   </div>
 </div>
 
@@ -277,12 +279,12 @@ function isPlaceholder(addr) {
 }
 async function detectMode() {
   const configured = !isPlaceholder(ARCADE_CONFIG.contract) && !isPlaceholder(ARCADE_CONFIG.relayer);
-  if (!configured) { setMode(false, "Practice — not yet deployed"); return; }
+  if (!configured) { setMode(false, "Practice · not yet deployed"); return; }
   const ok = await arcade.ready().catch(() => false);
-  if (!ok) { setMode(false, "Practice — relayer offline"); return; }
+  if (!ok) { setMode(false, "Practice · relayer offline"); return; }
   const params = await arcade.getScheduleParams().catch(() => null);
   if (params && params.outflows > 0) cfg = params;
-  setMode(true, "Onchain — Supernova (scheduled)");
+  setMode(true, "Onchain · Supernova");
   refreshBoard();
 }
 function setMode(on, label) {
@@ -313,7 +315,7 @@ async function startOnchain() {
   try {
     await arcade.startRound();
   } catch (err) {
-    return fallbackToPractice("Couldn't reach the relayer — playing in practice mode.");
+    return fallbackToPractice("Couldn't reach the relayer. Playing in practice mode.");
   }
   for (let i = 0; i < 10; i++) {
     await wait(1200);
@@ -323,11 +325,11 @@ async function startOnchain() {
       return beginRound({ seed: BigInt(r.seed), startMs: r.startMs, roundId: r.roundId });
     }
   }
-  fallbackToPractice("The round didn't confirm in time — playing in practice mode.");
+  fallbackToPractice("The round didn't confirm in time. Playing in practice mode.");
 }
 function fallbackToPractice(msg) {
   onchain = false;
-  setMode(false, "Practice — fallback");
+  setMode(false, "Practice · fallback");
   setStatus("err", msg);
   startLocal();
 }
@@ -531,7 +533,7 @@ function reveal(final, claimable, practice) {
   $("bal").firstChild.textContent = fmt(final);
   $("stackFill").style.transform = `scaleX(${Math.max(0, Math.min(1, final / cfg.startStack)).toFixed(3)})`;
   const kept = Math.round((final / cfg.startStack) * 100);
-  let html = `<div class="final">Final balance${practice ? " (practice)" : " — onchain"}<b>${fmt(final)} NOVA</b>` +
+  let html = `<div class="final">Final balance${practice ? " (practice)" : " (onchain)"}<b>${fmt(final)} NOVA</b>` +
     `<span>${kept}% of the stack • clawed ${G.savedCount} • drained ${G.lostCount}</span></div>` +
     `<div class="row" style="margin-top:6px"><button class="btn" id="againBtn">Play again</button>`;
   if (onchain && claimable > 0) html += `<button class="btn gold" id="claimNovaBtn">Claim ${fmt(claimable)} NOVA</button>`;
@@ -540,7 +542,7 @@ function reveal(final, claimable, practice) {
   $("againBtn").addEventListener("click", onDefend);
   if (onchain && claimable > 0) $("claimNovaBtn").addEventListener("click", () => claimNova(claimable));
   if (onchain && final > 0) { $("claim").classList.add("show"); $("handle").focus({ preventScroll: true }); }
-  else if (!onchain) setStatus("", "Practice round — scores and NOVA go onchain once the cabinet is live.");
+  else if (!onchain) setStatus("", "Practice round. Scores and NOVA go onchain once the cabinet is live.");
 }
 
 async function claimNova(amount) {
@@ -552,7 +554,7 @@ async function claimNova(amount) {
     if (btn) btn.textContent = "Claimed ✓";
   } catch (err) {
     if (btn) { btn.disabled = false; btn.textContent = `Claim ${fmt(amount)} NOVA`; }
-    setStatus("err", "Couldn't claim right now — try again.");
+    setStatus("err", "Couldn't claim right now. Try again.");
   }
 }
 
