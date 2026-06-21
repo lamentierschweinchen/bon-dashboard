@@ -417,6 +417,11 @@ export function createArcade(config) {
         outflows: decodeU64(parts[2]),
         startStack: decodeU64(parts[3]),
         creditPermil: decodeU64(parts[4]),
+        // difficulty-ramp knobs. A contract predating the ramp returns only 5 values,
+        // so we fall back to UNIFORM (0) — the client then renders exactly what that
+        // deployed contract referees; the ramp turns on the moment it reports 7.
+        rampPermil: parts[5] !== undefined ? decodeU64(parts[5]) : 0,
+        lateWindowShrinkPermil: parts[6] !== undefined ? decodeU64(parts[6]) : 0,
       };
     } catch (err) {
       console.warn("[arcade] getScheduleParams failed:", err);
