@@ -6,6 +6,12 @@
     { "source": "/perf-stats", "destination": "/perf-stats.html" },
     { "source": "/security-track", "destination": "/security-track.html" },
     { "source": "/supernova-sprint", "destination": "/supernova-sprint.html" },
-    { "source": "/onchain", "destination": "/onchain.html" }
+    { "source": "/onchain", "destination": "/onchain.html" },
+    { "source": "/arcade", "destination": "/arcade.html" },
+    { "source": "/tug-of-war", "destination": "/tug-of-war.html" },
+    { "source": "/canvas", "destination": "/canvas.html" },
+    { "source": "/button", "destination": "/button.html" },
+    { "source": "/reaction", "destination": "/reaction.html" },
+    { "source": "/clawback", "destination": "/clawback/index.html" }
   ]
 }

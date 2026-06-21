@@ -475,6 +475,95 @@ body{
 @media (prefers-reduced-motion:reduce){
   .lane{opacity:1;transform:none;}
 }
+
+/* ============================================================
+   ARCADE LAYER — visual language ported from the Supernova
+   Arcade concept (marketing/games/output/supernova-arcade-concept.html):
+   cosmos grid-floor horizon, CRT scanlines, marquee headline,
+   odometer scoreboard, keycap buttons, leaderboard avatars.
+   Purely cosmetic: only restyles existing elements + adds
+   non-interactive decoration. Every JS id and toggled class
+   (on/show/cross/danger/in/sprint-idle/res-pb/lane/dot-tx/
+   lb-you/lb-submit-status…) is preserved untouched.
+   ============================================================ */
+
+/* richer 8-point starfield */
+.stars{opacity:.6;background-repeat:no-repeat;background-image:
+  radial-gradient(1.4px 1.4px at 12% 20%, rgba(244,246,250,.7), transparent),
+  radial-gradient(1px 1px at 24% 64%, rgba(244,246,250,.5), transparent),
+  radial-gradient(1.3px 1.3px at 41% 30%, rgba(244,246,250,.6), transparent),
+  radial-gradient(1px 1px at 58% 76%, rgba(244,246,250,.5), transparent),
+  radial-gradient(1.2px 1.2px at 73% 22%, rgba(244,246,250,.55), transparent),
+  radial-gradient(1px 1px at 86% 58%, rgba(244,246,250,.5), transparent),
+  radial-gradient(1.3px 1.3px at 92% 84%, rgba(244,246,250,.45), transparent),
+  radial-gradient(1px 1px at 6% 86%, rgba(244,246,250,.5), transparent);}
+
+/* retro perspective grid along the bottom horizon */
+.grid-floor{position:absolute;left:-12%;right:-12%;bottom:0;height:42vh;max-height:330px;pointer-events:none;opacity:.4;
+  background:
+    linear-gradient(to top, rgba(35,247,221,.05), transparent 72%),
+    repeating-linear-gradient(90deg, transparent 0 58px, rgba(35,247,221,.10) 58px 59px);
+  -webkit-mask-image:linear-gradient(to top,#000,transparent);mask-image:linear-gradient(to top,#000,transparent);
+  transform:perspective(360px) rotateX(67deg);transform-origin:bottom;}
+.grid-floor::after{content:"";position:absolute;inset:0;
+  background:repeating-linear-gradient(0deg, transparent 0 26px, rgba(35,247,221,.10) 26px 27px);}
+
+/* CRT scanline overlay for framed "screen" panels (over content, click-through) */
+.scan{position:absolute;inset:0;pointer-events:none;border-radius:inherit;z-index:3;opacity:.5;
+  background:repeating-linear-gradient(0deg, rgba(0,0,0,0) 0 2px, rgba(0,0,0,.14) 2px 3px);}
+
+/* arcade status chips */
+.chip{display:inline-flex;align-items:center;gap:7px;font-family:var(--mono);font-size:10.5px;font-weight:500;letter-spacing:.01em;
+  padding:5px 11px;border-radius:999px;border:1px solid var(--border);background:rgba(14,17,23,.7);color:var(--text-dim);white-space:nowrap;}
+.chip .cdot{width:7px;height:7px;border-radius:50%;background:var(--mint);box-shadow:0 0 9px var(--mint);flex:0 0 auto;}
+.head .t-right{display:flex;align-items:center;gap:8px;justify-content:flex-end;}
+
+/* marquee headline — gradient clip + arcade bulbs (the .accent span stays solid mint) */
+.hero{position:relative;}
+.bulbs{display:flex;gap:9px;margin-bottom:13px;}
+.bulbs i{width:6px;height:6px;border-radius:50%;background:var(--mint);box-shadow:0 0 8px var(--mint);opacity:.85;animation:bulb 2.4s ease-in-out infinite;}
+.bulbs i:nth-child(2){animation-delay:.18s}.bulbs i:nth-child(3){animation-delay:.36s}.bulbs i:nth-child(4){animation-delay:.54s}.bulbs i:nth-child(5){animation-delay:.72s}.bulbs i:nth-child(6){animation-delay:.9s}
+@keyframes bulb{0%,100%{opacity:.85}50%{opacity:.28}}
+.hero h1{font-size:clamp(26px,8.5vw,34px);line-height:1.0;letter-spacing:-.02em;margin-bottom:11px;
+  background:linear-gradient(176deg,#FFFFFF 0%,#C9F8F2 58%,var(--mint) 128%);
+  -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;color:transparent;
+  filter:drop-shadow(0 4px 26px rgba(35,247,221,.16));}
+.hero h1 .accent{-webkit-text-fill-color:var(--mint);color:var(--mint);}
+
+/* GLOBAL COUNTER → odometer scoreboard */
+.counter.global{border:1px solid var(--border);border-radius:20px;position:relative;overflow:hidden;
+  background:radial-gradient(120% 90% at 80% -20%,rgba(35,247,221,.12),transparent 55%),linear-gradient(165deg,#0E1117,#090B10);
+  box-shadow:0 18px 60px rgba(0,0,0,.5),0 0 0 1px rgba(35,247,221,.05);padding:22px 22px 20px;}
+.counter.global .cl{font-family:var(--mono);letter-spacing:.16em;position:relative;z-index:4;}
+.counter.global .cn{font-size:clamp(30px,9.5vw,46px);letter-spacing:.005em;position:relative;z-index:4;}
+.counter.global .cn .g-mint{color:var(--mint);text-shadow:0 0 26px rgba(35,247,221,.6);}
+.counter.global .cs{position:relative;z-index:4;}
+
+/* TAP CARD → arcade play-screen (radial mint glow + rising tx-stream) */
+.tap-card{position:relative;overflow:hidden;
+  background:radial-gradient(120% 70% at 50% -5%,rgba(35,247,221,.08),transparent 60%),var(--surface);}
+.tx-stream{position:absolute;top:8px;left:50%;transform:translateX(-50%);width:172px;height:120px;pointer-events:none;}
+.tx-stream i{position:absolute;bottom:0;width:6px;height:6px;border-radius:50%;background:var(--mint);box-shadow:0 0 9px var(--mint);animation:rise 2.8s linear infinite;opacity:0;}
+.tx-stream i:nth-child(1){left:8px;animation-delay:0s}.tx-stream i:nth-child(2){left:50px;animation-delay:.6s}.tx-stream i:nth-child(3){left:88px;animation-delay:1.2s}.tx-stream i:nth-child(4){left:124px;animation-delay:1.8s}.tx-stream i:nth-child(5){left:162px;animation-delay:1.0s}.tx-stream i:nth-child(6){left:30px;animation-delay:2.2s}
+@keyframes rise{0%{opacity:0;transform:translateY(28px) scale(.5)}18%{opacity:.65}100%{opacity:0;transform:translateY(-104px) scale(1)}}
+
+/* keycap buttons (chunky bottom edge that compresses on press) */
+.btn-primary{box-shadow:0 0 0 1px rgba(35,247,221,.4),0 8px 22px rgba(35,247,221,.24);border-bottom:3px solid #0e9c8c;}
+.btn-primary:active{transform:translateY(2px) scale(.99);border-bottom-width:1px;}
+.btn-ghost{border-bottom:3px solid #11151d;}
+
+/* leaderboard → avatar rows */
+.lb-row{gap:11px;}
+.lb-av{width:23px;height:23px;border-radius:7px;flex:0 0 auto;display:grid;place-items:center;font-family:var(--mono);font-size:11px;font-weight:700;color:#06070A;}
+.lb-row.you .lb-av{box-shadow:0 0 0 2px rgba(35,247,221,.45);}
+
+@media (max-width:430px){
+  .chip.gasless{display:none;}
+}
+@media (prefers-reduced-motion:reduce){
+  .bulbs i,.tx-stream i{animation:none;}
+  .tx-stream i{opacity:.22;}
+}
 </style>
 </head>
 <body>
@@ -483,6 +572,7 @@ body{
   <div class="glow g1"></div>
   <div class="glow g2"></div>
   <div class="glow g3"></div>
+  <div class="grid-floor"></div>
 </div>
 
 <main class="wrap">
@@ -491,10 +581,14 @@ body{
       <svg viewBox="0 0 48 37" fill="none" aria-label="MultiversX"><path d="M26.6389 18.408L48.0001 6.93761L44.4089 0L24.8488 7.95166C24.3452 8.15668 23.7868 8.15668 23.2831 7.95166L3.72305 0L0.131836 6.93761L21.493 18.408L0.131836 29.8783L3.72305 36.8159L23.2831 28.8642C23.7868 28.6592 24.3452 28.6592 24.8488 28.8642L44.4089 36.8159L48.0001 29.8783L26.6389 18.408Z" fill="#23F7DD"/></svg>
       <span class="bt">Supernova Sprint</span>
     </div>
-    <span class="net-pill" id="netPill"><span class="dot"></span><span id="netLabel">testnet</span></span>
+    <div class="t-right">
+      <span class="chip gasless"><span class="cdot"></span>No wallet · gasless</span>
+      <span class="net-pill" id="netPill"><span class="dot"></span><span id="netLabel">testnet</span></span>
+    </div>
   </header>
 
   <section class="hero">
+    <div class="bulbs" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i></div>
     <h1 id="heroTitle">Sprint at <span class="accent">Supernova Speed</span>.</h1>
     <p id="heroCopy">
       Tap as fast as you can for 30 seconds. Every tap is a real transaction.
@@ -524,6 +618,8 @@ body{
   </section>
 
   <section class="tap-card sprint-idle" id="tapCard">
+    <div class="tx-stream" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i></div>
+    <div class="scan" aria-hidden="true"></div>
     <div style="position:relative;">
       <!-- countdown ring (sprint) -->
       <div class="tap-ringwrap" id="ringWrap" hidden>
@@ -578,6 +674,7 @@ body{
   <!-- SPRINT RESULTS (shown after a sprint locks) -->
   <section class="results" id="results">
     <div class="res-card">
+      <div class="scan" aria-hidden="true"></div>
       <div class="res-kicker">Real · live · 30 seconds</div>
       <div class="res-score" id="resScore">0</div>
       <div class="res-score-sub"><b id="resFinalized">0</b> real transactions confirmed onchain · <span id="resFired">0</span> taps fired</div>
@@ -676,6 +773,7 @@ body{
   <!-- UNLIMITED: the live global tap-counter, moved below the feed -->
   <section id="globalBar" style="display:none;margin-bottom:16px;">
     <div class="counter global">
+      <div class="scan" aria-hidden="true"></div>
       <div class="cl">Total Sprint Transactions</div>
       <div class="cn"><span class="g-mint" id="cGlobal">—</span></div>
       <div class="cs" id="cGlobalSub">live from the tap-counter contract, across every player</div>
@@ -2009,6 +2107,16 @@ function lbEscape(s){
   });
 }
 
+/* deterministic arcade avatar: handle → stable palette color + initial */
+function lbAvatar(handle){
+  var palette = ['#23F7DD','#5B8DEF','#F5B544','#A78BFA','#FF6B9D','#4ADE80'];
+  var h = handle || '?', n = 0;
+  for(var i=0;i<h.length;i++){ n = (n*31 + h.charCodeAt(i)) >>> 0; }
+  var color = palette[n % palette.length];
+  var initial = (h.trim().charAt(0) || '?').toUpperCase();
+  return '<span class="lb-av" style="background:' + color + '">' + lbEscape(initial) + '</span>';
+}
+
 function lbRenderLeaderboard(entries){
   var rows = $('lbRows'), you = $('lbYou');
   if(!rows) return;
@@ -2028,6 +2136,7 @@ function lbRenderLeaderboard(entries){
   var rowHtml = function(e, rank, mine){
     return '<div class="lb-row' + (mine?' you':'') + '">' +
       '<span class="lb-rank">' + rank + '</span>' +
+      lbAvatar(e.handle) +
       '<span class="lb-handle-cell">' + lbEscape(e.handle) + '</span>' +
       '<span class="lb-score-cell">' + e.score + '</span>' +
     '</div>';

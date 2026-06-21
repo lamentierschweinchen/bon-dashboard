@@ -54,6 +54,41 @@ import {
   RECORD_TAPS_FUNCTION,
   RECORD_TAPS_GAS_LIMIT,
 } from "@/lib/onchain/tap-counter.config";
+import {
+  TUGOFWAR_CONTRACT,
+  CANVAS_CONTRACT,
+  BUTTON_CONTRACT,
+  REACTION_CONTRACT,
+  CLAWBACK_CONTRACT,
+  PULL_FUNCTION,
+  PLACE_PIXEL_FUNCTION,
+  PRESS_FUNCTION,
+  REACT_FUNCTION,
+  START_ROUND_FUNCTION,
+  CLAW_BACK_FUNCTION,
+  END_ROUND_FUNCTION,
+  CLAIM_FUNCTION,
+  PULL_GAS_LIMIT,
+  PLACE_PIXEL_GAS_LIMIT,
+  PRESS_GAS_LIMIT,
+  REACT_GAS_LIMIT,
+  START_ROUND_GAS_LIMIT,
+  CLAW_BACK_GAS_LIMIT,
+  END_ROUND_GAS_LIMIT,
+  CLAIM_GAS_LIMIT,
+  isPlaceholder,
+} from "@/lib/onchain/arcade.config";
+
+// Arcade cabinet receivers that are actually deployed. A cabinet whose address
+// is still the undeployed placeholder is dropped here, so the relayer never
+// relays to a non-existent contract (those games play locally until deployed).
+const ARCADE_RECEIVERS = [
+  TUGOFWAR_CONTRACT,
+  CANVAS_CONTRACT,
+  BUTTON_CONTRACT,
+  REACTION_CONTRACT,
+  CLAWBACK_CONTRACT,
+].filter((addr) => !isPlaceholder(addr));
 
 // The plain-object shape accepted by Transaction.newFromPlainObject, derived
 // from the function signature so we do not depend on the type's export name.
@@ -119,11 +154,68 @@ const RELAY_OPS: Record<string, RelayOp> = {
   // Username for the caller's address, set once at the end of a run. The client
   // reuses the leaderboard gas budget (lbGasLimit = SUBMIT_GAS_LIMIT), so cap it
   // to match. setHandle is light and consumes far less; the relayer only pays the
-  // gas actually consumed. Low rate budget.
+  // gas actually consumed. Low rate budget. Shared by the Sprint tap-counter AND
+  // the Arcade cabinets (tug-of-war, canvas), all of which expose setHandle.
   setHandle: {
-    receivers: [TAP_COUNTER_CONTRACT],
+    receivers: [TAP_COUNTER_CONTRACT, ...ARCADE_RECEIVERS],
     maxGasLimit: SUBMIT_GAS_LIMIT + 100_000,
     rateMax: 30,
+  },
+  // --- Supernova Arcade cabinets (additive; each pins its own receiver + caps) ---
+  // Tug-of-war: one `pull` = one tx = +1 to a side (uncheatable, no claimable
+  // count). Tappy game, so it gets the same high per-IP budget as the taps path;
+  // Supernova's fast finality keeps per-sender pending low at human rates.
+  [PULL_FUNCTION]: {
+    receivers: isPlaceholder(TUGOFWAR_CONTRACT) ? [] : [TUGOFWAR_CONTRACT],
+    maxGasLimit: PULL_GAS_LIMIT + 100_000,
+    rateMax: 1200,
+  },
+  // Canvas: one `placePixel` = one tx = one pixel. The contract enforces a
+  // per-address cooldown and the client mirrors it, so a single key paces itself;
+  // this per-IP budget caps a single source painting from many keys at once.
+  [PLACE_PIXEL_FUNCTION]: {
+    receivers: isPlaceholder(CANVAS_CONTRACT) ? [] : [CANVAS_CONTRACT],
+    maxGasLimit: PLACE_PIXEL_GAS_LIMIT + 100_000,
+    rateMax: 240,
+  },
+  // The Button: one `press` = one tx = one press (resets the shared timer). A
+  // human presses a handful of times per round, but allow headroom for a hot
+  // button; same shape as the other cabinets.
+  [PRESS_FUNCTION]: {
+    receivers: isPlaceholder(BUTTON_CONTRACT) ? [] : [BUTTON_CONTRACT],
+    maxGasLimit: PRESS_GAS_LIMIT + 100_000,
+    rateMax: 600,
+  },
+  // Reaction Arcade: one `react` = one tx = +1 landed reaction (uncheatable, no
+  // arguments). A human lands roughly one reaction per 1-3s; allow ample headroom
+  // for a fast run, same shape as the other tappy cabinets.
+  [REACT_FUNCTION]: {
+    receivers: isPlaceholder(REACTION_CONTRACT) ? [] : [REACTION_CONTRACT],
+    maxGasLimit: REACT_GAS_LIMIT + 100_000,
+    rateMax: 1200,
+  },
+  // --- Clawback (a self-contained fork; has a small round lifecycle) ---
+  // `clawBack` is the per-tap recall and the high-frequency path, so it gets the
+  // same tap-sized budget; startRound/endRound/claim fire about once per round.
+  [START_ROUND_FUNCTION]: {
+    receivers: isPlaceholder(CLAWBACK_CONTRACT) ? [] : [CLAWBACK_CONTRACT],
+    maxGasLimit: START_ROUND_GAS_LIMIT + 100_000,
+    rateMax: 60,
+  },
+  [CLAW_BACK_FUNCTION]: {
+    receivers: isPlaceholder(CLAWBACK_CONTRACT) ? [] : [CLAWBACK_CONTRACT],
+    maxGasLimit: CLAW_BACK_GAS_LIMIT + 100_000,
+    rateMax: 1200,
+  },
+  [END_ROUND_FUNCTION]: {
+    receivers: isPlaceholder(CLAWBACK_CONTRACT) ? [] : [CLAWBACK_CONTRACT],
+    maxGasLimit: END_ROUND_GAS_LIMIT + 100_000,
+    rateMax: 60,
+  },
+  [CLAIM_FUNCTION]: {
+    receivers: isPlaceholder(CLAWBACK_CONTRACT) ? [] : [CLAWBACK_CONTRACT],
+    maxGasLimit: CLAIM_GAS_LIMIT + 100_000,
+    rateMax: 60,
   },
 };
 
