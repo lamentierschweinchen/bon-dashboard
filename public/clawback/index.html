@@ -1,0 +1,641 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Clawback — Supernova Arcade</title>
+<!--
+  CLAWBACK — a Supernova Arcade game (model A: the contract is the referee).
+
+  You guard an account. Transactions stream in: RED drains (unstake, transfer out,
+  pay fee, realize loss) pull a valueless GAME token (NOVA) out; GREEN credits
+  (staking reward, refund, airdrop) pay in. Tap a red drain to fire a REAL gasless
+  counter-transaction that claws it back before it settles. LEAVE the green credits
+  — recall one by mistake and you forfeit the inflow. Most kept in a 60s round wins.
+
+  HONEST FRAMING: you do NOT reverse a settled transaction. Outflows are pending
+  settlements; a recall fired inside the settle window cancels the pending
+  settlement before it lands.
+
+  Uncheatable: seed from the chain (every run unique), each recall judged by the
+  real block timestamp, final balance contract-computed. The live balance here is a
+  faithful projection; the official score is read back from the chain after the
+  round (getFinal). Kept NOVA is real — claim it to your wallet at the end.
+
+  Two modes: ONCHAIN (deployed contract + relayer — real gasless txs + real NOVA)
+  and PRACTICE (no contract configured — fully playable locally, nothing onchain).
+-->
+<style>
+  :root {
+    --bg: #080b11;
+    --surface: #111824;
+    --surface-2: #18212f;
+    --line: #263243;
+    --text: #eaf1f8;
+    --muted: #8aa0b4;
+    --mint: #23f7dd;
+    --mint-dim: #12b9a6;
+    --gold: #ffd66b;
+    --loss: #ff5a72;
+    --save: #36f5a0;
+    --credit: #34e29a;
+    --unstake: #ffb454;
+    --xfer: #5ac8ff;
+    --fee: #b99bff;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; height: 100%; }
+  body {
+    background: radial-gradient(1100px 640px at 50% -12%, #14202f 0%, var(--bg) 58%);
+    color: var(--text);
+    font: 16px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    display: flex; flex-direction: column; align-items: center;
+    padding: 16px 14px 44px; gap: 13px; min-height: 100%;
+  }
+  .wrap { width: 100%; max-width: 460px; display: flex; flex-direction: column; gap: 13px; }
+  header { text-align: center; }
+  h1 { margin: 0; font-size: 27px; letter-spacing: 0.01em; font-weight: 800; }
+  h1 .x { color: var(--loss); }
+  .sub { color: var(--muted); font-size: 13px; margin-top: 3px; }
+  .mode { display: inline-block; margin-top: 7px; font-size: 11px; font-weight: 700;
+    letter-spacing: 0.06em; text-transform: uppercase; padding: 3px 9px; border-radius: 999px;
+    border: 1px solid var(--line); color: var(--muted); }
+  .mode.onchain { color: var(--mint); border-color: rgba(35,247,221,0.4); }
+  .mode.practice { color: var(--gold); border-color: rgba(255,214,107,0.35); }
+
+  /* balance hero */
+  .hero { background: linear-gradient(180deg, var(--surface-2), var(--surface));
+    border: 1px solid var(--line); border-radius: 18px; padding: 16px 18px 14px; text-align: center;
+    position: relative; overflow: hidden; }
+  .hero .cap { color: var(--muted); font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.09em; font-weight: 700; }
+  .bal { font-size: 50px; font-weight: 800; font-variant-numeric: tabular-nums; line-height: 1.05;
+    letter-spacing: -0.02em; margin: 2px 0 0; transition: color 0.18s ease; }
+  .bal .unit { font-size: 17px; color: var(--muted); font-weight: 700; margin-left: 5px; letter-spacing: 0; }
+  .bal.flash-down { color: var(--loss); }
+  .bal.flash-up { color: var(--save); }
+  .bal.shake { animation: shake 0.32s ease; }
+  @keyframes shake { 0%,100%{transform:translateX(0)} 20%{transform:translateX(-6px)} 40%{transform:translateX(5px)} 60%{transform:translateX(-3px)} 80%{transform:translateX(2px)} }
+  .stack { height: 8px; border-radius: 6px; background: #0c1119; margin: 11px 0 4px; overflow: hidden; border: 1px solid var(--line); }
+  .stack > i { display: block; height: 100%; width: 100%; border-radius: 6px;
+    background: linear-gradient(90deg, var(--loss) 0%, var(--gold) 45%, var(--mint) 100%);
+    transform-origin: left; transition: transform 0.12s linear; }
+  .meta { display: flex; justify-content: space-between; font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .meta b { color: var(--text); }
+  .meta .saved b { color: var(--save); }
+  .meta .lost b { color: var(--loss); }
+  .rtimer { height: 5px; border-radius: 4px; background: #0c1119; overflow: hidden; border: 1px solid var(--line); }
+  .rtimer > i { display: block; height: 100%; width: 100%; background: var(--mint); transform-origin: left; }
+
+  /* arena */
+  .arena { position: relative; height: 384px; border: 1px solid var(--line); border-radius: 16px;
+    background: linear-gradient(180deg, rgba(35,247,221,0.04), rgba(0,0,0,0) 22%), linear-gradient(180deg, var(--surface), #0d131c);
+    overflow: hidden; touch-action: manipulation; user-select: none; }
+  .settle-line { position: absolute; left: 0; right: 0; bottom: 40px; height: 0; border-top: 1px dashed rgba(255,90,114,0.5); }
+  .settle-label { position: absolute; right: 8px; bottom: 44px; font-size: 10px; color: var(--loss); letter-spacing: 0.05em; text-transform: uppercase; opacity: 0.75; }
+  .danger { position: absolute; left: 0; right: 0; bottom: 0; height: 40px; background: linear-gradient(180deg, rgba(255,90,114,0) 0%, rgba(255,90,114,0.12) 100%); pointer-events: none; }
+
+  .card { position: absolute; width: 30%; will-change: transform; cursor: pointer;
+    border-radius: 11px; padding: 7px 8px 8px; border: 1px solid var(--line);
+    background: linear-gradient(180deg, #1b2433, #141c28); box-shadow: 0 6px 16px -8px rgba(0,0,0,0.6); }
+  .card:active { transform: scale(0.95); }
+  .card .ty { font-size: 9.5px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; opacity: 0.92; }
+  .card .amt { font-size: 18px; font-weight: 800; font-variant-numeric: tabular-nums; margin-top: 1px; }
+  .card .amt .m { font-size: 10px; opacity: 0.7; font-weight: 700; }
+  .card .bar { height: 4px; border-radius: 3px; background: rgba(255,255,255,0.12); margin-top: 6px; overflow: hidden; }
+  .card .bar > i { display: block; height: 100%; width: 100%; transform-origin: left; background: var(--mint); }
+  /* drains (RED family, tap them) */
+  .card.t-unstake { border-color: rgba(255,180,84,0.55); } .card.t-unstake .ty { color: var(--unstake); }
+  .card.t-loss { border-color: rgba(255,90,114,0.55); } .card.t-loss .ty { color: var(--loss); }
+  .card.t-xfer { border-color: rgba(90,200,255,0.55); } .card.t-xfer .ty { color: var(--xfer); }
+  .card.t-fee { border-color: rgba(185,155,255,0.55); } .card.t-fee .ty { color: var(--fee); }
+  .card.drain .amt { color: var(--text); }
+  /* credits (GREEN, leave them) */
+  .card.credit { border-color: rgba(52,226,154,0.7); background: linear-gradient(180deg, #12281f, #0f1f19); }
+  .card.credit .ty { color: var(--credit); }
+  .card.credit .amt { color: var(--credit); }
+  .card.credit .bar > i { background: var(--credit); }
+  /* big drains — the whales, prioritize */
+  .card.big { box-shadow: 0 0 0 1px var(--gold), 0 8px 22px -8px rgba(255,214,107,0.5); animation: bigpulse 1s ease-in-out infinite; }
+  .card.big .amt { color: var(--gold); }
+  @keyframes bigpulse { 0%,100%{box-shadow:0 0 0 1px rgba(255,214,107,0.7),0 8px 22px -10px rgba(255,214,107,0.45)} 50%{box-shadow:0 0 0 2px rgba(255,214,107,1),0 10px 26px -8px rgba(255,214,107,0.7)} }
+  .card.saved { animation: flyup 0.4s ease-out forwards; pointer-events: none; }
+  @keyframes flyup { to { transform: translateY(-46px) scale(1.08); opacity: 0; } }
+  .card.lost { animation: die 0.34s ease-out forwards; pointer-events: none; }
+  @keyframes die { 0%{ filter: brightness(1.8) saturate(1.6); } 100%{ transform: scale(0.86); opacity: 0; } }
+  .card.banked { animation: bank 0.4s ease-out forwards; pointer-events: none; }
+  @keyframes bank { to { transform: scale(0.9); opacity: 0; } }
+
+  .float { position: absolute; pointer-events: none; font-weight: 800; font-size: 16px; z-index: 5;
+    animation: rise 0.7s ease-out forwards; font-variant-numeric: tabular-nums; }
+  .float.save { color: var(--save); } .float.loss { color: var(--loss); }
+  @keyframes rise { from { opacity: 1; transform: translateY(0) scale(1); } to { opacity: 0; transform: translateY(-34px) scale(1.2); } }
+
+  .arena .center { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 22px; gap: 12px; }
+  .arena .center.hide { display: none; }
+  .arena .center p { color: var(--muted); font-size: 13px; margin: 0; max-width: 330px; }
+  .arena .center .legend { display: flex; gap: 16px; font-size: 12px; }
+  .arena .center .legend b { font-weight: 700; }
+  .arena .center .legend .r { color: var(--loss); } .arena .center .legend .g { color: var(--credit); }
+  .arena .center .final { font-size: 13px; color: var(--muted); }
+  .arena .center .final b { font-size: 40px; color: var(--mint); display: block; font-variant-numeric: tabular-nums; font-weight: 800; }
+  .spin { width: 26px; height: 26px; border-radius: 50%; border: 3px solid rgba(255,255,255,0.15); border-top-color: var(--mint); animation: spin 0.8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .btn { background: var(--mint); color: #04201d; border: none; border-radius: 12px; padding: 13px 22px; font-weight: 800; font-size: 16px; cursor: pointer; }
+  .btn:disabled { opacity: 0.5; cursor: default; }
+  .btn.gold { background: var(--gold); }
+
+  .claim { display: none; gap: 8px; margin-top: 4px; }
+  .claim.show { display: flex; }
+  .claim input { flex: 1; background: var(--bg); border: 1px solid var(--line); border-radius: 10px; color: var(--text); padding: 11px 12px; font-size: 15px; outline: none; }
+  .claim input:focus { border-color: var(--mint-dim); }
+  .row { display: flex; gap: 8px; justify-content: center; }
+  .status { font-size: 12.5px; min-height: 17px; text-align: center; }
+  .status.ok { color: var(--mint); } .status.err { color: var(--loss); }
+  .status a { color: var(--mint); }
+
+  .panel { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 14px; }
+  .panel h2 { margin: 0 0 9px; font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); font-weight: 700; }
+  .global { text-align: center; }
+  .global .num { font-size: 32px; font-weight: 800; font-variant-numeric: tabular-nums; }
+  .global .num .g { color: var(--mint); }
+  .global .lbl { color: var(--muted); font-size: 12px; margin-top: 1px; }
+  .lb-row { display: grid; grid-template-columns: 26px 1fr auto; align-items: center; gap: 10px; padding: 7px 4px; font-size: 14px; }
+  .lb-row + .lb-row { border-top: 1px solid var(--line); }
+  .lb-row .rank { color: var(--muted); font-variant-numeric: tabular-nums; }
+  .lb-row .handle { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .lb-row .score { font-weight: 800; font-variant-numeric: tabular-nums; color: var(--mint); }
+  .lb-row.you { background: rgba(35,247,221,0.08); border-radius: 8px; }
+  .lb-row.you .handle::after { content: " you"; color: var(--mint); font-size: 11px; }
+  .lb-empty { color: var(--muted); font-size: 13px; text-align: center; padding: 10px 0; }
+
+  .how { font-size: 12.5px; color: var(--muted); line-height: 1.55; }
+  .how b { color: var(--text); } .how .r { color: var(--loss); font-weight: 700; } .how .g { color: var(--credit); font-weight: 700; }
+  .foot { color: var(--muted); font-size: 11px; text-align: center; line-height: 1.6; }
+  .foot b { color: #aebccb; font-weight: 600; }
+  .tick { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--mint); margin-right: 5px; vertical-align: middle; animation: pulse 2s ease-in-out infinite; }
+  @keyframes pulse { 0%,100% { opacity: 0.35; } 50% { opacity: 1; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>CLAW<span class="x">BACK</span></h1>
+    <div class="sub">Red drains pull funds out. Claw them back before they settle — leave the green inflows.</div>
+    <span class="mode" id="modeBadge">connecting…</span>
+  </header>
+
+  <section class="hero">
+    <div class="cap">Account balance</div>
+    <div class="bal" id="bal">—<span class="unit">NOVA</span></div>
+    <div class="stack"><i id="stackFill"></i></div>
+    <div class="meta">
+      <span class="saved">clawed back <b id="savedStat">0</b></span>
+      <span>time <b id="timeStat">60.0s</b></span>
+      <span class="lost">drained <b id="lostStat">0</b></span>
+    </div>
+    <div class="rtimer" style="margin-top:8px"><i id="rtimerFill"></i></div>
+  </section>
+
+  <section class="arena" id="arena">
+    <div class="settle-line"></div>
+    <div class="settle-label">settles</div>
+    <div class="danger"></div>
+    <div class="center" id="center">
+      <p id="centerText">Transactions will stream in and drain your <b>1,000 NOVA</b>.</p>
+      <div class="legend"><span><b class="r">red</b> = tap to claw back</span><span><b class="g">green</b> = inflow, leave it</span></div>
+      <button class="btn" id="startBtn">Defend the account</button>
+    </div>
+  </section>
+
+  <div class="row">
+    <div class="claim" id="claim">
+      <input id="handle" maxlength="32" placeholder="Pick a handle for the board" autocomplete="off" />
+      <button class="btn" id="claimBtn">Claim spot</button>
+    </div>
+  </div>
+  <div class="status" id="status"></div>
+
+  <section class="panel global">
+    <h2><span class="tick"></span>Global onchain actions</h2>
+    <div class="num"><span class="g" id="globalNum">—</span></div>
+    <div class="lbl">counter-transactions fired across everyone, read from the chain</div>
+  </section>
+
+  <section class="panel">
+    <h2><span class="tick"></span>Top defenders — most kept</h2>
+    <div id="lbRows"><div class="lb-empty">Reading the chain…</div></div>
+  </section>
+
+  <section class="panel how">
+    <h2>How it works</h2>
+    <span class="r">Red</span> transactions are pending drains on a valueless game token — tap one to fire a
+    <b>real gasless counter-transaction</b> that claws the amount back before its settle window closes.
+    <span class="g">Green</span> ones are inflows; leave them (recall one by mistake and you forfeit it).
+    You are not reversing a settled transaction; you are countering it fast enough. The round seed and your
+    final balance are computed <b>onchain</b>, so the score can't be faked — and every run is unique.
+  </section>
+
+  <div class="foot">
+    Onchain reads tick ~2s. <b>Supernova is scheduled to activate on MultiversX.</b><br />
+    NOVA is a valueless in-game token — no real funds are ever at stake. A testnet experiment; the board can reset with testnet.
+  </div>
+</div>
+
+<script type="module">
+import { createArcade } from "./arcade.js";
+import { ARCADE_CONFIG } from "./arcade.config.js";
+import { buildSchedule } from "./schedule.js";
+
+const $ = (id) => document.getElementById(id);
+const arcade = createArcade(ARCADE_CONFIG);
+
+// config defaults mirror the contract; onchain mode overrides from getScheduleParams
+const DEFAULTS = { roundLengthMs: 60_000, settleWindowMs: 8_000, outflows: 440, startStack: 1_000, creditPermil: 130 };
+const DRAIN_TYPES = [
+  { name: "Unstake", cls: "t-unstake" },
+  { name: "Realize loss", cls: "t-loss" },
+  { name: "Transfer out", cls: "t-xfer" },
+  { name: "Pay fee", cls: "t-fee" },
+];
+const CREDIT_TYPES = ["Staking reward", "Refund", "Airdrop"];
+const COLS = 3;
+
+let cfg = { ...DEFAULTS };
+let onchain = false;
+
+const G = {
+  phase: "idle", seed: 0n, startMs: 0, roundId: 0,
+  schedule: [], visibleFall: 2800, settleLineY: 280, arenaH: 384,
+  nextIdx: 0, savedCount: 0, lostCount: 0, spawnSeq: 0,
+  cards: new Map(), trueBalance: 0, dispBalance: 0, raf: null,
+};
+
+// ---------- mode detection ----------
+function isPlaceholder(addr) {
+  return !addr || addr.includes("qqqqqqqqqqqqqpgq0000") || /^erd1?0{20,}/.test(addr) || addr.includes("000000000000000000000000000000");
+}
+async function detectMode() {
+  const configured = !isPlaceholder(ARCADE_CONFIG.contract) && !isPlaceholder(ARCADE_CONFIG.relayer);
+  if (!configured) { setMode(false, "Practice — not yet deployed"); return; }
+  const ok = await arcade.ready().catch(() => false);
+  if (!ok) { setMode(false, "Practice — relayer offline"); return; }
+  const params = await arcade.getScheduleParams().catch(() => null);
+  if (params && params.outflows > 0) cfg = params;
+  setMode(true, "Onchain — Supernova (scheduled)");
+  refreshBoard();
+}
+function setMode(on, label) {
+  onchain = on;
+  const b = $("modeBadge");
+  b.textContent = label;
+  b.className = "mode " + (on ? "onchain" : "practice");
+  $("centerText").innerHTML = `Transactions will stream in and drain your <b>${fmt(cfg.startStack)} NOVA</b> in ${Math.round(cfg.roundLengthMs / 1000)} seconds. Keep the most.`;
+}
+
+// ---------- start ----------
+$("startBtn").addEventListener("click", onDefend);
+async function onDefend() {
+  if (G.phase === "starting" || G.phase === "playing") return;
+  initAudio();
+  $("claim").classList.remove("show");
+  setStatus("", "");
+  if (onchain) return startOnchain();
+  return startLocal();
+}
+function startLocal() {
+  beginRound({ seed: randomU64(), startMs: Date.now(), roundId: G.roundId });
+}
+async function startOnchain() {
+  setPhase("starting");
+  showCenter(`<div class="spin"></div><p>Locking your round on Supernova…<br/>the schedule is being seeded onchain.</p>`);
+  const prevRound = G.roundId;
+  try {
+    await arcade.startRound();
+  } catch (err) {
+    return fallbackToPractice("Couldn't reach the relayer — playing in practice mode.");
+  }
+  for (let i = 0; i < 10; i++) {
+    await wait(1200);
+    const r = await arcade.getRound().catch(() => null);
+    if (r && r.roundId > prevRound && r.seed !== "0") {
+      G.roundId = r.roundId;
+      return beginRound({ seed: BigInt(r.seed), startMs: r.startMs, roundId: r.roundId });
+    }
+  }
+  fallbackToPractice("The round didn't confirm in time — playing in practice mode.");
+}
+function fallbackToPractice(msg) {
+  onchain = false;
+  setMode(false, "Practice — fallback");
+  setStatus("err", msg);
+  startLocal();
+}
+
+function beginRound({ seed, startMs, roundId }) {
+  G.seed = seed; G.startMs = startMs; G.roundId = roundId;
+  G.schedule = buildSchedule(seed, cfg);
+  G.visibleFall = Math.max(1500, Math.min(2000, cfg.settleWindowMs - 2500));
+  G.arenaH = $("arena").clientHeight || 384;
+  G.settleLineY = G.arenaH - 40 - 58;
+  G.nextIdx = 0; G.savedCount = 0; G.lostCount = 0; G.spawnSeq = 0;
+  G.trueBalance = cfg.startStack; G.dispBalance = cfg.startStack;
+  $("savedStat").textContent = "0";
+  $("lostStat").textContent = "0";
+  $("timeStat").textContent = (cfg.roundLengthMs / 1000).toFixed(1) + "s";
+  $("bal").firstChild.textContent = fmt(cfg.startStack);
+  $("stackFill").style.transform = "scaleX(1)";
+  $("rtimerFill").style.transform = "scaleX(1)";
+  clearCards();
+  hideCenter();
+  setPhase("playing");
+  // catch up anything that streamed during the onchain round-lock
+  const elapsed0 = now() - G.startMs;
+  while (G.nextIdx < G.schedule.length && G.schedule[G.nextIdx].spawnMs <= elapsed0) {
+    activate(G.schedule[G.nextIdx], elapsed0); G.nextIdx++;
+  }
+  G.raf = requestAnimationFrame(tick);
+}
+
+// ---------- the loop ----------
+function tick() {
+  const elapsed = now() - G.startMs;
+  if (elapsed >= cfg.roundLengthMs) return endRoundFlow();
+
+  while (G.nextIdx < G.schedule.length && G.schedule[G.nextIdx].spawnMs <= elapsed) {
+    activate(G.schedule[G.nextIdx], elapsed); G.nextIdx++;
+  }
+  for (const [, c] of G.cards) {
+    if (c.state !== "falling") continue;
+    const age = elapsed - c.o.spawnMs;
+    if (age >= G.visibleFall) { settleCard(c); continue; }
+    const p = age / G.visibleFall;
+    c.el.style.transform = `translateY(${(p * G.settleLineY).toFixed(1)}px)`;
+    c.barFill.style.transform = `scaleX(${(1 - p).toFixed(3)})`;
+    if (!c.o.credit) { // urgency colour on drains
+      if (p > 0.72) c.barFill.style.background = "var(--loss)";
+      else if (p > 0.45) c.barFill.style.background = "var(--gold)";
+    }
+  }
+  renderBalance();
+  const left = Math.max(0, cfg.roundLengthMs - elapsed);
+  $("timeStat").textContent = (left / 1000).toFixed(1) + "s";
+  $("rtimerFill").style.transform = `scaleX(${(left / cfg.roundLengthMs).toFixed(3)})`;
+  G.raf = requestAnimationFrame(tick);
+}
+
+// an item appearing immediately moves the balance: a drain pulls funds out, a
+// credit pays in. Recalling it later reverses that (and matches the contract).
+function activate(o, elapsed) {
+  G.trueBalance += o.credit ? o.amount : -o.amount;
+  const age = elapsed - o.spawnMs;
+  if (age >= G.visibleFall) {
+    // already past its window before we could render it (round-lock catch-up)
+    if (!o.credit) { G.lostCount++; $("lostStat").textContent = G.lostCount; }
+    return;
+  }
+  spawnCard(o, age);
+}
+
+function spawnCard(o, age) {
+  const el = document.createElement("div");
+  let label, sign, cls;
+  if (o.credit) {
+    label = CREDIT_TYPES[Number(BigInt(o.id) % BigInt(CREDIT_TYPES.length))];
+    sign = "+"; cls = "credit";
+  } else {
+    const ty = DRAIN_TYPES[Number(BigInt(o.id) % 4n)];
+    label = ty.name; sign = "−"; cls = "drain " + ty.cls + (o.amount >= 9 ? " big" : "");
+  }
+  el.className = "card " + cls;
+  const col = G.spawnSeq++ % COLS;
+  const colW = 100 / COLS;
+  el.style.left = (col * colW + (colW - 30) / 2) + "%";
+  el.innerHTML = `<div class="ty">${label}</div><div class="amt">${sign}${o.amount}<span class="m"> NOVA</span></div><div class="bar"><i></i></div>`;
+  const c = { o, el, state: "falling", barFill: el.querySelector(".bar > i") };
+  el.addEventListener("pointerdown", () => tapCard(c), { passive: true });
+  $("arena").appendChild(el);
+  G.cards.set(o.id, c);
+  const p = Math.max(0, age) / G.visibleFall;
+  el.style.transform = `translateY(${(p * G.settleLineY).toFixed(1)}px)`;
+}
+
+function tapCard(c) {
+  if (c.state !== "falling") return;
+  c.state = "acted";
+  // fire the REAL counter-transaction either way; the contract decides the effect.
+  if (onchain) arcade.clawBack(G.roundId, c.o.id).catch(() => {});
+  if (c.o.credit) {
+    // mis-tap: you cancelled an inflow → forfeit it
+    G.trueBalance -= c.o.amount;
+    flashBalance("down");
+    floatText(c.el, "−" + c.o.amount, "loss");
+    blip(150, 0.12, "sawtooth"); vibrate(22);
+    c.el.classList.add("lost");
+  } else {
+    // recall a drain in time → save it
+    G.savedCount++;
+    G.trueBalance += c.o.amount;
+    $("savedStat").textContent = G.savedCount;
+    flashBalance("up");
+    floatText(c.el, "+" + c.o.amount, "save");
+    blip(660, 0.07, "triangle"); vibrate(8);
+    c.el.classList.add("saved");
+  }
+  setTimeout(() => removeCard(c.o.id), 380);
+}
+
+function settleCard(c) {
+  c.state = "settled";
+  if (c.o.credit) {
+    c.el.classList.add("banked"); // inflow kept (balance already counted at spawn)
+  } else {
+    G.lostCount++;
+    $("lostStat").textContent = G.lostCount;
+    floatText(c.el, "−" + c.o.amount, "loss");
+    if (c.o.amount >= 9) flashBalance("down"); // a whale got through — sting
+    blip(120, 0.1, "sawtooth"); vibrate(14);
+    c.el.classList.add("lost");
+  }
+  setTimeout(() => removeCard(c.o.id), 340);
+}
+
+function removeCard(id) { const c = G.cards.get(id); if (c) { c.el.remove(); G.cards.delete(id); } }
+function clearCards() { for (const [, c] of G.cards) c.el.remove(); G.cards.clear(); }
+
+// ---------- balance (tweened, both directions) ----------
+function renderBalance() {
+  const target = Math.max(0, G.trueBalance);
+  G.dispBalance += (target - G.dispBalance) * 0.2;
+  if (Math.abs(target - G.dispBalance) < 0.5) G.dispBalance = target;
+  $("bal").firstChild.textContent = fmt(Math.round(G.dispBalance));
+  $("stackFill").style.transform = `scaleX(${Math.max(0, Math.min(1, G.dispBalance / cfg.startStack)).toFixed(3)})`;
+}
+let flashTimer = null;
+function flashBalance(dir) {
+  const el = $("bal");
+  el.classList.remove("flash-up", "flash-down", "shake");
+  void el.offsetWidth;
+  el.classList.add(dir === "up" ? "flash-up" : "flash-down");
+  if (dir === "down") el.classList.add("shake");
+  clearTimeout(flashTimer);
+  flashTimer = setTimeout(() => el.classList.remove("flash-up", "flash-down", "shake"), 200);
+}
+function floatText(cardEl, text, cls) {
+  const f = document.createElement("span");
+  f.className = "float " + cls;
+  f.textContent = text;
+  const arena = $("arena"), ar = arena.getBoundingClientRect(), cr = cardEl.getBoundingClientRect();
+  f.style.left = (cr.left - ar.left + cr.width / 2 - 12) + "px";
+  f.style.top = (cr.top - ar.top) + "px";
+  arena.appendChild(f);
+  setTimeout(() => f.remove(), 700);
+}
+
+// ---------- end of round ----------
+async function endRoundFlow() {
+  if (G.phase !== "playing") return;
+  setPhase("ending");
+  cancelAnimationFrame(G.raf);
+  clearCards();
+  $("timeStat").textContent = "0.0s";
+  $("rtimerFill").style.transform = "scaleX(0)";
+
+  // the live projection already tracked every appear/recall, so it IS the final
+  if (!onchain) return reveal(localFinal(), 0, true);
+
+  showCenter(`<div class="spin"></div><p>Round over. Tallying your final balance onchain…</p>`);
+  for (let i = 0; i < 3; i++) {
+    try { await arcade.endRound(G.roundId); break; } catch (err) { if (i === 2) break; await wait(1500); }
+  }
+  let final = localFinal();
+  let claimable = 0;
+  for (let i = 0; i < 6; i++) {
+    await wait(1500);
+    const f = await arcade.getFinal().catch(() => null);
+    if (f != null) final = f;
+    const r = await arcade.getRound().catch(() => null);
+    if (r && r.ended) { claimable = (await arcade.getClaimable().catch(() => 0)) || 0; break; }
+  }
+  if (!claimable) claimable = (await arcade.getClaimable().catch(() => 0)) || 0;
+  reveal(final, claimable, false);
+  refreshBoard();
+}
+
+// the live projection converges to the contract's final; use it as the local score
+function localFinal() { return Math.max(0, Math.round(G.trueBalance)); }
+
+function reveal(final, claimable, practice) {
+  setPhase("done");
+  G.trueBalance = final; G.dispBalance = final;
+  $("bal").firstChild.textContent = fmt(final);
+  $("stackFill").style.transform = `scaleX(${Math.max(0, Math.min(1, final / cfg.startStack)).toFixed(3)})`;
+  const kept = Math.round((final / cfg.startStack) * 100);
+  let html = `<div class="final">Final balance${practice ? " (practice)" : " — onchain"}<b>${fmt(final)} NOVA</b>` +
+    `<span>${kept}% of the stack • clawed ${G.savedCount} • drained ${G.lostCount}</span></div>` +
+    `<div class="row" style="margin-top:6px"><button class="btn" id="againBtn">Play again</button>`;
+  if (onchain && claimable > 0) html += `<button class="btn gold" id="claimNovaBtn">Claim ${fmt(claimable)} NOVA</button>`;
+  html += `</div>`;
+  showCenter(html);
+  $("againBtn").addEventListener("click", onDefend);
+  if (onchain && claimable > 0) $("claimNovaBtn").addEventListener("click", () => claimNova(claimable));
+  if (onchain && final > 0) { $("claim").classList.add("show"); $("handle").focus({ preventScroll: true }); }
+  else if (!onchain) setStatus("", "Practice round — scores and NOVA go onchain once the cabinet is live.");
+}
+
+async function claimNova(amount) {
+  const btn = $("claimNovaBtn");
+  if (btn) { btn.disabled = true; btn.textContent = "Minting…"; }
+  try {
+    const r = await arcade.claim();
+    setStatus("ok", `Minted ${fmt(amount)} NOVA to your wallet. <a href="${r.explorerUrl}" target="_blank" rel="noopener">View tx ↗</a>`);
+    if (btn) btn.textContent = "Claimed ✓";
+  } catch (err) {
+    if (btn) { btn.disabled = false; btn.textContent = `Claim ${fmt(amount)} NOVA`; }
+    setStatus("err", "Couldn't claim right now — try again.");
+  }
+}
+
+// ---------- claim a handle ----------
+$("claimBtn").addEventListener("click", claimHandle);
+$("handle").addEventListener("keydown", (e) => { if (e.key === "Enter") claimHandle(); });
+async function claimHandle() {
+  const handle = ($("handle").value || "").trim();
+  if (!handle) return setStatus("err", "Type a handle first.");
+  if (new TextEncoder().encode(handle).length > 32) return setStatus("err", "Keep it under 32 characters.");
+  $("claimBtn").disabled = true;
+  setStatus("", "Putting your handle onchain…");
+  try {
+    localStorage.setItem("clawback_handle", handle);
+    const r = await arcade.setHandle(handle);
+    setStatus("ok", `On the board. <a href="${r.explorerUrl}" target="_blank" rel="noopener">View tx ↗</a>`);
+    refreshBoard();
+  } catch (err) {
+    $("claimBtn").disabled = false;
+    setStatus("err", friendlyError(err));
+  }
+}
+
+// ---------- onchain reads on a ~2s tick ----------
+async function refreshBoard() {
+  if (!onchain) return;
+  const [global, board] = await Promise.all([arcade.getGlobalActions(), arcade.getLeaderboard(10)]);
+  if (global != null) $("globalNum").textContent = fmt(global);
+  renderLeaderboard(board);
+}
+setInterval(refreshBoard, 2000);
+
+function renderLeaderboard(entries) {
+  const box = $("lbRows");
+  if (!onchain) { box.innerHTML = '<div class="lb-empty">Live once the cabinet is deployed.</div>'; return; }
+  if (!entries || entries.length === 0) { box.innerHTML = '<div class="lb-empty">No scores yet. Be the first to hold the line.</div>'; return; }
+  const me = arcade.address;
+  box.innerHTML = entries.map((e, i) => {
+    const mine = me && e.address === me ? " you" : "";
+    const name = e.handle ? escapeHtml(e.handle) : shortAddr(e.address);
+    return `<div class="lb-row${mine}"><span class="rank">${i + 1}</span><span class="handle">${name}</span><span class="score">${fmt(e.score)}</span></div>`;
+  }).join("");
+}
+
+// ---------- helpers ----------
+function setPhase(p) { G.phase = p; }
+function showCenter(html) { const c = $("center"); c.innerHTML = html; c.classList.remove("hide"); }
+function hideCenter() { $("center").classList.add("hide"); }
+function setStatus(kind, html) { const el = $("status"); el.className = "status " + kind; el.innerHTML = html; }
+function now() { return Date.now(); }
+function wait(ms) { return new Promise((r) => setTimeout(r, ms)); }
+function fmt(n) { return Number(n).toLocaleString("en-US"); }
+function shortAddr(a) { return a ? a.slice(0, 6) + "…" + a.slice(-4) : "anon"; }
+function escapeHtml(s) { return String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])); }
+function randomU64() { const b = new Uint8Array(8); (self.crypto || window.crypto).getRandomValues(b); let v = 0n; for (const x of b) v = (v << 8n) | BigInt(x); return v; }
+function friendlyError(err) {
+  if (!err) return "Something went wrong.";
+  if (err.code === "relayer_unavailable" || err.code === "unavailable") return "The gasless relayer isn't switched on yet.";
+  if (err.code === "play first") return "Play a round first, then claim a handle.";
+  return "Couldn't set your handle right now.";
+}
+
+// ---------- audio + haptics ----------
+let actx = null;
+function initAudio() { try { if (!actx) actx = new (window.AudioContext || window.webkitAudioContext)(); } catch {} }
+function blip(freq, dur, type) {
+  if (!actx) return;
+  try {
+    const o = actx.createOscillator(), g = actx.createGain();
+    o.type = type || "sine"; o.frequency.value = freq;
+    g.gain.value = 0.05; o.connect(g); g.connect(actx.destination);
+    o.start(); g.gain.exponentialRampToValueAtTime(0.0001, actx.currentTime + dur);
+    o.stop(actx.currentTime + dur + 0.02);
+  } catch {}
+}
+function vibrate(ms) { try { navigator.vibrate && navigator.vibrate(ms); } catch {} }
+
+// ---------- boot ----------
+try { const s = localStorage.getItem("clawback_handle"); if (s) $("handle").value = s; } catch {}
+$("bal").firstChild.textContent = fmt(cfg.startStack);
+$("stackFill").style.transform = "scaleX(1)";
+detectMode();
+refreshBoard();
+</script>
+</body>
+</html>

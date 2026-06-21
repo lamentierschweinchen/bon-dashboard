@@ -1,0 +1,419 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+    <title>The Button · Supernova Arcade</title>
+    <meta name="description" content="One button, one shared 60-second timer. Every press is a real onchain transaction that resets it. How long dare you wait?" />
+    <link rel="stylesheet" href="/arcade.css" />
+    <style>
+      .button-stage {
+        position: relative;
+        width: 280px;
+        height: 280px;
+        margin: 6px auto 2px;
+      }
+      .ring { position: absolute; inset: 0; transform: rotate(-90deg); }
+      .ring circle { fill: none; stroke-width: 12; stroke-linecap: round; }
+      .ring .track { stroke: rgba(255, 255, 255, 0.07); }
+      .ring .prog { transition: stroke 0.4s; }
+      .press-btn {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 188px;
+        height: 188px;
+        transform: translate(-50%, -50%);
+        border-radius: 50%;
+        border: none;
+        cursor: pointer;
+        color: #1a0a02;
+        font-weight: 800;
+        font-size: 17px;
+        letter-spacing: 0.04em;
+        background: radial-gradient(circle at 42% 36%, #fff, var(--flare-orange) 48%, var(--supernova-orange) 86%);
+        box-shadow: 0 10px 34px rgba(232, 96, 28, 0.5), inset 0 -8px 18px rgba(0, 0, 0, 0.25);
+        transition: transform 0.08s ease, box-shadow 0.2s;
+        touch-action: manipulation;
+        user-select: none;
+      }
+      .press-btn:active { transform: translate(-50%, -50%) scale(0.94); }
+      .press-btn .big {
+        display: block;
+        font-variant-numeric: tabular-nums;
+        font-size: 40px;
+        line-height: 1;
+        margin-bottom: 2px;
+      }
+      .press-btn .sub { font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; opacity: 0.8; }
+      .stage-urgent .press-btn {
+        background: radial-gradient(circle at 42% 36%, #fff, #ff6b6b 48%, #d6336c 90%);
+        box-shadow: 0 10px 38px rgba(214, 51, 108, 0.6), inset 0 -8px 18px rgba(0, 0, 0, 0.25);
+        animation: pulse-btn 0.7s ease-in-out infinite;
+      }
+      @keyframes pulse-btn {
+        0%, 100% { transform: translate(-50%, -50%) scale(1); }
+        50% { transform: translate(-50%, -50%) scale(1.035); }
+      }
+      .stage-idle .press-btn {
+        background: radial-gradient(circle at 42% 36%, #cfe9ff, #4dabf7 50%, #1c7ed6 90%);
+        box-shadow: 0 10px 30px rgba(28, 126, 214, 0.45), inset 0 -8px 18px rgba(0, 0, 0, 0.25);
+        color: #04121f;
+      }
+      .result {
+        text-align: center;
+        font-weight: 600;
+        font-size: 13.5px;
+        padding: 8px;
+        border-radius: 10px;
+        background: var(--panel-2);
+        border: 1px solid var(--line);
+        margin-top: 12px;
+        color: var(--muted);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <div class="topbar">
+        <a class="back" href="/arcade">← Arcade</a>
+        <div class="brand"><b>Supernova</b> Arcade</div>
+      </div>
+
+      <h1>The Button</h1>
+      <p class="subtitle">One button, one shared 60-second timer. Every press is a real onchain transaction that resets it to full. The longer you dare wait before pressing, the braver — and it's all scored onchain.</p>
+
+      <div class="card">
+        <div class="button-stage stage-idle" id="stage">
+          <svg class="ring" viewBox="0 0 280 280">
+            <circle class="track" cx="140" cy="140" r="128"></circle>
+            <circle class="prog" id="prog" cx="140" cy="140" r="128"></circle>
+          </svg>
+          <button class="press-btn" id="pressBtn">
+            <span class="big" id="bigTime">60.0</span>
+            <span class="sub">Press</span>
+          </button>
+        </div>
+        <div class="result hidden" id="result"></div>
+      </div>
+
+      <div class="stats">
+        <div class="stat"><div class="num" id="yourBest">0s</div><div class="lbl">Your best wait</div></div>
+        <div class="stat"><div class="num" id="presses">0</div><div class="lbl">Round presses</div></div>
+        <div class="stat"><div class="num" id="globalActions">0</div><div class="lbl">Total presses</div></div>
+      </div>
+
+      <div class="status" id="status" style="margin-top: 14px">
+        <span class="dot"></span><span id="statusText">Warming up…</span>
+      </div>
+
+      <div class="card" style="margin-top: 14px">
+        <p class="card-title">Bravest pressers</p>
+        <ul class="lb" id="leaderboard">
+          <li><span class="empty">No presses yet. Hold your nerve.</span></li>
+        </ul>
+        <div class="row hidden" id="nameRow" style="margin-top: 12px">
+          <input class="name-input" id="nameInput" maxlength="32" placeholder="Add a name for the board" />
+          <button class="btn ghost" id="nameBtn" style="width:auto; padding:12px 16px">Save</button>
+        </div>
+      </div>
+
+      <div class="card hidden" id="feedCard">
+        <p class="card-title">Recent transactions</p>
+        <ul class="feed" id="feed"></ul>
+      </div>
+
+      <p class="foot">
+        MultiversX testnet — the public network scheduled to run Supernova (600ms rounds). Gasless via a relayer that co-signs and pays the gas, so you play with no wallet. The shared timer reads about a beat behind real time, so a press elsewhere reaches you within ~2s. Testnet can be reset, which clears the state.
+      </p>
+    </div>
+
+    <script type="module">
+      import { createArcadeClient } from "/arcade-core.js";
+
+      const client = createArcadeClient("button");
+      const $ = (id) => document.getElementById(id);
+      const fmt = (n) => (n == null ? "—" : Number(n).toLocaleString("en-US"));
+      const DURATION = 60000;
+      // Frontend display margin: show the timer reaching 0 this much BEFORE the
+      // real deadline, so a press made while time is on screen has headroom to
+      // land onchain. Pairs with the contract's grace window (which actually
+      // honors a slightly-late press as a save). Total tolerance = margin + grace.
+      const DISPLAY_MARGIN_MS = 800;
+      const R = 128;
+      const C = 2 * Math.PI * R;
+
+      $("prog").style.strokeDasharray = C;
+
+      const S = {
+        // onchain (deployed) view
+        onchain: { roundId: 1, lastPress: 0, presses: 0, minRemaining: DURATION, global: 0, players: 0 },
+        optimisticLast: 0, // local optimistic reset until the next poll
+        // local-preview view
+        local: { roundId: 1, lastPress: 0, presses: 0, minRemaining: DURATION, lastResult: null, botNext: 0 },
+        yourBest: 0,
+        lastResult: null,
+        feed: [],
+        named: false,
+        hasPlayed: false,
+        inFlight: 0, // presses sent but not yet confirmed (drives the "saving…" cue)
+      };
+
+      function effectiveLastPress() {
+        if (client.deployed) return Math.max(S.onchain.lastPress, S.optimisticLast);
+        return S.local.lastPress;
+      }
+
+      function viewData() {
+        if (client.deployed) {
+          return {
+            roundId: S.onchain.roundId,
+            presses: S.onchain.presses,
+            minRemaining: S.onchain.minRemaining,
+            global: S.onchain.global,
+            lastResult: S.lastResult,
+          };
+        }
+        return {
+          roundId: S.local.roundId,
+          presses: S.local.presses,
+          minRemaining: S.local.minRemaining,
+          global: S.local.presses, // local stand-in
+          lastResult: S.local.lastResult,
+        };
+      }
+
+      function remainingMs() {
+        const last = effectiveLastPress();
+        if (!last) return DURATION; // idle (no press yet)
+        return Math.max(0, DURATION - (Date.now() - last));
+      }
+
+      // ---------- render ----------
+      function tick() {
+        if (!client.deployed) stepLocal();
+        const last = effectiveLastPress();
+        const rem = remainingMs(); // real remaining, 0..DURATION
+        const shown = Math.max(0, rem - DISPLAY_MARGIN_MS); // on-screen (margin applied)
+        const frac = shown / DURATION;
+        const idle = !last;
+        const saving = S.inFlight > 0;
+
+        // ring (matches the shown timer)
+        $("prog").style.strokeDashoffset = C * (1 - frac);
+        const hue = frac > 0.5 ? "var(--mvx-cyan)" : frac > 0.25 ? "var(--flare-orange)" : "#ff6b6b";
+        $("prog").style.stroke = idle ? "rgba(255,255,255,0.18)" : hue;
+
+        // time + stage
+        $("bigTime").textContent = idle ? "↻" : (shown / 1000).toFixed(1);
+        const stage = $("stage");
+        stage.classList.toggle("stage-urgent", !idle && shown <= 0.25 * DURATION);
+        stage.classList.toggle("stage-idle", idle);
+        $("pressBtn").querySelector(".sub").textContent = saving ? "saving…" : idle ? "Revive" : "Press";
+
+        // stats
+        const v = viewData();
+        $("yourBest").textContent = S.yourBest + "s";
+        $("presses").textContent = fmt(v.presses);
+        $("globalActions").textContent = fmt(v.global);
+
+        // last result banner
+        const r = v.lastResult;
+        const rEl = $("result");
+        if (r && r.roundId > 0) {
+          rEl.textContent = `Round ${r.roundId} expired — ${fmt(r.presses)} presses, closest call ${(r.minRemaining / 1000).toFixed(1)}s.`;
+          rEl.classList.remove("hidden");
+        } else {
+          rEl.classList.add("hidden");
+        }
+      }
+
+      function setStatus(kind, html) {
+        $("status").className = "status " + (kind || "");
+        $("statusText").innerHTML = html;
+      }
+
+      // ---------- press ----------
+      function recordWait() {
+        const last = effectiveLastPress();
+        const now = Date.now();
+        const elapsed = last ? Math.min(now - last, DURATION) : 0;
+        const waitS = Math.floor(elapsed / 1000);
+        if (waitS > S.yourBest) S.yourBest = waitS;
+        // closest call (this view)
+        const rem = last ? Math.max(0, DURATION - elapsed) : DURATION;
+        if (!client.deployed && rem < S.local.minRemaining) S.local.minRemaining = rem;
+      }
+
+      async function press() {
+        recordWait();
+        S.hasPlayed = true;
+        const now = Date.now();
+
+        if (client.deployed) {
+          S.optimisticLast = now; // optimistic reset
+          S.inFlight++; // show "saving…" until the press confirms onchain
+          tick();
+          try {
+            const { txHash } = await client.sendAction("press", []);
+            const entry = { hash: txHash, state: "pending" };
+            S.feed.unshift(entry);
+            if (S.feed.length > 8) S.feed.length = 8;
+            renderFeed();
+            pollTx(entry); // clears inFlight on resolve
+          } catch (err) {
+            S.inFlight = Math.max(0, S.inFlight - 1);
+            handleSendError(err);
+          }
+        } else {
+          // local: this press resets the timer (revive if it had expired)
+          if (S.local.lastPress && now >= S.local.lastPress + DURATION) rollLocalRound(now);
+          S.local.lastPress = now;
+          S.local.presses++;
+          // simulate the onchain latency beat so the "saving…" cue is visible here
+          S.inFlight++;
+          setTimeout(() => { S.inFlight = Math.max(0, S.inFlight - 1); }, 900);
+          tick();
+        }
+        maybeShowNameRow();
+      }
+
+      // ---------- local preview: ghost presser + round roll ----------
+      function rollLocalRound(now) {
+        S.local.lastResult = {
+          roundId: S.local.roundId,
+          presses: S.local.presses,
+          minRemaining: S.local.minRemaining,
+        };
+        S.local.roundId++;
+        S.local.presses = 0;
+        S.local.minRemaining = DURATION;
+      }
+      function stepLocal() {
+        const now = Date.now();
+        if (!S.local.botNext) S.local.botNext = now + 9000 + Math.random() * 14000;
+        // expire if nobody pressed in time
+        if (S.local.lastPress && now >= S.local.lastPress + DURATION) {
+          rollLocalRound(now);
+          S.local.lastPress = 0; // idle until revived
+        }
+        // ghost presser
+        if (now >= S.local.botNext) {
+          const last = S.local.lastPress;
+          const elapsed = last ? Math.min(now - last, DURATION) : 0;
+          const rem = last ? Math.max(0, DURATION - elapsed) : DURATION;
+          if (last && now >= last + DURATION) rollLocalRound(now);
+          if (last && rem < S.local.minRemaining) S.local.minRemaining = rem;
+          S.local.lastPress = now;
+          S.local.presses++;
+          // sometimes the ghost waits long (close call / let it expire) for variety
+          S.local.botNext = now + (Math.random() < 0.25 ? 55000 + Math.random() * 12000 : 7000 + Math.random() * 16000);
+        }
+      }
+
+      async function pollTx(entry) {
+        for (let i = 0; i < 26; i++) {
+          await new Promise((r) => setTimeout(r, 600));
+          const st = await client.txStatus(entry.hash);
+          if (st === "success") { entry.state = "final"; S.inFlight = Math.max(0, S.inFlight - 1); renderFeed(); return; }
+          if (st === "fail" || st === "invalid") { entry.state = "failed"; S.inFlight = Math.max(0, S.inFlight - 1); renderFeed(); return; }
+        }
+        S.inFlight = Math.max(0, S.inFlight - 1); // timed out — stop showing "saving…"
+      }
+
+      function handleSendError(err) {
+        const code = err && err.code;
+        if (code === "rate_limited") setStatus("warn", "Going fast — you hit the relayer's per-minute limit. Your press still shows here; onchain resumes in a moment.");
+        else if (code === "relayer_unavailable" || code === "not_deployed") setStatus("warn", "The onchain layer is <b>scheduled</b> — your presses show here for now and go onchain once it activates.");
+        else if (code === "network") setStatus("err", "Network hiccup reaching the relayer. Your press still shows here.");
+        else setStatus("warn", "Onchain submission is unavailable this moment. Your press still shows here.");
+      }
+
+      function renderFeed() {
+        if (!S.feed.length) return;
+        $("feedCard").classList.remove("hidden");
+        $("feed").innerHTML = S.feed
+          .map((e) => `<li><span class="tag ${e.state}">${e.state}</span>` +
+            (e.hash ? `<a href="${client.explorer}/transactions/${e.hash}" target="_blank" rel="noopener">${e.hash.slice(0, 10)}…</a>` : `<span>${e.note || ""}</span>`) + `</li>`)
+          .join("");
+      }
+
+      function renderLeaderboard(entries) {
+        const ul = $("leaderboard");
+        if (!entries || !entries.length) { ul.innerHTML = `<li><span class="empty">No presses yet. Hold your nerve.</span></li>`; return; }
+        const me = client.address;
+        ul.innerHTML = entries.slice(0, 8).map((e, i) => {
+          const you = e.address === me;
+          const name = e.handle && e.handle.length ? e.handle : e.address.slice(0, 6) + "…" + e.address.slice(-4);
+          return `<li><span class="rank">${i + 1}</span><span class="who ${you ? "you" : ""}">${escapeHtml(name)}${you ? " (you)" : ""}</span><span class="sc">${fmt(e.score)}s</span></li>`;
+        }).join("");
+      }
+      function escapeHtml(s) { return String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])); }
+
+      // ---------- poll onchain ----------
+      async function poll() {
+        if (!client.deployed) return;
+        const b = await client.query("getButton", []);
+        if (b && b.length >= 5) {
+          S.onchain.roundId = client.decodeU64(b[0]);
+          const onchainLast = client.decodeU64(b[1]);
+          S.onchain.lastPress = onchainLast;
+          S.onchain.presses = client.decodeU64(b[3]);
+          S.onchain.minRemaining = client.decodeU64(b[4]);
+          if (onchainLast >= S.optimisticLast) S.optimisticLast = 0; // onchain caught up
+        }
+        const g = await client.query("getGlobalActions", []);
+        if (g && g.length) S.onchain.global = client.decodeU64(g[0]);
+        const last = await client.query("getLastResult", []);
+        if (last && last.length) S.lastResult = decodeRoundResult(last[0]);
+        const top = await client.query("getTopPressers", ["08"]);
+        if (top) renderLeaderboard(client.decodeLeaderboard(top));
+        const me = client.addressHex();
+        if (me) {
+          const entry = await client.query("getPlayerEntry", [me]);
+          if (entry && entry.length) {
+            const best = client.decodeU64(entry[0]);
+            if (best > S.yourBest) S.yourBest = best;
+          }
+        }
+      }
+
+      function decodeRoundResult(b64) {
+        const bytes = client.b64ToBytes(b64);
+        if (bytes.length < 32) return null; // round_id(8)+presses(8)+min(8)+ended(8)
+        const u64 = (o) => { let v = 0; for (let i = 0; i < 8; i++) v = v * 256 + bytes[o + i]; return v; };
+        return { roundId: u64(0), presses: u64(8), minRemaining: u64(16) };
+      }
+
+      function maybeShowNameRow() {
+        if (S.hasPlayed && !S.named) $("nameRow").classList.remove("hidden");
+      }
+      async function saveName() {
+        const name = $("nameInput").value.trim();
+        if (!name) return;
+        if (!client.deployed) { S.named = true; $("nameRow").classList.add("hidden"); setStatus("ok", "Name saved here. It goes onchain with the board once it activates."); return; }
+        try {
+          await client.sendAction("setHandle", [client.strToHex(name)]);
+          S.named = true; $("nameRow").classList.add("hidden");
+          setStatus("ok", "Name sent onchain. It will show on the board shortly.");
+        } catch (err) { handleSendError(err); }
+      }
+
+      $("pressBtn").addEventListener("click", press);
+      $("nameBtn").addEventListener("click", saveName);
+
+      (async function () {
+        if (!client.deployed) {
+          setStatus("warn", "Local preview — the onchain layer is <b>scheduled</b>. A ghost presser keeps the button alive; press to reset the timer. Presses go onchain once it activates.");
+        } else {
+          setStatus("ok", "One tap, no wallet. Every press is a real transaction that resets the shared timer.");
+          client.ensureKey().then((ok) => { if (!ok) setStatus("warn", "Onchain layer unavailable right now. Your presses still show here."); });
+        }
+        poll();
+        setInterval(poll, 2000);
+        setInterval(tick, 100); // smooth countdown
+        tick();
+      })();
+    </script>
+  </body>
+</html>
