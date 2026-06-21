@@ -3,30 +3,49 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<title>Clawback · Supernova Arcade</title>
-<meta name="description" content="Red drains pull a valueless game token out of your account. Tap to claw them back before they settle. A real onchain game on MultiversX, gasless and no wallet." />
+<title>ETHperience · Supernova Arcade</title>
+<meta name="description" content="Defend your wallet from the attacks that drain crypto. Brutal on the ETH theme, a breeze with a MultiversX guardian. A real onchain game on MultiversX, gasless and no wallet." />
 <link rel="icon" href="/favicon.svg" />
 <link rel="stylesheet" href="/arcade.css" />
 <!--
   CLAWBACK — a Supernova Arcade game (model A: the contract is the referee).
 
-  You guard an account. Transactions stream in: RED drains (unstake, transfer out,
-  pay fee, realize loss) pull a valueless GAME token (NOVA) out; GREEN credits
-  (staking reward, refund, airdrop) pay in. Tap a red drain to fire a REAL gasless
-  counter-transaction that claws it back before it settles. LEAVE the green credits
-  — recall one by mistake and you forfeit the inflow. Most kept in a 60s round wins.
+  ONE defend-your-money game, TWO difficulty MODES of the SAME mechanic:
 
-  HONEST FRAMING: you do NOT reverse a settled transaction. Outflows are pending
-  settlements; a recall fired inside the settle window cancels the pending
-  settlement before it lands.
+    • ETH theme ("unnecessarily hard"): attacks rain down — sandwiches, MEV bots,
+      wallet drainers, approval exploits, bridge hacks. They come fast and mostly
+      land. You fight to keep your money and mostly can't. Brutal, a little funny.
 
-  Uncheatable: seed from the chain (every run unique), each recall judged by the
-  real block timestamp, final balance contract-computed. The live balance here is a
-  faithful projection; the official score is read back from the chain after the
-  round (getFinal). Kept NOVA is real — claim it to your wallet at the end.
+    • Guardian (MultiversX, "unreasonably secure"): the native guardian auto-blocks
+      the incoming attacks (a satisfying shield bounce). Trivially easy; your money
+      stays safe with little effort.
 
-  Two modes: ONCHAIN (deployed contract + relayer — real gasless txs + real NOVA)
-  and PRACTICE (no contract configured — fully playable locally, nothing onchain).
+  The proof is the TOGGLE: same game, hell on the ETH theme, a breeze with a
+  guardian. Switching feels like night and day.
+
+  HONESTY (hard rules): BOTH modes run on MultiversX (real onchain, NOVA, gasless).
+  "ETH theme" is a THEMED hard difficulty that DRAMATIZES the Ethereum attack
+  experience — we are NOT running on Ethereum and never imply we are. The attacks
+  are real NAMED ATTACK TYPES (drainers, sandwiches, MEV); the structural framing
+  leads with those. We never say "MvX = invincible / zero MEV." The precise
+  competitive claim sentence is PROTOCOL-TEAM-GATED and ships as a marked
+  placeholder ([CLAIM TBD]); only the MECHANIC + structural framing ship now.
+
+  Mechanically the guardian is a GAMEPLAY ASSIST that auto-fires the SAME real
+  gasless counter-transaction the player fires by hand — so the integrity model is
+  untouched: every save is a real tx the CONTRACT referees by the real block
+  timestamp, and the official final balance is read back onchain (getFinal). The
+  mode only changes attack rate, fall speed, labels, and the auto-block visuals;
+  it never changes how the score is computed. Kept NOVA is real — claim it.
+
+  A recall fired inside the settle window cancels a PENDING settlement before it
+  lands; you do NOT reverse a settled transaction.
+
+  Onchain reads are legible at ~2s, so the board/counter poll on a ~2s tick.
+
+  Two run states: ONCHAIN (deployed contract + relayer — real gasless txs + real
+  NOVA) and PRACTICE (no contract configured — fully playable locally, nothing
+  onchain). Both difficulty modes work in either run state.
 -->
 <style>
   /* Clawback inherits the canon (Roobert, #06070A cosmos, mint, surfaces, buttons,
@@ -42,6 +61,57 @@
     border: 1px solid var(--border); color: var(--text-dim); }
   .mode.onchain { color: var(--mint); border-color: rgba(35,247,221,0.4); background: rgba(35,247,221,0.05); }
   .mode.practice { color: var(--amber); border-color: rgba(245,181,68,0.4); }
+
+  /* ---- mode selector: ETH theme (hard) vs Guardian (secure). The whole point is
+     the contrast, so it's a prominent segmented toggle, not a buried setting. ---- */
+  .modepick { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .modepick .opt { position: relative; cursor: pointer; border: 1px solid var(--border); border-radius: 14px;
+    background: var(--surface); padding: 12px 13px 11px; text-align: left; transition: border-color 0.16s, background 0.16s, transform 0.08s; }
+  .modepick .opt:active { transform: scale(0.985); }
+  .modepick .opt .nm { display: flex; align-items: center; gap: 7px; font-size: 14px; font-weight: 700; color: var(--text); }
+  .modepick .opt .nm .ic { font-size: 15px; line-height: 1; }
+  .modepick .opt .tag { font-size: 10.5px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; margin-top: 3px; }
+  .modepick .opt .dsc { font-size: 11.5px; color: var(--text-faint); margin-top: 5px; line-height: 1.4; }
+  /* ETH = hard (coral) */
+  .modepick .opt.eth.sel { border-color: rgba(255,107,157,0.7); background: linear-gradient(150deg, rgba(255,107,157,0.10), var(--surface) 62%); }
+  .modepick .opt.eth .nm .ic, .modepick .opt.eth .tag { color: var(--coral); }
+  /* Guardian = secure (mint) */
+  .modepick .opt.mvx.sel { border-color: rgba(35,247,221,0.7); background: linear-gradient(150deg, rgba(35,247,221,0.10), var(--surface) 62%); }
+  .modepick .opt.mvx .nm .ic, .modepick .opt.mvx .tag { color: var(--mint); }
+  .modepick .opt .check { position: absolute; top: 10px; right: 11px; width: 16px; height: 16px; border-radius: 50%;
+    border: 1px solid var(--border); opacity: 0; transition: opacity 0.16s; }
+  .modepick .opt.sel .check { opacity: 1; }
+  .modepick .opt.eth.sel .check { background: var(--coral); border-color: var(--coral); box-shadow: 0 0 10px rgba(255,107,157,0.6); }
+  .modepick .opt.mvx.sel .check { background: var(--mint); border-color: var(--mint); box-shadow: 0 0 10px rgba(35,247,221,0.6); }
+  /* a small live caption above the arena that flips with the mode */
+  .modeline { font-size: 12px; text-align: center; color: var(--text-dim); min-height: 16px; line-height: 1.4; }
+  .modeline.eth b { color: var(--coral); } .modeline.mvx b { color: var(--mint); }
+
+  /* ---- ETH-theme arena tint (hostile red wash) ---- */
+  .arena.eth { background: linear-gradient(180deg, rgba(255,107,157,0.05), rgba(0,0,0,0) 22%), linear-gradient(180deg, var(--surface), #0a0d13); }
+  .arena.eth .settle-line { border-top-color: rgba(255,107,157,0.6); }
+
+  /* ---- Guardian (MvX) arena: a calm mint shield aura ---- */
+  .arena.mvx { background: linear-gradient(180deg, rgba(35,247,221,0.05), rgba(0,0,0,0) 26%), linear-gradient(180deg, var(--surface), #0a0d13); }
+  /* the guardian shield: a faint protective band the auto-block flares from */
+  .shield { position: absolute; left: 0; right: 0; top: 0; height: 0; border-bottom: 1px solid rgba(35,247,221,0.0);
+    pointer-events: none; transition: border-color 0.3s; }
+  .arena.mvx .shield { border-bottom-color: rgba(35,247,221,0.18); box-shadow: 0 10px 30px -16px rgba(35,247,221,0.5); }
+  .arena.mvx .shieldbadge { position: absolute; top: 7px; left: 8px; display: inline-flex; align-items: center; gap: 5px;
+    font-size: 10px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--mint);
+    padding: 3px 8px; border-radius: 999px; border: 1px solid rgba(35,247,221,0.4); background: rgba(35,247,221,0.07); z-index: 4; }
+  .arena.mvx .shieldbadge .gd { width: 6px; height: 6px; border-radius: 50%; background: var(--mint); box-shadow: 0 0 7px var(--mint); animation: pulse 2s ease-in-out infinite; }
+  .arena.eth .shield, .arena.eth .shieldbadge { display: none; }
+
+  /* a card the guardian auto-blocks: snaps up to the shield and bursts (mint) */
+  .card.guarded { animation: guardpop 0.42s cubic-bezier(.2,1.3,.4,1) forwards; pointer-events: none;
+    border-color: var(--mint) !important; box-shadow: 0 0 0 1px var(--mint), 0 0 22px rgba(35,247,221,0.55) !important; }
+  .card.guarded .ty, .card.guarded .amt { color: var(--mint) !important; }
+  @keyframes guardpop { 0% { transform: scale(1); } 35% { transform: scale(1.12); } 100% { transform: translateY(-30px) scale(0.6); opacity: 0; } }
+  /* the satisfying shield bounce ring where an attack hit the guardian */
+  .bounce { position: absolute; pointer-events: none; width: 46px; height: 46px; margin: -23px 0 0 -23px; border-radius: 50%;
+    border: 2px solid var(--mint); z-index: 6; animation: bounce 0.5s ease-out forwards; }
+  @keyframes bounce { 0% { transform: scale(0.4); opacity: 0.9; } 100% { transform: scale(1.7); opacity: 0; } }
 
   /* balance hero */
   .hero { background: radial-gradient(120% 80% at 80% -10%, rgba(35,247,221,0.10), transparent 55%), var(--surface);
@@ -183,12 +253,29 @@
   </div>
 
   <header>
-    <h1>CLAW<span class="x">BACK</span></h1>
-    <div class="sub">Red drains pull funds out. Claw them back before they settle. Leave the green inflows.</div>
+    <h1><span class="x">ETH</span>perience</h1>
+    <div class="sub">Attacks rain down to drain your wallet. Tap to claw each one back before it settles. The catch: it depends which chain you are on.</div>
     <span class="mode" id="modeBadge">connecting…</span>
   </header>
 
   <div class="onetap"><span class="ic"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M13 2 3 14h7l-1 8 10-12h-7z" stroke="#23F7DD" stroke-width="1.6" stroke-linejoin="round"/></svg></span><span class="ot-t"><b>No wallet, just play.</b> A key is created in your browser and we cover the gas.</span></div>
+
+  <!-- the proof is the toggle: same game, two worlds. ETH theme = brutal; Guardian = safe. -->
+  <section class="modepick" id="modepick" aria-label="Choose your chain">
+    <button class="opt eth sel" id="optEth" data-mode="eth" type="button">
+      <span class="check"></span>
+      <span class="nm"><span class="ic">⚔︎</span>The ETH experience</span>
+      <span class="tag">Unnecessarily hard</span>
+      <span class="dsc">Sandwiches, MEV bots, drainers. They come fast and mostly land. Survive if you can.</span>
+    </button>
+    <button class="opt mvx" id="optMvx" data-mode="mvx" type="button">
+      <span class="check"></span>
+      <span class="nm"><span class="ic">⛨</span>With a MultiversX guardian</span>
+      <span class="tag">Unreasonably secure</span>
+      <span class="dsc">A native guardian auto-blocks the attacks. Your money just stays safe.</span>
+    </button>
+  </section>
+  <div class="modeline eth" id="modeline"><b>ETH experience.</b> Keeping your money is a fight.</div>
 
   <section class="hero">
     <div class="cap">Account balance</div>
@@ -202,14 +289,16 @@
     <div class="rtimer" style="margin-top:8px"><i id="rtimerFill"></i></div>
   </section>
 
-  <section class="arena" id="arena">
+  <section class="arena eth" id="arena">
+    <div class="shield"></div>
+    <span class="shieldbadge"><span class="gd"></span>Guardian active</span>
     <div class="settle-line"></div>
     <div class="settle-label">settles</div>
     <div class="danger"></div>
     <div class="center" id="center">
-      <p id="centerText">Transactions will stream in and drain your <b>1,000 NOVA</b>.</p>
-      <div class="legend"><span><b class="r">red</b> = tap to claw back</span><span><b class="g">green</b> = inflow, leave it</span></div>
-      <button class="btn" id="startBtn">Defend the account</button>
+      <p id="centerText">Attacks will rain in and drain your <b>1,000 NOVA</b>.</p>
+      <div class="legend"><span><b class="r">red</b> = attack, tap to claw back</span><span><b class="g">green</b> = inflow, leave it</span></div>
+      <button class="btn" id="startBtn">Defend the wallet</button>
     </div>
   </section>
 
@@ -233,16 +322,24 @@
   </section>
 
   <section class="panel how">
-    <h2>How it works</h2>
-    <span class="r">Red</span> transactions are pending drains on a valueless game token. Tap one to fire a
+    <h2>Two modes, one game</h2>
+    <span class="r">Red</span> cards are incoming attacks draining a valueless game token. Tap one to fire a
     <b>real gasless counter-transaction</b> that claws the amount back before its settle window closes.
     <span class="g">Green</span> ones are inflows; leave them (recall one by mistake and you forfeit it).
-    You are not reversing a settled transaction; you are countering it fast enough. The round seed and your
-    final balance are computed <b>onchain</b>, so the score can't be faked, and every run is unique.
+    On the <b style="color:var(--coral)">ETH experience</b>, attacks pour in fast and mostly land, the way wallet drainers,
+    sandwiches, and MEV play out on Ethereum today. Switch to <b style="color:var(--mint)">a MultiversX guardian</b> and a
+    native co-signer auto-blocks the same attacks before they settle, so your money stays safe with little effort.
+    <br /><br />
+    <span style="color:var(--text-faint)">[CLAIM TBD: pending protocol team — the precise sentence on MultiversX's MEV / front-running resistance vs Ethereum goes here once the protocol team confirms the wording.]</span>
+    <br /><br />
+    The "ETH experience" is a themed hard mode. <b>Both modes run on MultiversX testnet</b> (real onchain, gasless) — this game
+    never runs on Ethereum. The round seed and your final balance are computed <b>onchain</b>, so the score can't be faked,
+    and every run is unique.
   </section>
 
   <div class="foot">
-    <span class="sn">Experience Supernova</span> before mainnet, on MultiversX testnet. Counter-transactions read straight from the chain.<br />
+    <span class="sn">Experience Supernova</span> before mainnet, on MultiversX testnet. Counter-transactions read straight from the chain.
+    Supernova is scheduled to activate; finality on a single shard is as fast as ~100ms.<br />
     NOVA is a valueless in-game token. No real funds are ever at stake. A testnet experiment; the board can reset with testnet.
   </div>
 </div>
@@ -261,22 +358,53 @@ const arcade = createArcade(ARCADE_CONFIG);
 // Onchain mode overrides this from getScheduleParams so the client always matches the
 // deployed contract exactly.
 const DEFAULTS = { roundLengthMs: 60_000, settleWindowMs: 8_000, outflows: 440, startStack: 1_000, creditPermil: 130, rampPermil: 500, lateWindowShrinkPermil: 0 };
-// real, money-losing things (funny). Every one of these genuinely lowers the
-// balance — no "moves funds but keeps them" actions. Picked per item by id.
+
+// Attack labels = the REAL named attack TYPES that drain crypto wallets (the ETH
+// experience). Sourced from arcade-proof-research.md: wallet drainers ($494M in
+// 2024, 85.3% on Ethereum), MEV + sandwiches, approval/phishing exploits, bridge
+// hacks. The SAME attacks appear in Guardian mode — the difference is they bounce.
 const DRAIN_TYPES = [
-  "Aped a memecoin",
-  "Overpaid for a JPG",
-  "Got rugged",
-  "Bought the top",
-  "Liquidated",
-  "FOMO'd a presale",
-  "Got sandwiched",
-  "Tipped a streamer",
+  "Sandwiched",
+  "MEV bot hit",
+  "Wallet drainer",
+  "Approval exploit",
+  "Phishing drain",
+  "Frontrun",
+  "Bridge hack",
+  "Honeypot",
 ];
 const CREDIT_TYPES = ["Airdrop hit", "Sold the top", "Staking reward"];
 const COLS = 3;
 
+// ---- the two difficulty MODES (client-side presentation/difficulty ONLY) ----
+// IMPORTANT: modes never touch the seed-derived schedule or the contract-computed
+// final. They scale fall SPEED (how long you have to react before a card settles)
+// and, for Guardian, auto-fire the SAME real claw-back tx on a share of attacks.
+// The contract still referees every save by the real block timestamp.
+//   fallScale  — multiplies the visible fall time. <1 = cards drop FASTER (harder).
+//   guardian   — fraction of attacks the native guardian auto-blocks for you (0..1).
+//   theme      — arena tint + copy.
+const MODES = {
+  eth: {
+    key: "eth", theme: "eth",
+    fallScale: 0.62,   // attacks come down fast — you mostly can't keep up
+    guardian: 0,       // no guardian on the ETH theme; every attack is yours to fight
+    label: "ETH experience",
+    line: '<b>ETH experience.</b> Keeping your money is a fight.',
+    center: "Attacks rain in and drain your <b>%S NOVA</b> in %T seconds. Claw back what you can. Most can't.",
+  },
+  mvx: {
+    key: "mvx", theme: "mvx",
+    fallScale: 1.5,    // calmer fall, but you barely need it — the guardian does the work
+    guardian: 0.82,    // the native guardian auto-blocks the vast majority of attacks
+    label: "MultiversX guardian",
+    line: '<b>MultiversX guardian.</b> The attacks bounce off. Your money stays safe.',
+    center: "Attacks come in, but your <b style=\"color:var(--mint)\">guardian</b> auto-blocks them. Your <b>%S NOVA</b> just stays safe.",
+  },
+};
+
 let cfg = { ...DEFAULTS };
+let mode = MODES.eth;        // default to the brutal ETH experience so the contrast lands
 let onchain = false;
 
 const G = {
@@ -284,6 +412,7 @@ const G = {
   schedule: [], visibleFall: 2800, settleLineY: 280, arenaH: 384,
   nextIdx: 0, savedCount: 0, lostCount: 0, savedAmt: 0, forfeitAmt: 0, forfeitCount: 0, spawnSeq: 0,
   cards: new Map(), trueBalance: 0, dispBalance: 0, raf: null,
+  blockedCount: 0, // attacks the guardian auto-blocked this round (MvX mode)
 };
 
 // ---------- mode detection ----------
@@ -305,8 +434,37 @@ function setMode(on, label) {
   const b = $("modeBadge");
   b.textContent = label;
   b.className = "mode " + (on ? "onchain" : "practice");
-  $("centerText").innerHTML = `Transactions will stream in and drain your <b>${fmt(cfg.startStack)} NOVA</b> in ${Math.round(cfg.roundLengthMs / 1000)} seconds. Keep the most.`;
+  refreshCenterText();
 }
+
+// ---------- difficulty MODE selector (ETH theme vs Guardian) ----------
+function refreshCenterText() {
+  // #centerText only exists in the idle pre-round prompt. Once a round starts (or
+  // the relayer-lock spinner shows), showCenter() replaces the whole #center, so
+  // the element is gone — skip rather than throw. beginRound rebuilds it as needed.
+  const el = $("centerText");
+  if (!el) return;
+  const secs = Math.round(cfg.roundLengthMs / 1000);
+  el.innerHTML = mode.center.replace("%S", fmt(cfg.startStack)).replace("%T", secs);
+}
+function selectMode(key) {
+  if (G.phase === "starting" || G.phase === "playing") return; // locked mid-round
+  mode = MODES[key] || MODES.eth;
+  try { localStorage.setItem("clawback_mode", mode.key); } catch {}
+  // toggle the segmented control
+  $("optEth").classList.toggle("sel", mode.key === "eth");
+  $("optMvx").classList.toggle("sel", mode.key === "mvx");
+  // arena theme + caption
+  const arena = $("arena");
+  arena.classList.toggle("eth", mode.theme === "eth");
+  arena.classList.toggle("mvx", mode.theme === "mvx");
+  const ml = $("modeline");
+  ml.className = "modeline " + mode.theme;
+  ml.innerHTML = mode.line;
+  refreshCenterText();
+}
+$("optEth").addEventListener("click", () => selectMode("eth"));
+$("optMvx").addEventListener("click", () => selectMode("mvx"));
 
 // ---------- start ----------
 $("startBtn").addEventListener("click", onDefend);
@@ -351,10 +509,15 @@ function fallbackToPractice(msg) {
 function beginRound({ seed, startMs, roundId }) {
   G.seed = seed; G.startMs = startMs; G.roundId = roundId;
   G.schedule = buildSchedule(seed, cfg);
-  G.visibleFall = Math.max(1500, Math.min(2000, cfg.settleWindowMs - 2500));
+  // base visible-fall, then scale by the chosen mode (ETH = faster/harder, Guardian
+  // = calmer). Visuals/difficulty only; the contract's settle window is unchanged.
+  const baseFall = Math.max(1500, Math.min(2000, cfg.settleWindowMs - 2500));
+  G.visibleFall = Math.round(baseFall * mode.fallScale);
   G.arenaH = $("arena").clientHeight || 384;
   G.settleLineY = G.arenaH - 40 - 58;
   G.nextIdx = 0; G.savedCount = 0; G.lostCount = 0; G.savedAmt = 0; G.forfeitAmt = 0; G.forfeitCount = 0; G.spawnSeq = 0;
+  G.blockedCount = 0;
+  $("modepick").style.opacity = "0.5"; $("modepick").style.pointerEvents = "none"; // locked mid-round
   G.trueBalance = cfg.startStack; G.dispBalance = cfg.startStack;
   $("savedStat").textContent = "0";
   $("lostStat").textContent = "0";
@@ -434,11 +597,40 @@ function spawnCard(o, age) {
   G.cards.set(o.id, c);
   const p = Math.max(0, age) / G.visibleFall;
   el.style.transform = `translateY(${(p * G.settleLineY).toFixed(1)}px)`;
+
+  // Guardian (MvX mode): the native guardian auto-blocks a share of incoming
+  // ATTACKS. Eligibility is deterministic per item (id-based), so a given run is
+  // reproducible and not a per-frame coin flip. The block fires the SAME real
+  // claw-back tx the player would — integrity model untouched, it just does it
+  // for you. Whales (big) always get through to the guardian's net too.
+  if (!o.credit && mode.guardian > 0 && (Number(BigInt(o.id) % 100n) < Math.round(mode.guardian * 100))) {
+    c.guardScheduled = true;
+    const delay = 220 + (Number(BigInt(o.id) % 260n)); // staggered, snappy
+    c.guardTimer = setTimeout(() => guardianBlock(c), delay);
+  }
+}
+
+// the guardian intercepts an attack: satisfying shield bounce, same real tx fires
+function guardianBlock(c) {
+  if (c.state !== "falling") return;
+  c.state = "acted";
+  if (onchain) arcade.clawBack(G.roundId, c.o.id).catch(() => {}); // real counter-tx, fired for you
+  // the guardian neutralizes the drain → balance restored, counts as saved
+  G.savedCount++; G.blockedCount++;
+  G.savedAmt += c.o.amount;
+  G.trueBalance += c.o.amount;
+  $("savedStat").textContent = G.savedCount;
+  bounceRing(c.el);
+  floatText(c.el, "blocked", "save");
+  blip(880, 0.06, "sine"); vibrate(6);
+  c.el.classList.add("guarded");
+  setTimeout(() => removeCard(c.o.id), 420);
 }
 
 function tapCard(c) {
   if (c.state !== "falling") return;
   c.state = "acted";
+  if (c.guardTimer) { clearTimeout(c.guardTimer); c.guardTimer = null; } // player beat the guardian to it
   // fire the REAL counter-transaction either way; the contract decides the effect.
   if (onchain) arcade.clawBack(G.roundId, c.o.id).catch(() => {});
   if (c.o.credit) {
@@ -465,6 +657,7 @@ function tapCard(c) {
 
 function settleCard(c) {
   c.state = "settled";
+  if (c.guardTimer) { clearTimeout(c.guardTimer); c.guardTimer = null; }
   if (c.o.credit) {
     c.el.classList.add("banked"); // inflow kept (balance already counted at spawn)
   } else {
@@ -478,8 +671,8 @@ function settleCard(c) {
   setTimeout(() => removeCard(c.o.id), 340);
 }
 
-function removeCard(id) { const c = G.cards.get(id); if (c) { c.el.remove(); G.cards.delete(id); } }
-function clearCards() { for (const [, c] of G.cards) c.el.remove(); G.cards.clear(); }
+function removeCard(id) { const c = G.cards.get(id); if (c) { if (c.guardTimer) clearTimeout(c.guardTimer); c.el.remove(); G.cards.delete(id); } }
+function clearCards() { for (const [, c] of G.cards) { if (c.guardTimer) clearTimeout(c.guardTimer); c.el.remove(); } G.cards.clear(); }
 
 // ---------- balance (tweened, both directions) ----------
 function renderBalance() {
@@ -509,6 +702,16 @@ function floatText(cardEl, text, cls) {
   arena.appendChild(f);
   setTimeout(() => f.remove(), 700);
 }
+// the guardian's shield bounce — a mint ring expanding where the attack hit
+function bounceRing(cardEl) {
+  const b = document.createElement("span");
+  b.className = "bounce";
+  const arena = $("arena"), ar = arena.getBoundingClientRect(), cr = cardEl.getBoundingClientRect();
+  b.style.left = (cr.left - ar.left + cr.width / 2) + "px";
+  b.style.top = (cr.top - ar.top + cr.height / 2) + "px";
+  arena.appendChild(b);
+  setTimeout(() => b.remove(), 520);
+}
 
 // ---------- end of round ----------
 async function endRoundFlow() {
@@ -518,6 +721,7 @@ async function endRoundFlow() {
   clearCards();
   $("timeStat").textContent = "0.0s";
   $("rtimerFill").style.transform = "scaleX(0)";
+  $("modepick").style.opacity = ""; $("modepick").style.pointerEvents = ""; // mode switchable again
 
   // the live projection already tracked every appear/recall, so it IS the final
   if (!onchain) return reveal(localFinal(), 0, true);
@@ -559,13 +763,25 @@ function reveal(final, claimable, practice, ended = true) {
   const gained = Math.max(0, totalCredit - G.forfeitAmt);
 
   const tag = practice ? " (practice)" : " (onchain)";
+  // the saved row reads differently per mode: a fight you won (ETH) vs the guardian
+  // doing the work (MvX). blockedCount = the share the guardian auto-intercepted.
+  const isMvx = mode.key === "mvx";
+  const savedSub = isMvx
+    ? `${G.blockedCount} blocked by your guardian`
+    : `${G.savedCount} recall${G.savedCount === 1 ? "" : "s"} in time`;
+  const savedHead = isMvx ? "Guardian blocked" : "Clawed back";
+  // a one-line verdict that makes the contrast land
+  const verdict = isMvx
+    ? `Your guardian held the line. <b style="color:var(--mint)">Try the ETH experience</b> and feel the difference.`
+    : `Brutal, right? <b style="color:var(--mint)">Switch on a MultiversX guardian</b> and watch the attacks bounce.`;
   let html =
     `<div class="final">Final balance${tag}<b>${fmt(final)} NOVA</b></div>` +
     `<div class="tally">` +
       `<div class="tr lost"><span class="ico">▼</span><span class="lab">Drained away<em>${G.lostCount} got through</em></span><b>−${fmt(lost)}</b></div>` +
-      `<div class="tr save"><span class="ico">✦</span><span class="lab">Clawed back<em>${G.savedCount} recall${G.savedCount === 1 ? "" : "s"} in time</em></span><b>${fmt(saved)}</b></div>` +
+      `<div class="tr save"><span class="ico">✦</span><span class="lab">${savedHead}<em>${savedSub}</em></span><b>${fmt(saved)}</b></div>` +
       `<div class="tr gain"><span class="ico">▲</span><span class="lab">Inflows kept${G.forfeitCount ? `<em>${G.forfeitCount} cancelled by mistake</em>` : ""}</span><b>+${fmt(gained)}</b></div>` +
     `</div>` +
+    `<div class="final" style="font-size:12px;color:var(--text-dim);max-width:300px">${verdict}</div>` +
     `<div class="row" style="margin-top:2px"><button class="btn" id="againBtn">Play again</button>`;
   if (onchain && claimable > 0) html += `<button class="btn gold" id="claimNovaBtn">Claim ${fmt(claimable)} NOVA</button>`;
   html += `</div>`;
@@ -672,6 +888,10 @@ function vibrate(ms) { try { navigator.vibrate && navigator.vibrate(ms); } catch
 try { const s = localStorage.getItem("clawback_handle"); if (s) $("handle").value = s; } catch {}
 $("bal").firstChild.textContent = fmt(cfg.startStack);
 $("stackFill").style.transform = "scaleX(1)";
+// restore last-chosen mode (default ETH so the brutal contrast lands first)
+let savedMode = "eth";
+try { const m = localStorage.getItem("clawback_mode"); if (m === "mvx" || m === "eth") savedMode = m; } catch {}
+selectMode(savedMode);
 detectMode();
 refreshBoard();
 </script>
