@@ -156,6 +156,7 @@ body::after { /* 3 soft glows (mint / blue / lavender); a page re-tints via --gl
 .back:hover { color: var(--mint); border-color: rgba(35, 247, 221, 0.4); }
 .lockup { display: inline-flex; align-items: center; gap: 8px; }
 .lockup .lk-x { width: 20px; height: 16px; flex: 0 0 auto; }
+.lockup .lk-wordmark { height: 16px; width: auto; display: block; flex: 0 0 auto; } /* official /mvx-wordmark.svg */
 .lockup .lk-name { font-size: 15px; font-weight: 600; letter-spacing: 0.01em; color: var(--text); }
 .lockup .lk-name .x-letter { color: var(--mint); }
 /* legacy text brand (if any page still uses it) renders on-system */

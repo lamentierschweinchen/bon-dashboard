@@ -133,6 +133,7 @@ h1,h2,h3,p{text-wrap:balance;}
 .topbar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;}
 .lockup{display:flex;align-items:center;gap:10px;}
 .lockup .lk-x{width:23px;height:18px;}
+.lockup .lk-wordmark{height:18px;width:auto;display:block;} /* official /mvx-wordmark.svg */
 .lockup .lk-name{font-size:16px;font-weight:600;letter-spacing:.01em;color:var(--text);}
 .lockup .lk-name .x-letter{color:var(--mint);}
 .topbar .t-right{display:flex;align-items:center;gap:9px;flex-wrap:wrap;justify-content:flex-end;}
@@ -322,8 +323,7 @@ a.cab:hover{transform:translateY(-3px);border-color:rgba(35,247,221,.4);box-shad
   <!-- top bar -->
   <header class="topbar">
     <div class="lockup">
-      <svg class="lk-x xmark" viewBox="0 0 192 148" aria-hidden="true"><path d="M106.4,74L192,28L177.6,0.2L99.2,32.1c-2,0.8-4.3,0.8-6.3,0L14.5,0.2L0.1,28l85.6,46l-85.6,46l14.4,27.8l78.4-31.9c2-0.8,4.3-0.8,6.3,0l78.4,31.9l14.4-27.8L106.4,74z"/></svg>
-      <span class="lk-name">Multivers<span class="x-letter">X</span></span>
+      <img class="lk-wordmark" src="/mvx-wordmark.svg" alt="MultiversX" />
     </div>
     <div class="t-right">
       <span class="chip"><span class="dot"></span>No wallet · gasless</span>
