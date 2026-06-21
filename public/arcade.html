@@ -468,6 +468,12 @@ const CABINETS = [
     metaSuffix: "counters onchain",
     counter: { address: GAMES.clawback.contract, view: "getGlobalActions" },
   },
+  {
+    id: "degendash", name: "Degen Dash", status: "preview", href: "/degen-dash", art: "dash",
+    line: "Crypto events fly in. Tap to collect the wins, dodge the rugs. Every collect is a real transaction. Stack the most before the buzzer.",
+    metaSuffix: "collects onchain",
+    counter: { address: GAMES.degendash.contract, view: "getGlobalActions" },
+  },
 ];
 
 const X_SVG = '<svg viewBox="0 0 192 148" aria-hidden="true"><path d="M106.4,74L192,28L177.6,0.2L99.2,32.1c-2,0.8-4.3,0.8-6.3,0L14.5,0.2L0.1,28l85.6,46l-85.6,46l14.4,27.8l78.4-31.9c2-0.8,4.3-0.8,6.3,0l78.4,31.9l14.4-27.8L106.4,74z" fill="#23F7DD"/></svg>';
@@ -511,6 +517,13 @@ function artHTML(kind) {
         + '<div style="font:800 26px/1 var(--mono);color:var(--text);letter-spacing:-.02em;">886<span style="font-size:11px;color:var(--text-dim);margin-left:3px;">NOVA</span></div></div>'
         + '<div style="position:absolute;top:12px;left:16%;padding:3px 7px;border-radius:7px;border:1px solid rgba(255,107,157,.6);background:rgba(255,107,157,.12);color:var(--coral);font:700 12px/1 var(--mono);">−12</div>'
         + '<div style="position:absolute;bottom:14px;right:15%;padding:3px 7px;border-radius:7px;border:1px solid rgba(74,222,128,.6);background:rgba(74,222,128,.12);color:var(--green);font:700 12px/1 var(--mono);">+6</div>';
+    case "dash":
+      return '<div class="scan lite"></div>'
+        + '<div style="position:absolute;inset:0;display:grid;place-items:center;">'
+        + '<div style="font:800 26px/1 var(--mono);color:var(--mint);letter-spacing:-.02em;text-shadow:0 0 14px rgba(35,247,221,.5);">+247</div></div>'
+        + '<div style="position:absolute;top:12px;left:14%;padding:3px 7px;border-radius:7px;border:1px solid rgba(35,247,221,.6);background:rgba(35,247,221,.12);color:var(--mint);font:700 12px/1 var(--mono);">+18</div>'
+        + '<div style="position:absolute;top:40px;right:16%;padding:3px 7px;border-radius:7px;border:1px solid rgba(167,139,250,.6);background:rgba(167,139,250,.12);color:var(--lavender);font:700 12px/1 var(--mono);">+9</div>'
+        + '<div style="position:absolute;bottom:14px;left:30%;padding:3px 7px;border-radius:7px;border:1px solid rgba(255,107,157,.6);background:rgba(255,107,157,.12);color:var(--coral);font:700 12px/1 var(--mono);">☠ −7</div>';
     default:
       return '<div class="scan lite"></div><div class="a-ring"><span class="x">' + X_SVG + "</span></div>";
   }

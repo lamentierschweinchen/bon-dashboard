@@ -81,6 +81,17 @@ export const CLAWBACK_CONTRACT =
   process.env.NEXT_PUBLIC_CLAWBACK_CONTRACT ||
   "erd1qqqqqqqqqqqqqpgq5prt7nz84my2926d4xs9sw9dyz9j2s4uppuqkvnrrs"; // testnet, shard 0
 
+/**
+ * THE DEGEN DASH contract (shard 0). Set NEXT_PUBLIC_DEGENDASH_CONTRACT after deploy.
+ * See marketing/games/degen-dash (a self-contained fork; its client lives at
+ * public/degen-dash/). Like Clawback it has a small round lifecycle —
+ * startRound / collect / endRound / claim. The high-frequency path is `collect`.
+ * Undeployed by default (placeholder), so the relayer refuses it and the cabinet
+ * plays locally in practice mode until the real address is set.
+ */
+export const DEGENDASH_CONTRACT =
+  process.env.NEXT_PUBLIC_DEGENDASH_CONTRACT || UNDEPLOYED_PLACEHOLDER;
+
 /** Relayed endpoints for the cabinets. */
 export const PULL_FUNCTION = "pull";
 export const PLACE_PIXEL_FUNCTION = "placePixel";
@@ -91,6 +102,11 @@ export const START_ROUND_FUNCTION = "startRound";
 export const CLAW_BACK_FUNCTION = "clawBack";
 export const END_ROUND_FUNCTION = "endRound";
 export const CLAIM_FUNCTION = "claim";
+// Degen Dash round lifecycle. startRound / endRound / claim are shared function
+// NAMES with Clawback, but pin DIFFERENT receivers — each op below lists only its
+// own contract, so a startRound/endRound/claim for Degen Dash is authorized only
+// against the Degen Dash contract (and vice versa). `collect` is its per-tap path.
+export const COLLECT_FUNCTION = "collect";
 
 /**
  * Gas ceilings. `pull` does a handful of small storage writes (plus, on a round
@@ -109,6 +125,10 @@ export const START_ROUND_GAS_LIMIT = 30_000_000;
 export const CLAW_BACK_GAS_LIMIT = 8_000_000;
 export const END_ROUND_GAS_LIMIT = 12_000_000;
 export const CLAIM_GAS_LIMIT = 10_000_000;
+// Degen Dash: same lifecycle profile as Clawback. `startRound` sums the good total
+// up front (heaviest); `collect` is the per-tap grab; `endRound` tallies; `claim`
+// mints the collected NOVA. Same caps; the relayer only pays gas actually consumed.
+export const COLLECT_GAS_LIMIT = 8_000_000;
 
 /**
  * True when an address is still the undeployed placeholder. The relayer uses

@@ -77,6 +77,14 @@ export const GAMES = {
     contract: "erd1qqqqqqqqqqqqqpgq5prt7nz84my2926d4xs9sw9dyz9j2s4uppuqkvnrrs", // NEXT_PUBLIC_CLAWBACK_CONTRACT (testnet, shard 0)
     gasLimit: 8000000,
   },
+  degendash: {
+    // Self-contained fork (its own client at public/degen-dash/); registered here so
+    // the hub odometer sums its getGlobalActions once deployed. Collect-the-good run
+    // game; the high-frequency tx is `collect`. SET contract AFTER DEPLOY.
+    label: "Degen Dash",
+    contract: UNDEPLOYED_PLACEHOLDER, // set to NEXT_PUBLIC_DEGENDASH_CONTRACT address (testnet, shard 0)
+    gasLimit: 8000000,
+  },
 };
 
 /* ---------- tiny encoders (SC call argument hex) ---------- */

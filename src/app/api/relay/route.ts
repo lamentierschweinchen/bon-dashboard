@@ -60,6 +60,7 @@ import {
   BUTTON_CONTRACT,
   REACTION_CONTRACT,
   CLAWBACK_CONTRACT,
+  DEGENDASH_CONTRACT,
   PULL_FUNCTION,
   PLACE_PIXEL_FUNCTION,
   PRESS_FUNCTION,
@@ -68,6 +69,7 @@ import {
   CLAW_BACK_FUNCTION,
   END_ROUND_FUNCTION,
   CLAIM_FUNCTION,
+  COLLECT_FUNCTION,
   PULL_GAS_LIMIT,
   PLACE_PIXEL_GAS_LIMIT,
   PRESS_GAS_LIMIT,
@@ -76,6 +78,7 @@ import {
   CLAW_BACK_GAS_LIMIT,
   END_ROUND_GAS_LIMIT,
   CLAIM_GAS_LIMIT,
+  COLLECT_GAS_LIMIT,
   isPlaceholder,
 } from "@/lib/onchain/arcade.config";
 
@@ -88,6 +91,7 @@ const ARCADE_RECEIVERS = [
   BUTTON_CONTRACT,
   REACTION_CONTRACT,
   CLAWBACK_CONTRACT,
+  DEGENDASH_CONTRACT,
 ].filter((addr) => !isPlaceholder(addr));
 
 // The plain-object shape accepted by Transaction.newFromPlainObject, derived
@@ -194,11 +198,14 @@ const RELAY_OPS: Record<string, RelayOp> = {
     maxGasLimit: REACT_GAS_LIMIT + 100_000,
     rateMax: 1200,
   },
-  // --- Clawback (a self-contained fork; has a small round lifecycle) ---
-  // `clawBack` is the per-tap recall and the high-frequency path, so it gets the
-  // same tap-sized budget; startRound/endRound/claim fire about once per round.
+  // --- Clawback + Degen Dash (self-contained forks; small round lifecycles) ---
+  // Both expose startRound/endRound/claim (shared NAMES), so each of those ops
+  // lists BOTH deployed contracts as allowed receivers (placeholders filtered out);
+  // the receiver check still pins each tx to a real contract. Their per-tap paths
+  // are DISTINCT functions: Clawback's `clawBack`, Degen Dash's `collect`. Both get
+  // the tap-sized budget; the lifecycle fns fire about once per round.
   [START_ROUND_FUNCTION]: {
-    receivers: isPlaceholder(CLAWBACK_CONTRACT) ? [] : [CLAWBACK_CONTRACT],
+    receivers: [CLAWBACK_CONTRACT, DEGENDASH_CONTRACT].filter((a) => !isPlaceholder(a)),
     maxGasLimit: START_ROUND_GAS_LIMIT + 100_000,
     rateMax: 60,
   },
@@ -207,13 +214,18 @@ const RELAY_OPS: Record<string, RelayOp> = {
     maxGasLimit: CLAW_BACK_GAS_LIMIT + 100_000,
     rateMax: 1200,
   },
+  [COLLECT_FUNCTION]: {
+    receivers: isPlaceholder(DEGENDASH_CONTRACT) ? [] : [DEGENDASH_CONTRACT],
+    maxGasLimit: COLLECT_GAS_LIMIT + 100_000,
+    rateMax: 1200,
+  },
   [END_ROUND_FUNCTION]: {
-    receivers: isPlaceholder(CLAWBACK_CONTRACT) ? [] : [CLAWBACK_CONTRACT],
+    receivers: [CLAWBACK_CONTRACT, DEGENDASH_CONTRACT].filter((a) => !isPlaceholder(a)),
     maxGasLimit: END_ROUND_GAS_LIMIT + 100_000,
     rateMax: 60,
   },
   [CLAIM_FUNCTION]: {
-    receivers: isPlaceholder(CLAWBACK_CONTRACT) ? [] : [CLAWBACK_CONTRACT],
+    receivers: [CLAWBACK_CONTRACT, DEGENDASH_CONTRACT].filter((a) => !isPlaceholder(a)),
     maxGasLimit: CLAIM_GAS_LIMIT + 100_000,
     rateMax: 60,
   },
