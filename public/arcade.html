@@ -117,6 +117,26 @@ h1,h2,h3,p{text-wrap:balance;}
 .kicker{font-size:12px;font-weight:600;letter-spacing:.24em;text-transform:uppercase;color:var(--mint);}
 @keyframes lp{0%,100%{opacity:1;}50%{opacity:.42;}}
 
+/* ---------- sound toggle (the live arcade score; muted by default) ---------- */
+.sound-toggle{display:inline-flex;align-items:center;gap:8px;font-family:inherit;font-size:11.5px;font-weight:500;letter-spacing:.01em;
+  padding:6px 12px;border-radius:999px;border:1px solid var(--border);background:rgba(14,17,23,.7);color:var(--text-dim);
+  cursor:pointer;white-space:nowrap;transition:border-color .2s,color .2s,background .2s,box-shadow .35s;}
+.sound-toggle:hover{border-color:rgba(35,247,221,.4);color:var(--text);}
+.sound-toggle .st-ic{width:14px;height:14px;display:block;flex:0 0 auto;}
+.sound-toggle.on{border-color:rgba(35,247,221,.5);color:var(--mint);background:rgba(35,247,221,.06);box-shadow:0 0 16px rgba(35,247,221,.16);}
+.sound-toggle.on .st-ic{color:var(--mint);}
+.sound-toggle.loading{opacity:.6;cursor:progress;}
+/* a tiny equalizer that animates only while playing */
+.sound-toggle .eq{display:none;align-items:flex-end;gap:2px;height:11px;}
+.sound-toggle.on .eq{display:inline-flex;}
+.sound-toggle .eq i{width:2px;height:100%;background:var(--mint);border-radius:1px;transform-origin:bottom;animation:eqb .9s ease-in-out infinite;}
+.sound-toggle .eq i:nth-child(1){animation-delay:0s;}
+.sound-toggle .eq i:nth-child(2){animation-delay:.18s;}
+.sound-toggle .eq i:nth-child(3){animation-delay:.34s;}
+@keyframes eqb{0%,100%{transform:scaleY(.32);}50%{transform:scaleY(1);}}
+/* subtle scoreboard breath synced to the score's beat (only while playing) */
+.scoreboard.beat{box-shadow:0 18px 60px rgba(0,0,0,.5),0 0 0 1px rgba(35,247,221,.22),0 0 28px rgba(35,247,221,.14);}
+
 .btn{font-family:inherit;font-weight:600;font-size:14px;letter-spacing:.01em;border:none;border-radius:12px;cursor:pointer;
   padding:11px 20px;display:inline-flex;align-items:center;justify-content:center;gap:7px;transition:transform .08s,filter .15s;}
 .btn:active{transform:scale(.97);}
@@ -330,6 +350,16 @@ a.cab:hover{transform:translateY(-3px);border-color:rgba(35,247,221,.4);box-shad
     <div class="t-right">
       <span class="chip"><span class="dot"></span>No wallet · gasless</span>
       <span class="chip"><span class="dot"></span>Supernova · live on testnet</span>
+      <button class="sound-toggle" id="soundToggle" type="button" aria-pressed="false"
+        title="Play the live arcade score — the arcade sonifies its own onchain activity (off by default)">
+        <svg class="st-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M11 5 6 9H3v6h3l5 4V5Z"/>
+          <path class="st-wave" d="M15.5 8.5a5 5 0 0 1 0 7M18 6a8 8 0 0 1 0 12" style="display:none"/>
+          <path class="st-mute" d="M22 9.5l-5 5M17 9.5l5 5"/>
+        </svg>
+        <span class="st-label">Sound</span>
+        <span class="eq" aria-hidden="true"><i></i><i></i><i></i></span>
+      </button>
     </div>
   </header>
 
@@ -420,6 +450,7 @@ a.cab:hover{transform:translateY(-3px);border-color:rgba(35,247,221,.4);box-shad
 <script type="module">
 "use strict";
 import { createArcadeClient, GAMES } from "/arcade-core.js";
+import { createArcadeScore } from "/arcade-score.js";
 
 /* ===========================================================================
    CABINET REGISTRY — the config-driven grid. Add a game = add an entry.
@@ -587,6 +618,30 @@ const scoreboard = document.getElementById("scoreboard");
 
 const counters = CABINETS.filter((c) => c.counter && c.counter.address);
 
+/* ===========================================================================
+   THE LIVE AMBIENT SCORE — the arcade plays itself from its own activity.
+   Rides the same ~2s counter reads (no extra polling). Each cabinet is a voice;
+   its delta fires its notes; the global delta sets intensity; round-number total
+   crossings fire a celebratory moment. Muted by default; opt-in via the toggle.
+   =========================================================================== */
+const demoMode = new URLSearchParams(location.search).has("score-demo")
+  || new URLSearchParams(location.search).has("mock");
+const score = createArcadeScore({
+  momentStep: 25000,
+  onBeat: (intensity) => {              // subtle scoreboard breath, only when busy
+    if (intensity < 0.08) return;
+    scoreboard.classList.add("beat");
+    setTimeout(() => scoreboard.classList.remove("beat"), 130);
+  },
+  onMoment: (snapshot) => {
+    // MINT SEAM: a future "capture this moment" can listen for this event and
+    // freeze the snapshot. We only announce it here — no minting is built.
+    try { window.dispatchEvent(new CustomEvent("arcade:moment", { detail: snapshot })); } catch (e) {}
+    console.info("[arcade] moment", snapshot);
+  },
+});
+window.arcadeScore = score; // console mixer: arcadeScore.setLevel('canvas',0.55); arcadeScore.getMix()
+
 async function readCounter(c) {
   const rd = await client.query(c.counter.view, [], c.counter.address);
   const v = rd && rd.length ? client.decodeU64(rd[0]) : 0;
@@ -668,10 +723,61 @@ async function refresh() {
   lastMilestone = bucket;
   if (firstLoad) { firstLoad = false; countUp(total); }   // spin up on first load
   else renderDigits(total, true);     // set value + flip the changed digits each ~2s read
+
+  /* feed the live ambient score the SAME reads (no extra polling) — it diffs to
+     per-cabinet deltas internally. Skipped under ?score-demo (a synthetic feeder
+     drives it there instead). */
+  if (score && !demoMode) {
+    const perCabinet = {};
+    counters.forEach((c, i) => { perCabinet[c.id] = vals[i] || 0; });
+    score.feed({ perCabinet, total });
+  }
 }
 
 refresh();
 setInterval(refresh, 2000);
+
+/* ---------- speaker toggle: muted by default; first click is the user gesture
+   that boots Tone.js and starts the score. ---------- */
+const soundToggle = document.getElementById("soundToggle");
+const soundLabel = soundToggle.querySelector(".st-label");
+const waveEl = soundToggle.querySelector(".st-wave");
+const muteEl = soundToggle.querySelector(".st-mute");
+function paintSound(nowOn) {
+  soundToggle.classList.toggle("on", nowOn);
+  soundToggle.setAttribute("aria-pressed", String(nowOn));
+  soundLabel.textContent = nowOn ? "Sound on" : "Sound";
+  if (waveEl) waveEl.style.display = nowOn ? "" : "none";
+  if (muteEl) muteEl.style.display = nowOn ? "none" : "";
+}
+soundToggle.addEventListener("click", async () => {
+  soundToggle.classList.add("loading");
+  try {
+    paintSound(await score.toggle());
+  } catch (e) {
+    console.warn("[arcade] sound toggle failed", e);
+  } finally {
+    soundToggle.classList.remove("loading");
+  }
+});
+
+/* ?score-demo (or ?mock): feed the score a synthetic activity stream so it can
+   be heard/verified without waiting on live taps. (Live feed is skipped above.) */
+if (demoMode) {
+  const fake = { sprint: 1200, tugofwar: 540, canvas: 360, button: 90, clawback: 140, degendash: 40 };
+  const tick = () => {
+    fake.sprint    += Math.floor(Math.random() * 24);
+    fake.tugofwar  += Math.floor(Math.random() * 9);
+    fake.canvas    += Math.floor(Math.random() * 11);
+    fake.button    += Math.random() < 0.45 ? 1 + Math.floor(Math.random() * 3) : 0;
+    fake.clawback  += Math.random() < 0.5 ? Math.floor(Math.random() * 6) : 0;
+    fake.degendash += Math.random() < 0.35 ? Math.floor(Math.random() * 7) : 0;
+    score.feed({ perCabinet: { ...fake }, total: Object.values(fake).reduce((a, b) => a + b, 0) });
+  };
+  tick();
+  setInterval(tick, 2000);
+  console.info("[arcade] score-demo: synthetic activity feeding the score.");
+}
 
 /* build-kit / submit CTAs (the kit page is not published yet → scroll to the
    on-page section; set BUILD_KIT_URL once it ships). */
