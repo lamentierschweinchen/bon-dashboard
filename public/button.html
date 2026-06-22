@@ -5,13 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <title>The Button · Supernova Arcade</title>
     <meta name="description" content="One button, one shared 60-second timer. Every press is a real onchain transaction that resets it. How long dare you wait?" />
-    <link rel="stylesheet" href="/arcade.css" />
+    <link rel="stylesheet" href="/arcade-shell.css" />
     <style>
       .button-stage {
         position: relative;
-        width: 280px;
-        height: 280px;
-        margin: 6px auto 2px;
+        width: min(280px, 74vw);
+        height: min(280px, 74vw);
+        margin: 2px auto;
       }
       /* The Button surfaces. Canon (Roobert, cosmos, mint, buttons) comes from
          /arcade.css. States: normal = mint, caution = amber, urgent = coral, revive = blue. */
@@ -96,52 +96,52 @@
       <!-- Vercel Web Analytics -->
     <script defer src="/_vercel/insights/script.js"></script>
 </head>
-  <body>
+  <body style="--c:#5B8DEF" data-shard="shard 2">
+    <div class="scan"></div><div class="vignette"></div><div class="floor"></div>
+    <div class="brk tl"></div><div class="brk tr"></div><div class="brk bl"></div><div class="brk br"></div>
     <div class="wrap">
-      <div class="topbar">
+      <header class="abar">
         <a class="back" href="/arcade"><span aria-hidden="true">&larr;</span> Arcade</a>
-        <span class="lockup">
-          <img class="lk-wordmark" src="/mvx-wordmark.svg" alt="MultiversX" />
-        </span>
-      </div>
+        <span class="lockup"><img src="/mvx-wordmark.svg" alt="MultiversX" /><span class="shard">shard 2</span></span>
+      </header>
 
       <h1>The Button</h1>
-      <p class="subtitle">One button, one shared 60-second timer. Every press is a real onchain transaction that resets it to full. The longer you dare wait before pressing, the braver, and it's all scored onchain.</p>
-      <div class="onetap"><span class="ic"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M13 2 3 14h7l-1 8 10-12h-7z" stroke="#23F7DD" stroke-width="1.6" stroke-linejoin="round"/></svg></span><span class="ot-t"><b>No wallet, just play.</b> A key is created in your browser and we cover the gas.</span></div>
+      <p class="sub">One shared 60-second timer. Every press is a <b>real onchain transaction</b> that resets it to full. The longer you dare wait, the braver. All scored onchain.</p>
+      <div class="onetap"><span class="ic"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M13 2 3 14h7l-1 8 10-12h-7z" stroke="#5B8DEF" stroke-width="1.6" stroke-linejoin="round"/></svg></span><span class="t"><b>No wallet, just play.</b> A key is created in your browser and we cover the gas.</span></div>
 
-      <div class="card">
-        <div class="button-stage stage-idle" id="stage">
-          <svg class="ring" viewBox="0 0 280 280">
-            <circle class="track" cx="140" cy="140" r="128"></circle>
-            <circle class="prog" id="prog" cx="140" cy="140" r="128"></circle>
-          </svg>
-          <button class="press-btn" id="pressBtn">
-            <span class="big" id="bigTime">60.0</span>
-            <span class="sub">Press</span>
-          </button>
+      <div class="cabinet">
+        <div class="cab-marquee">The Button · don't let it hit zero</div>
+        <div class="screen">
+          <div class="button-stage stage-idle" id="stage">
+            <svg class="ring" viewBox="0 0 280 280">
+              <circle class="track" cx="140" cy="140" r="128"></circle>
+              <circle class="prog" id="prog" cx="140" cy="140" r="128"></circle>
+            </svg>
+            <button class="press-btn" id="pressBtn">
+              <span class="big" id="bigTime">60.0</span>
+              <span class="sub">Press</span>
+            </button>
+          </div>
+          <div class="states">
+            <span class="stp"><i style="background:#23F7DD;box-shadow:0 0 7px #23F7DD"></i>Safe</span>
+            <span class="stp"><i style="background:#F5B544;box-shadow:0 0 7px #F5B544"></i>Caution</span>
+            <span class="stp"><i style="background:#FF6B9D;box-shadow:0 0 7px #FF6B9D"></i>Urgent</span>
+            <span class="stp"><i style="background:#5B8DEF;box-shadow:0 0 7px #5B8DEF"></i>Revive</span>
+          </div>
+          <div class="result hidden" id="result"></div>
         </div>
-        <div class="result hidden" id="result"></div>
       </div>
 
-      <div class="states">
-        <span class="stp"><i style="background:#23F7DD;box-shadow:0 0 7px #23F7DD"></i>Safe</span>
-        <span class="stp"><i style="background:#F5B544;box-shadow:0 0 7px #F5B544"></i>Caution</span>
-        <span class="stp"><i style="background:#FF6B9D;box-shadow:0 0 7px #FF6B9D"></i>Urgent</span>
-        <span class="stp"><i style="background:#5B8DEF;box-shadow:0 0 7px #5B8DEF"></i>Revive</span>
-      </div>
-
-      <div class="stats" style="margin-top: 14px">
+      <div class="stats">
         <div class="stat"><div class="num" id="yourBest">0s</div><div class="lbl">Your best wait</div></div>
         <div class="stat"><div class="num" id="presses">0</div><div class="lbl">Round presses</div></div>
-        <div class="stat"><div class="num" id="globalActions">0</div><div class="lbl">Total presses</div></div>
+        <div class="stat"><div class="num on" id="globalActions">0</div><div class="lbl">Total presses</div></div>
       </div>
 
-      <div class="status" id="status" style="margin-top: 14px">
-        <span class="dot"></span><span id="statusText">Warming up…</span>
-      </div>
+      <div class="status" id="status"><span class="dot"></span><span id="statusText">Warming up…</span></div>
 
-      <div class="card" style="margin-top: 14px">
-        <p class="card-title">Bravest pressers</p>
+      <div class="card">
+        <p class="card-title"><span class="gd"></span>Bravest pressers</p>
         <ul class="lb" id="leaderboard">
           <li><span class="empty">No presses yet. Hold your nerve.</span></li>
         </ul>
@@ -152,19 +152,19 @@
       </div>
 
       <div class="card hidden" id="feedCard">
-        <p class="card-title">Recent transactions</p>
+        <p class="card-title"><span class="gd"></span>Recent transactions</p>
         <ul class="feed" id="feed"></ul>
       </div>
 
-      <p class="foot">
-        <span class="sn">Supernova is live on testnet</span>, 600ms rounds on MultiversX. Gasless via a relayer that co-signs and pays the gas, so you play with no wallet. The shared timer is read straight from the chain. Testnet can be reset, which clears the state.
-      </p>
+      <footer class="afoot"><span class="sn">Supernova · live on testnet</span> · 600ms rounds on MultiversX · the shared timer is read straight from the chain</footer>
     </div>
 
     <script type="module">
       import { createArcadeClient } from "/arcade-core.js";
+      import { mountGalaxy } from "/arcade-galaxy.js";
 
       const client = createArcadeClient("button");
+      const galaxy = mountGalaxy({ intensity: 0.5, focusShard: 2 });
       const $ = (id) => document.getElementById(id);
       const fmt = (n) => (n == null ? "···" : Number(n).toLocaleString("en-US"));
       const DURATION = 60000;
@@ -288,6 +288,7 @@
       }
       async function press() {
         pressRipple();
+        galaxy.pulse(2);
         recordWait();
         S.hasPlayed = true;
         const now = Date.now();
