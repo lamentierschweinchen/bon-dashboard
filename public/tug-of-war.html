@@ -5,10 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <title>Tug-of-War · Supernova Arcade</title>
     <meta name="description" content="Pick a side. Every tap is a real onchain transaction pulling the rope your way. A collective faction battle on MultiversX, gasless and no wallet." />
-    <link rel="stylesheet" href="/arcade.css" />
+    <link rel="stylesheet" href="/arcade-shell.css" />
     <style>
-      /* Tug-of-War surfaces. Canon (Roobert, cosmos, mint, buttons) comes from
-         /arcade.css. Faction accents: Nova = mint, Flare = amber. */
+      /* Tug-of-War surfaces. Neon-arcade shell (Roobert, galaxy, cabinet/screen)
+         comes from /arcade-shell.css. Faction accents: Nova = mint, Flare = amber. */
+      .screen .play { width: 100%; display: flex; flex-direction: column; gap: 12px; align-items: stretch; }
       /* ── rope ── */
       .rope-wrap {
         position: relative;
@@ -88,7 +89,7 @@
         text-transform: uppercase;
         font-weight: 600;
       }
-      .side-name.a { left: 12px; color: var(--mint-dim); }
+      .side-name.a { left: 12px; color: #79e6d8; }
       .side-name.b { right: 12px; color: #c79a44; }
 
       /* ── side picker ── */
@@ -134,69 +135,64 @@
       <!-- Vercel Web Analytics -->
     <script defer src="/_vercel/insights/script.js"></script>
 </head>
-  <body>
+  <body style="--c:#23F7DD" data-shard="shard 1">
+    <div class="scan"></div><div class="vignette"></div><div class="floor"></div>
+    <div class="brk tl"></div><div class="brk tr"></div><div class="brk bl"></div><div class="brk br"></div>
     <div class="wrap">
-      <div class="topbar">
+      <header class="abar">
         <a class="back" href="/arcade"><span aria-hidden="true">&larr;</span> Arcade</a>
-        <span class="lockup">
-          <img class="lk-wordmark" src="/mvx-wordmark.svg" alt="MultiversX" />
-        </span>
-      </div>
+        <span class="lockup"><img src="/mvx-wordmark.svg" alt="MultiversX" /><span class="shard">shard 1</span></span>
+      </header>
 
       <h1>Tug-of-War</h1>
-      <p class="subtitle">Pick a side. Every tap is a real onchain transaction pulling the rope your way. The tally is shared and onchain; it settles in about two seconds.</p>
-      <div class="onetap"><span class="ic"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M13 2 3 14h7l-1 8 10-12h-7z" stroke="#23F7DD" stroke-width="1.6" stroke-linejoin="round"/></svg></span><span class="ot-t"><b>No wallet, just play.</b> A key is created in your browser and we cover the gas.</span></div>
+      <p class="sub">Pick a side. Every tap is a <b>real onchain transaction</b> pulling the rope your way. The tally is shared and onchain; it settles in about two seconds.</p>
+      <div class="onetap"><span class="ic"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M13 2 3 14h7l-1 8 10-12h-7z" stroke="#23F7DD" stroke-width="1.6" stroke-linejoin="round"/></svg></span><span class="t"><b>No wallet, just play.</b> A key is created in your browser and we cover the gas.</span></div>
 
-      <!-- rope -->
-      <div class="card">
-        <div class="row" style="justify-content: space-between; margin-bottom: 6px">
-          <span class="card-title" style="margin:0">Round <span id="roundId">1</span></span>
-          <span class="timer" id="timer">2:00</span>
+      <div class="cabinet">
+        <div class="cab-marquee">Tug-of-War · pick a side, pull the rope</div>
+        <div class="screen">
+          <div class="play">
+            <div class="row" style="justify-content: space-between; width: 100%">
+              <span class="readout">Round <span id="roundId">1</span></span>
+              <span class="timer" id="timer">2:00</span>
+            </div>
+            <div class="rope-wrap">
+              <div class="zone a"></div>
+              <div class="zone b"></div>
+              <div class="rope-line"></div>
+              <div class="center-mark"></div>
+              <div class="side-tally a" id="tallyA">0</div>
+              <div class="side-tally b" id="tallyB">0</div>
+              <div class="side-name a">Nova</div>
+              <div class="side-name b">Flare</div>
+              <div class="knot" id="knot"><svg class="xmark" viewBox="0 0 192 148" aria-hidden="true"><path d="M106.4,74L192,28L177.6,0.2L99.2,32.1c-2,0.8-4.3,0.8-6.3,0L14.5,0.2L0.1,28l85.6,46l-85.6,46l14.4,27.8l78.4-31.9c2-0.8,4.3-0.8,6.3,0l78.4,31.9l14.4-27.8L106.4,74z"/></svg></div>
+            </div>
+            <div class="sides">
+              <div class="side-btn a" id="sideA" role="button" tabindex="0">
+                <div class="tag">Team</div>
+                <div class="nm">Nova</div>
+              </div>
+              <div class="side-btn b" id="sideB" role="button" tabindex="0">
+                <div class="tag">Team</div>
+                <div class="nm">Flare</div>
+              </div>
+            </div>
+            <button class="btn pull-btn a" id="pullBtn" disabled>Pick a side to pull</button>
+            <div class="result hidden" id="result"></div>
+          </div>
         </div>
-        <div class="rope-wrap">
-          <div class="zone a"></div>
-          <div class="zone b"></div>
-          <div class="rope-line"></div>
-          <div class="center-mark"></div>
-          <div class="side-tally a" id="tallyA">0</div>
-          <div class="side-tally b" id="tallyB">0</div>
-          <div class="side-name a">Nova</div>
-          <div class="side-name b">Flare</div>
-          <div class="knot" id="knot"><svg class="xmark" viewBox="0 0 192 148" aria-hidden="true"><path d="M106.4,74L192,28L177.6,0.2L99.2,32.1c-2,0.8-4.3,0.8-6.3,0L14.5,0.2L0.1,28l85.6,46l-85.6,46l14.4,27.8l78.4-31.9c2-0.8,4.3-0.8,6.3,0l78.4,31.9l14.4-27.8L106.4,74z"/></svg></div>
-        </div>
-        <div class="result hidden" id="result"></div>
       </div>
 
-      <!-- side picker -->
-      <div class="sides">
-        <div class="side-btn a" id="sideA" role="button" tabindex="0">
-          <div class="tag">Team</div>
-          <div class="nm">Nova</div>
-        </div>
-        <div class="side-btn b" id="sideB" role="button" tabindex="0">
-          <div class="tag">Team</div>
-          <div class="nm">Flare</div>
-        </div>
-      </div>
-
-      <!-- pull -->
-      <button class="btn pull-btn a" id="pullBtn" disabled>Pick a side to pull</button>
-
-      <!-- stats -->
-      <div class="stats" style="margin-top: 14px">
+      <div class="stats">
         <div class="stat"><div class="num" id="yourPulls">0</div><div class="lbl">Your pulls</div></div>
-        <div class="stat"><div class="num" id="globalActions">0</div><div class="lbl">Onchain pulls</div></div>
+        <div class="stat"><div class="num on" id="globalActions">0</div><div class="lbl">Onchain pulls</div></div>
         <div class="stat"><div class="num" id="players">0</div><div class="lbl">Pullers</div></div>
       </div>
 
-      <!-- status -->
-      <div class="status" id="status" style="margin-top: 14px">
-        <span class="dot"></span><span id="statusText">Warming up…</span>
-      </div>
+      <div class="status" id="status"><span class="dot"></span><span id="statusText">Warming up…</span></div>
 
-      <!-- leaderboard -->
-      <div class="card" style="margin-top: 14px">
-        <p class="card-title">Top pullers</p>
+      <div class="card">
+        <p class="card-title"><span class="gd"></span>Top pullers</p>
         <ul class="lb" id="leaderboard">
           <li><span class="empty">No pulls yet. Be the first.</span></li>
         </ul>
@@ -206,21 +202,21 @@
         </div>
       </div>
 
-      <!-- feed -->
       <div class="card hidden" id="feedCard">
-        <p class="card-title">Recent transactions</p>
+        <p class="card-title"><span class="gd"></span>Recent transactions</p>
         <ul class="feed" id="feed"></ul>
       </div>
 
-      <p class="foot">
-        <span class="sn">Supernova is live on testnet</span>, 600ms rounds on MultiversX. Gasless via a relayer that co-signs and pays the gas, so you play with no wallet. The shared tally is read straight from the chain. Testnet can be reset, which clears the board.
-      </p>
+      <footer class="afoot"><span class="sn">Supernova · live on testnet</span> · 600ms rounds on MultiversX · gasless, no wallet · the shared tally is read straight from the chain</footer>
     </div>
 
     <script type="module">
       import { createArcadeClient } from "/arcade-core.js";
+      import { mountGalaxy } from "/arcade-galaxy.js";
 
       const client = createArcadeClient("tugofwar");
+      // dimmed galaxy backdrop; a pull fires a photon in its team's shard color
+      const galaxy = mountGalaxy({ intensity: 0.5, focusShard: 1 });
       const $ = (id) => document.getElementById(id);
       const fmt = (n) => (n == null ? "···" : Number(n).toLocaleString("en-US"));
       const ROUND_MS = 120000; // mirrors ROUND_DURATION_MS
@@ -354,6 +350,7 @@
         if (S.side == null) return;
         const side = S.side;
         S.yourPulls++;
+        galaxy.pulse(side === 0 ? 1 : 0); // Nova→mint shard, Flare→amber shard
 
         // knot jolts toward your side
         const knot = $("knot");

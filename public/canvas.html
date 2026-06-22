@@ -5,10 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <title>Supernova Canvas · Supernova Arcade</title>
     <meta name="description" content="A shared pixel grid. Each pixel you place is a real onchain transaction. A persistent community artifact on MultiversX, gasless and no wallet." />
-    <link rel="stylesheet" href="/arcade.css" />
+    <link rel="stylesheet" href="/arcade-shell.css" />
     <style>
       /* Supernova Canvas surfaces. Canon (Roobert, cosmos, mint, buttons) comes
-         from /arcade.css. Palette rebuilt on the Sprint accent family (see JS). */
+         from /arcade-shell.css. Palette rebuilt on the Sprint accent family (see JS). */
+      .screen .play { width: 100%; display: flex; flex-direction: column; gap: 12px; align-items: stretch; }
       .board-wrap {
         position: relative;
         width: 100%;
@@ -74,7 +75,7 @@
         display: block;
         height: 100%;
         width: 100%;
-        background: linear-gradient(90deg, var(--mint), var(--mint-dim));
+        background: linear-gradient(90deg, var(--mint), #79e6d8);
         transform-origin: left;
         transform: scaleX(0);
       }
@@ -91,32 +92,37 @@
       <!-- Vercel Web Analytics -->
     <script defer src="/_vercel/insights/script.js"></script>
 </head>
-  <body>
+  <body style="--c:#A78BFA" data-shard="shard 1">
+    <div class="scan"></div><div class="vignette"></div><div class="floor"></div>
+    <div class="brk tl"></div><div class="brk tr"></div><div class="brk bl"></div><div class="brk br"></div>
     <div class="wrap">
-      <div class="topbar">
+      <header class="abar">
         <a class="back" href="/arcade"><span aria-hidden="true">&larr;</span> Arcade</a>
-        <span class="lockup">
-          <img class="lk-wordmark" src="/mvx-wordmark.svg" alt="MultiversX" />
-        </span>
-      </div>
+        <span class="lockup"><img src="/mvx-wordmark.svg" alt="MultiversX" /><span class="shard">shard 1</span></span>
+      </header>
 
       <h1>Supernova Canvas</h1>
-      <p class="subtitle">A shared pixel grid. Pick a color, tap a pixel. Each placement is a real onchain transaction, and the board is a persistent community artifact.</p>
-      <div class="onetap"><span class="ic"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M13 2 3 14h7l-1 8 10-12h-7z" stroke="#23F7DD" stroke-width="1.6" stroke-linejoin="round"/></svg></span><span class="ot-t"><b>No wallet, just play.</b> A key is created in your browser and we cover the gas.</span></div>
+      <p class="sub">A shared pixel grid. Pick a color, tap a pixel. Each placement is a <b>real onchain transaction</b>, and the board is a persistent community artifact.</p>
+      <div class="onetap"><span class="ic"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M13 2 3 14h7l-1 8 10-12h-7z" stroke="#A78BFA" stroke-width="1.6" stroke-linejoin="round"/></svg></span><span class="t"><b>No wallet, just play.</b> A key is created in your browser and we cover the gas.</span></div>
 
-      <div class="card">
-        <div class="board-wrap">
-          <canvas id="board" width="512" height="512"></canvas>
-          <div class="sel-cell" id="selCell"></div>
+      <div class="cabinet">
+        <div class="cab-marquee">Supernova Canvas · paint the chain</div>
+        <div class="screen">
+          <div class="play">
+            <div class="board-wrap">
+              <canvas id="board" width="512" height="512"></canvas>
+              <div class="sel-cell" id="selCell"></div>
+            </div>
+            <div class="palette" id="palette"></div>
+            <div class="cooldown"><span id="cooldownBar"></span></div>
+            <div class="coord" id="coord">Pick a color, then tap the grid</div>
+          </div>
         </div>
-        <div class="palette" id="palette"></div>
-        <div class="cooldown"><span id="cooldownBar"></span></div>
-        <div class="coord" id="coord">Pick a color, then tap the grid</div>
       </div>
 
       <div class="stats">
         <div class="stat"><div class="num" id="yourPixels">0</div><div class="lbl">Your pixels</div></div>
-        <div class="stat"><div class="num" id="globalActions">0</div><div class="lbl">Pixels placed</div></div>
+        <div class="stat"><div class="num on" id="globalActions">0</div><div class="lbl">Pixels placed</div></div>
         <div class="stat"><div class="num" id="players">0</div><div class="lbl">Painters</div></div>
       </div>
 
@@ -125,7 +131,7 @@
       </div>
 
       <div class="card" style="margin-top: 14px">
-        <p class="card-title">Top painters</p>
+        <p class="card-title"><span class="gd"></span>Top painters</p>
         <ul class="lb" id="leaderboard">
           <li><span class="empty">No pixels yet. Place the first.</span></li>
         </ul>
@@ -136,19 +142,19 @@
       </div>
 
       <div class="card hidden" id="feedCard">
-        <p class="card-title">Recent transactions</p>
+        <p class="card-title"><span class="gd"></span>Recent transactions</p>
         <ul class="feed" id="feed"></ul>
       </div>
 
-      <p class="foot">
-        <span class="sn">Supernova is live on testnet</span>, 600ms rounds on MultiversX. Gasless via a relayer that co-signs and pays the gas, so you play with no wallet. The shared board is read straight from the chain. Testnet can be reset, which clears the canvas.
-      </p>
+      <footer class="afoot"><span class="sn">Supernova · live on testnet</span> · 600ms rounds on MultiversX · gasless, no wallet · the board is read straight from the chain</footer>
     </div>
 
     <script type="module">
       import { createArcadeClient } from "/arcade-core.js";
+      import { mountGalaxy } from "/arcade-galaxy.js";
 
       const client = createArcadeClient("canvas");
+      const galaxy = mountGalaxy({ intensity: 0.5, focusShard: 1 });
       const $ = (id) => document.getElementById(id);
       const fmt = (n) => (n == null ? "···" : Number(n).toLocaleString("en-US"));
 
@@ -247,6 +253,7 @@
 
       async function place(ev) {
         ev.preventDefault();
+        galaxy.pulse(1);
         const now = Date.now();
         if (now < S.cooldownUntil) {
           $("coord").textContent = "Cooling down…";

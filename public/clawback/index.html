@@ -6,7 +6,7 @@
 <title>ETHperience · Supernova Arcade</title>
 <meta name="description" content="Defend your wallet from the attacks that drain crypto. Brutal on the ETH theme, a breeze with a MultiversX guardian. A real onchain game on MultiversX, gasless and no wallet." />
 <link rel="icon" href="/favicon.svg" />
-<link rel="stylesheet" href="/arcade.css" />
+<link rel="stylesheet" href="/arcade-shell.css" />
 <!--
   CLAWBACK — a Supernova Arcade game (model A: the contract is the referee).
 
@@ -49,8 +49,9 @@
 -->
 <style>
   /* Clawback inherits the canon (Roobert, #06070A cosmos, mint, surfaces, buttons,
-     leaderboard, reset) from /arcade.css. Game-specific accents map straight onto the
-     canon tokens: drains/loss = --coral, clawed-back/credits = --green, whale = --amber. */
+     leaderboard, reset) from /arcade-shell.css. Game-specific accents map straight
+     onto the canon tokens: drains/loss = --coral, clawed-back/credits = --green,
+     whale = --amber. */
   .wrap { max-width: 460px; display: flex; flex-direction: column; gap: 13px; }
   header { text-align: center; }
   h1 { margin: 0; font-size: 30px; letter-spacing: -0.01em; font-weight: 800; color: var(--text); }
@@ -134,7 +135,7 @@
   .meta .saved b { color: var(--green); }
   .meta .lost b { color: var(--coral); }
   .rtimer { height: 4px; border-radius: 4px; background: #0c1119; overflow: hidden; border: 1px solid var(--border); margin-top: 9px; }
-  .rtimer > i { display: block; height: 100%; width: 100%; background: linear-gradient(90deg, var(--mint), var(--mint-dim)); transform-origin: left; }
+  .rtimer > i { display: block; height: 100%; width: 100%; background: linear-gradient(90deg, var(--mint), #79e6d8); transform-origin: left; }
 
   /* arena */
   .arena { position: relative; height: 384px; border: 1px solid var(--border); border-radius: 16px;
@@ -201,16 +202,16 @@
   .spin { width: 26px; height: 26px; border-radius: 50%; border: 3px solid rgba(255,255,255,0.15); border-top-color: var(--mint); animation: spin 0.8s linear infinite; }
   @keyframes spin { to { transform: rotate(360deg); } }
 
-  /* canon mint pill (glow + 3px lip) comes from /arcade.css; keep auto width for the side-by-side rows */
+  /* shell mint pill (glow + 3px lip) comes from /arcade-shell.css; keep auto width for the side-by-side rows */
   .btn { width: auto; }
   .btn.gold { background: var(--amber); color: #2a1c02; box-shadow: 0 0 0 1px rgba(245,181,68,0.4), 0 8px 24px rgba(245,181,68,0.24); border-bottom: 3px solid #b9842a; }
 
   .claim { display: none; gap: 8px; margin-top: 4px; }
   .claim.show { display: flex; }
-  .claim input { flex: 1; background: var(--bg); border: 1px solid var(--border); border-radius: 10px; color: var(--text); padding: 11px 12px; font-size: 15px; outline: none; }
-  .claim input:focus { border-color: var(--mint-dim); }
+  .claim input { flex: 1; background: #06070A; border: 1px solid var(--border); border-radius: 10px; color: var(--text); padding: 11px 12px; font-size: 15px; outline: none; }
+  .claim input:focus { border-color: #79e6d8; }
   .row { display: flex; gap: 8px; justify-content: center; }
-  /* plain centered status line (override the canon status box) */
+  /* plain centered status line (override the shell status box) */
   .status { border: none; background: none; padding: 0; min-height: 17px; display: block; font-size: 12.5px; text-align: center; }
   .status.ok { color: var(--mint); } .status.err { color: var(--coral); }
   .status a { color: var(--mint); }
@@ -234,73 +235,76 @@
 
   .how { font-size: 12.5px; color: var(--text-dim); line-height: 1.55; }
   .how b { color: var(--text); } .how .r { color: var(--coral); font-weight: 700; } .how .g { color: var(--green); font-weight: 700; }
-  .foot { color: var(--text-faint); font-size: 11px; text-align: center; line-height: 1.6; margin-top: 0; }
-  .foot b { color: var(--text-dim); font-weight: 600; }
-  .foot .sn { color: var(--mint); font-weight: 600; }
   .tick { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--mint); box-shadow: 0 0 7px var(--mint); margin-right: 6px; vertical-align: middle; animation: pulse 2s ease-in-out infinite; }
   @keyframes pulse { 0%,100% { opacity: 0.35; } 50% { opacity: 1; } }
+  .screen .play { width: 100%; display: flex; flex-direction: column; gap: 12px; align-items: stretch; }
 </style>
     <!-- Vercel Web Analytics -->
     <script defer src="/_vercel/insights/script.js"></script>
 </head>
-<body>
+<body style="--c:#FF6B9D" data-shard="shard 2">
+<div class="scan"></div><div class="vignette"></div><div class="floor"></div>
+<div class="brk tl"></div><div class="brk tr"></div><div class="brk bl"></div><div class="brk br"></div>
 <div class="wrap">
-  <div class="topbar">
+  <header class="abar">
     <a class="back" href="/arcade"><span aria-hidden="true">&larr;</span> Arcade</a>
-    <span class="lockup">
-      <img class="lk-wordmark" src="/mvx-wordmark.svg" alt="MultiversX" />
-    </span>
-  </div>
-
-  <header>
-    <h1><span class="x">ETH</span>perience</h1>
-    <div class="sub">Attacks rain down to drain your wallet. Tap to claw each one back before it settles. The catch: it depends which chain you are on.</div>
-    <span class="mode" id="modeBadge">connecting…</span>
+    <span class="lockup"><img src="/mvx-wordmark.svg" alt="MultiversX" /><span class="shard">shard 2</span></span>
   </header>
 
-  <div class="onetap"><span class="ic"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M13 2 3 14h7l-1 8 10-12h-7z" stroke="#23F7DD" stroke-width="1.6" stroke-linejoin="round"/></svg></span><span class="ot-t"><b>No wallet, just play.</b> A key is created in your browser and we cover the gas.</span></div>
+  <h1><span class="x">ETH</span>perience</h1>
+  <p class="sub">Attacks rain down to drain your wallet. Tap to claw each one back before it settles. The catch: it depends which chain you are on.</p>
+  <span class="mode" id="modeBadge">connecting…</span>
 
-  <!-- the proof is the toggle: same game, two worlds. ETH theme = brutal; Guardian = safe. -->
-  <section class="modepick" id="modepick" aria-label="Choose your chain">
-    <button class="opt eth sel" id="optEth" data-mode="eth" type="button">
-      <span class="check"></span>
-      <span class="nm"><span class="ic">⚔︎</span>The ETH experience</span>
-      <span class="tag">Unnecessarily hard</span>
-      <span class="dsc">Sandwiches, MEV bots, drainers. They come fast and mostly land. Survive if you can.</span>
-    </button>
-    <button class="opt mvx" id="optMvx" data-mode="mvx" type="button">
-      <span class="check"></span>
-      <span class="nm"><span class="ic">⛨</span>With a MultiversX guardian</span>
-      <span class="tag">Unreasonably secure</span>
-      <span class="dsc">A native guardian auto-blocks the attacks. Your money just stays safe.</span>
-    </button>
-  </section>
-  <div class="modeline eth" id="modeline"><b>ETH experience.</b> Keeping your money is a fight.</div>
+  <div class="onetap"><span class="ic"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M13 2 3 14h7l-1 8 10-12h-7z" stroke="#FF6B9D" stroke-width="1.6" stroke-linejoin="round"/></svg></span><span class="t"><b>No wallet, just play.</b> A key is created in your browser and we cover the gas.</span></div>
 
-  <section class="hero">
-    <div class="cap">Account balance</div>
-    <div class="bal" id="bal">···<span class="unit">NOVA</span></div>
-    <div class="stack"><i id="stackFill"></i></div>
-    <div class="meta">
-      <span class="saved">clawed back <b id="savedStat">0</b></span>
-      <span>time <b id="timeStat">60.0s</b></span>
-      <span class="lost">drained <b id="lostStat">0</b></span>
+  <div class="cabinet">
+    <div class="cab-marquee">Clawback · pull it back before it settles</div>
+    <div class="screen">
+      <div class="play">
+        <!-- the proof is the toggle: same game, two worlds. ETH theme = brutal; Guardian = safe. -->
+        <section class="modepick" id="modepick" aria-label="Choose your chain">
+          <button class="opt eth sel" id="optEth" data-mode="eth" type="button">
+            <span class="check"></span>
+            <span class="nm"><span class="ic">⚔︎</span>The ETH experience</span>
+            <span class="tag">Unnecessarily hard</span>
+            <span class="dsc">Sandwiches, MEV bots, drainers. They come fast and mostly land. Survive if you can.</span>
+          </button>
+          <button class="opt mvx" id="optMvx" data-mode="mvx" type="button">
+            <span class="check"></span>
+            <span class="nm"><span class="ic">⛨</span>With a MultiversX guardian</span>
+            <span class="tag">Unreasonably secure</span>
+            <span class="dsc">A native guardian auto-blocks the attacks. Your money just stays safe.</span>
+          </button>
+        </section>
+        <div class="modeline eth" id="modeline"><b>ETH experience.</b> Keeping your money is a fight.</div>
+
+        <section class="hero">
+          <div class="cap">Account balance</div>
+          <div class="bal" id="bal">···<span class="unit">NOVA</span></div>
+          <div class="stack"><i id="stackFill"></i></div>
+          <div class="meta">
+            <span class="saved">clawed back <b id="savedStat">0</b></span>
+            <span>time <b id="timeStat">60.0s</b></span>
+            <span class="lost">drained <b id="lostStat">0</b></span>
+          </div>
+          <div class="rtimer" style="margin-top:8px"><i id="rtimerFill"></i></div>
+        </section>
+
+        <section class="arena eth" id="arena">
+          <div class="shield"></div>
+          <span class="shieldbadge"><span class="gd"></span>Guardian active</span>
+          <div class="settle-line"></div>
+          <div class="settle-label">settles</div>
+          <div class="danger"></div>
+          <div class="center" id="center">
+            <p id="centerText">Attacks will rain in and drain your <b>1,000 NOVA</b>.</p>
+            <div class="legend"><span><b class="r">red</b> = attack, tap to claw back</span><span><b class="g">green</b> = inflow, leave it</span></div>
+            <button class="btn" id="startBtn">Defend the wallet</button>
+          </div>
+        </section>
+      </div>
     </div>
-    <div class="rtimer" style="margin-top:8px"><i id="rtimerFill"></i></div>
-  </section>
-
-  <section class="arena eth" id="arena">
-    <div class="shield"></div>
-    <span class="shieldbadge"><span class="gd"></span>Guardian active</span>
-    <div class="settle-line"></div>
-    <div class="settle-label">settles</div>
-    <div class="danger"></div>
-    <div class="center" id="center">
-      <p id="centerText">Attacks will rain in and drain your <b>1,000 NOVA</b>.</p>
-      <div class="legend"><span><b class="r">red</b> = attack, tap to claw back</span><span><b class="g">green</b> = inflow, leave it</span></div>
-      <button class="btn" id="startBtn">Defend the wallet</button>
-    </div>
-  </section>
+  </div>
 
   <div class="row">
     <div class="claim" id="claim">
@@ -336,20 +340,18 @@
     and every run is unique.
   </section>
 
-  <div class="foot">
-    <span class="sn">Supernova is live on testnet</span>. Counter-transactions read straight from the MultiversX chain.
-    Finality on a single shard is as fast as ~100ms.<br />
-    NOVA is a valueless in-game token. No real funds are ever at stake. A testnet experiment; the board can reset with testnet.
-  </div>
+  <footer class="afoot"><span class="sn">Supernova · live on testnet</span> · 600ms rounds on MultiversX · gasless, no wallet · claw back before the window closes</footer>
 </div>
 
 <script type="module">
 import { createArcade } from "/clawback/arcade.js";
 import { ARCADE_CONFIG } from "/clawback/arcade.config.js";
 import { buildSchedule } from "/clawback/schedule.js";
+import { mountGalaxy } from "/arcade-galaxy.js";
 
 const $ = (id) => document.getElementById(id);
 const arcade = createArcade(ARCADE_CONFIG);
+const galaxy = mountGalaxy({ intensity: 0.5, focusShard: 2 });
 
 // config defaults mirror the contract; onchain mode overrides from getScheduleParams
 // practice/preview config mirrors the contract defaults, incl. the difficulty ramp
@@ -628,6 +630,7 @@ function guardianBlock(c) {
 
 function tapCard(c) {
   if (c.state !== "falling") return;
+  galaxy.pulse(2);
   c.state = "acted";
   if (c.guardTimer) { clearTimeout(c.guardTimer); c.guardTimer = null; } // player beat the guardian to it
   // fire the REAL counter-transaction either way; the contract decides the effect.

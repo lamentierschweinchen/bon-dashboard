@@ -81,12 +81,21 @@ h1{font-size:clamp(26px,6vw,34px);font-weight:900;letter-spacing:-.02em;line-hei
   box-shadow:0 0 30px color-mix(in srgb,var(--c) 20%,transparent),0 20px 48px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.05);}
 .cabinet::before,.cabinet::after{content:"";position:absolute;top:18px;bottom:18px;width:3px;border-radius:3px;background:var(--c);box-shadow:0 0 10px var(--c);opacity:.7;}
 .cabinet::before{left:2px;}.cabinet::after{right:2px;}
-.cab-marquee{text-align:center;font-family:var(--mono);font-size:10px;letter-spacing:.22em;text-transform:uppercase;color:var(--c);padding:6px 0 9px;text-shadow:0 0 10px color-mix(in srgb,var(--c) 60%,transparent);}
+.cab-marquee{position:relative;text-align:center;font-family:var(--mono);font-size:10px;letter-spacing:.22em;text-transform:uppercase;color:var(--c);padding:15px 0 9px;text-shadow:0 0 10px color-mix(in srgb,var(--c) 60%,transparent);}
+/* marquee bulb-strip — a row of little lights across the top of every cabinet */
+.cab-marquee::before{content:"";position:absolute;top:6px;left:50%;transform:translateX(-50%);width:min(74%,240px);height:5px;
+  background-image:radial-gradient(circle,var(--c) 1.3px,transparent 1.8px);background-size:15px 5px;background-position:center;background-repeat:repeat-x;
+  filter:drop-shadow(0 0 4px var(--c));opacity:.75;animation:marquee 2.6s ease-in-out infinite;}
+@keyframes marquee{0%,100%{opacity:.75}50%{opacity:.32}}
 .screen{position:relative;border-radius:10px;overflow:hidden;min-height:240px;
   background:radial-gradient(130% 120% at 50% 0%,color-mix(in srgb,var(--c) 12%,#050608),#040506);
   border:2px solid #04060a;box-shadow:inset 0 0 30px rgba(0,0,0,.8),0 0 0 1px color-mix(in srgb,var(--c) 28%,transparent);
-  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:22px 16px;}
-.screen::after{content:"";position:absolute;inset:0;pointer-events:none;opacity:.45;background:repeating-linear-gradient(0deg,rgba(0,0,0,0) 0 2px,rgba(0,0,0,.26) 2px 3px);}
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:22px 16px;animation:crt 8s steps(1) infinite;}
+.screen::after{content:"";position:absolute;inset:0;pointer-events:none;z-index:3;opacity:.45;background:repeating-linear-gradient(0deg,rgba(0,0,0,0) 0 2px,rgba(0,0,0,.26) 2px 3px);}
+/* CRT glass sheen + a faint, rare flicker for life */
+.screen::before{content:"";position:absolute;inset:0;pointer-events:none;z-index:2;
+  background:linear-gradient(133deg,rgba(255,255,255,.06),transparent 38%),radial-gradient(120% 70% at 50% -12%,color-mix(in srgb,var(--c) 9%,transparent),transparent 62%);}
+@keyframes crt{0%,100%{filter:brightness(1)}96.5%{filter:brightness(1)}97.5%{filter:brightness(1.05)}98.5%{filter:brightness(.97)}99.5%{filter:brightness(1.02)}}
 .screen>*{position:relative;z-index:1;}
 
 /* ---- neon numbers / readouts ---- */
