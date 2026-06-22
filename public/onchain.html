@@ -128,6 +128,12 @@ body{
 .wrap{position:relative;z-index:1;max-width:560px;margin:0 auto;padding:26px 20px 56px;display:flex;flex-direction:column;gap:18px;min-height:100vh;}
 
 /* header */
+/* canon Arcade back-link + wordmark lockup (matches /arcade.css; .wrap gap handles spacing) */
+.topbar{display:flex;align-items:center;justify-content:space-between;gap:12px;}
+.back{display:inline-flex;align-items:center;gap:6px;color:var(--text-dim);text-decoration:none;font-size:13px;font-weight:500;letter-spacing:.01em;border:1px solid var(--border);border-radius:11px;padding:7px 12px;white-space:nowrap;background:rgba(14,17,23,.7);transition:color .15s,border-color .15s;}
+.back:hover{color:var(--mint);border-color:rgba(35,247,221,.4);}
+.lockup{display:inline-flex;align-items:center;gap:8px;}
+.lockup .lk-wordmark{height:16px;width:auto;display:block;flex:0 0 auto;}
 .head{display:flex;align-items:center;justify-content:space-between;gap:12px;}
 .brand{display:flex;align-items:center;gap:10px;}
 .brand svg{width:26px;height:auto;display:block;}
@@ -578,6 +584,13 @@ body{
 </div>
 
 <main class="wrap">
+  <div class="topbar">
+    <a class="back" href="/arcade"><span aria-hidden="true">&larr;</span> Arcade</a>
+    <span class="lockup">
+      <img class="lk-wordmark" src="/mvx-wordmark.svg" alt="MultiversX" />
+    </span>
+  </div>
+
   <header class="head">
     <div class="brand">
       <svg viewBox="0 0 48 37" fill="none" aria-label="MultiversX"><path d="M26.6389 18.408L48.0001 6.93761L44.4089 0L24.8488 7.95166C24.3452 8.15668 23.7868 8.15668 23.2831 7.95166L3.72305 0L0.131836 6.93761L21.493 18.408L0.131836 29.8783L3.72305 36.8159L23.2831 28.8642C23.7868 28.6592 24.3452 28.6592 24.8488 28.8642L44.4089 36.8159L48.0001 29.8783L26.6389 18.408Z" fill="#23F7DD"/></svg>

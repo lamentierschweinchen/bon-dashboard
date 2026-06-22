@@ -330,16 +330,15 @@
     sandwiches, and MEV play out on Ethereum today. Switch to <b style="color:var(--mint)">a MultiversX guardian</b> and a
     native co-signer auto-blocks the same attacks before they settle, so your money stays safe with little effort.
     <br /><br />
-    <span style="color:var(--text-faint)">[CLAIM TBD: pending protocol team — the precise sentence on MultiversX's MEV / front-running resistance vs Ethereum goes here once the protocol team confirms the wording.]</span>
-    <br /><br />
-    The "ETH experience" is a themed hard mode. <b>Both modes run on MultiversX testnet</b> (real onchain, gasless) — this game
+    <!-- [CLAIM TBD: hidden from UI pending protocol team. The precise sentence on MultiversX's MEV / front-running resistance vs Ethereum goes here once the protocol team confirms the wording. Restore as visible copy when supplied.] -->
+    The "ETH experience" is a themed hard mode. <b>Both modes run on MultiversX testnet</b> (real onchain, gasless). This game
     never runs on Ethereum. The round seed and your final balance are computed <b>onchain</b>, so the score can't be faked,
     and every run is unique.
   </section>
 
   <div class="foot">
     <span class="sn">Experience Supernova</span> before mainnet, on MultiversX testnet. Counter-transactions read straight from the chain.
-    Supernova is scheduled to activate; finality on a single shard is as fast as ~100ms.<br />
+    Finality on a single shard is as fast as ~100ms.<br />
     NOVA is a valueless in-game token. No real funds are ever at stake. A testnet experiment; the board can reset with testnet.
   </div>
 </div>
@@ -373,7 +372,7 @@ const DRAIN_TYPES = [
   "Bridge hack",
   "Honeypot",
 ];
-const CREDIT_TYPES = ["Airdrop hit", "Sold the top", "Staking reward"];
+const CREDIT_TYPES = ["Airdrop hit", "Sold the top", "Got paid"];
 const COLS = 3;
 
 // ---- the two difficulty MODES (client-side presentation/difficulty ONLY) ----
@@ -551,7 +550,7 @@ function tick() {
     const p = age / G.visibleFall;
     c.el.style.transform = `translateY(${(p * G.settleLineY).toFixed(1)}px)`;
     c.barFill.style.transform = `scaleX(${(1 - p).toFixed(3)})`;
-    if (!c.o.credit) { // urgency colour on drains (canon tokens)
+    if (!c.o.credit) { // urgency color on drains (canon tokens)
       if (p > 0.72) c.barFill.style.background = "var(--coral)";
       else if (p > 0.45) c.barFill.style.background = "var(--amber)";
     }

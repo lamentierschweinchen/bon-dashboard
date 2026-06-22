@@ -365,7 +365,7 @@ a.cab:hover{transform:translateY(-3px);border-color:rgba(35,247,221,.4);box-shad
       </div>
       <div class="sb-foot">
         <div class="sb-sub">Climbing as people play across <b>every cabinet</b>.</div>
-        <span class="sb-tick"><span class="pip"></span>live</span>
+        <span class="sb-tick"><span class="pip"></span>updating</span>
       </div>
     </div>
   </section>
@@ -456,12 +456,9 @@ const CABINETS = [
     metaSuffix: "presses onchain",
     counter: { address: GAMES.button.contract, view: "getGlobalActions" },
   },
-  {
-    id: "reaction", name: "Reaction Arcade", status: "preview", href: "/reaction", art: "react",
-    line: "When the X flashes, tap. Every on-time reaction is a real transaction. Land as many as you can before you slip.",
-    meta: "beat the flash",
-    counter: { address: GAMES.reaction.contract, view: "getGlobalActions" },
-  },
+  // Reaction Arcade — dormant for launch (off-canon + undeployed). reaction.html stays
+  // reachable by direct URL but is intentionally unlinked from the hub grid. Restore this
+  // entry when it's rebuilt to canon and its onchain contract is deployed.
   {
     id: "clawback", name: "ETHperience", status: "live", href: "/clawback", art: "claw",
     line: "Defend your wallet from the attacks that drain crypto. Brutal on the ETH experience, a breeze with a MultiversX guardian. Same game, two worlds.",
@@ -471,7 +468,7 @@ const CABINETS = [
   {
     id: "degendash", name: "Degen Dash", status: "preview", href: "/degen-dash", art: "dash",
     line: "Crypto events fly in. Tap to collect the wins, dodge the rugs. Every collect is a real transaction. Stack the most before the buzzer.",
-    metaSuffix: "collects onchain",
+    meta: "dodge the rugs",
     counter: { address: GAMES.degendash.contract, view: "getGlobalActions" },
   },
 ];
@@ -543,7 +540,7 @@ function cabinetHTML(c) {
   else { btn = '<span class="btn btn-soon">Soon</span>'; }
 
   const metaText = c.metaSuffix
-    ? '<b id="meta-' + c.id + '">—</b> ' + c.metaSuffix
+    ? '<b id="meta-' + c.id + '">·</b> ' + c.metaSuffix
     : (c.meta || "");
 
   const inner =
