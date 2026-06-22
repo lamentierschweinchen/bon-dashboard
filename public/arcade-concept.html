@@ -1,0 +1,333 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Supernova Arcade · concept</title>
+<!--
+  CONCEPT (not the live arcade, not deployed) — direction exploration for Lukas.
+  Idea: the arcade is not a menu on a generic backdrop. It is an OBJECT sitting
+  inside the live Supernova network — a "Galaxy of Nodes" (per Beautiful Blockchains)
+  driven by real onchain activity. Every game runs on the network; every move you
+  make lights it up (a photon between shards). HUD console framing (per the Supernova
+  LP / telemetry). On-canon tokens (Roobert PRO, JetBrains Mono, mint #23F7DD, the
+  shard accents amber/mint/coral that ARE the games' colors).
+-->
+<style>
+@font-face{font-family:'Roobert PRO';src:url('/fonts/RoobertPRO-Medium.otf') format('opentype');font-weight:500;font-display:swap;}
+@font-face{font-family:'Roobert PRO';src:url('/fonts/RoobertPRO-SemiBold.otf') format('opentype');font-weight:600;font-display:swap;}
+@font-face{font-family:'Roobert PRO';src:url('/fonts/RoobertPRO-Bold.otf') format('opentype');font-weight:700;font-display:swap;}
+@font-face{font-family:'Roobert PRO';src:url('/fonts/RoobertPRO-Heavy.otf') format('opentype');font-weight:900;font-display:swap;}
+@font-face{font-family:'JetBrains Mono';src:url('/fonts/JetBrainsMono.woff2') format('woff2');font-weight:100 800;font-display:swap;}
+:root{
+  --bg:#06070A; --surface:#0E1117; --border:#1E2330; --border-soft:#161B25;
+  --mint:#23F7DD; --amber:#F5B544; --coral:#FF6B9D; --blue:#5B8DEF; --lavender:#A78BFA;
+  --text:#F4F6FA; --text-dim:#9BA3B4; --text-faint:#6B7385;
+  --mono:'JetBrains Mono','SFMono-Regular',ui-monospace,Menlo,monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+html,body{height:100%;}
+body{background:var(--bg);color:var(--text);font-family:'Roobert PRO',system-ui,sans-serif;
+  -webkit-font-smoothing:antialiased;overflow-x:hidden;position:relative;min-height:100vh;}
+
+/* the living network — full-bleed canvas backdrop */
+#galaxy{position:fixed;inset:0;z-index:0;display:block;}
+/* cinematic overlays */
+.vignette{position:fixed;inset:0;z-index:1;pointer-events:none;
+  background:radial-gradient(120% 90% at 50% 42%,transparent 40%,rgba(3,4,6,.55) 100%);}
+.scan{position:fixed;inset:0;z-index:1;pointer-events:none;opacity:.5;
+  background:repeating-linear-gradient(0deg,rgba(0,0,0,0) 0 2px,rgba(0,0,0,.13) 2px 3px);}
+.grain{position:fixed;inset:0;z-index:1;pointer-events:none;opacity:.05;mix-blend-mode:overlay;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");}
+
+/* HUD console frame (the "object") */
+.frame{position:fixed;inset:14px;z-index:2;pointer-events:none;border:1px solid rgba(35,247,221,.08);border-radius:14px;}
+.brk{position:fixed;z-index:3;width:26px;height:26px;border:2px solid rgba(35,247,221,.5);pointer-events:none;}
+.brk.tl{top:14px;left:14px;border-right:none;border-bottom:none;border-radius:14px 0 0 0;}
+.brk.tr{top:14px;right:14px;border-left:none;border-bottom:none;border-radius:0 14px 0 0;}
+.brk.bl{bottom:14px;left:14px;border-right:none;border-top:none;border-radius:0 0 0 14px;}
+.brk.br{bottom:14px;right:14px;border-left:none;border-top:none;border-radius:0 0 14px 0;}
+
+/* content */
+.wrap{position:relative;z-index:4;max-width:1180px;margin:0 auto;padding:30px 28px 56px;display:flex;flex-direction:column;min-height:100vh;}
+
+.top{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;}
+.lockup img{height:19px;display:block;}
+.tele{display:flex;align-items:center;gap:14px;font-family:var(--mono);font-size:10.5px;letter-spacing:.08em;color:var(--text-faint);text-transform:uppercase;}
+.tele .v{color:var(--mint);}
+.tele .sep{color:#2a313f;}
+.chip{display:inline-flex;align-items:center;gap:7px;font-size:11px;font-weight:500;letter-spacing:.02em;padding:6px 11px;border-radius:999px;border:1px solid var(--border);background:rgba(14,17,23,.55);color:var(--text-dim);backdrop-filter:blur(4px);}
+.chip .dot{width:6px;height:6px;border-radius:50%;background:var(--mint);box-shadow:0 0 7px var(--mint);animation:bp 2s ease-in-out infinite;}
+@keyframes bp{0%,100%{opacity:1}50%{opacity:.4}}
+
+/* hero — the core readout */
+.hero{flex:1 1 auto;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:6px;padding:30px 0;}
+.kick{font-size:12px;font-weight:600;letter-spacing:.34em;text-transform:uppercase;color:var(--mint);}
+.title{font-weight:900;font-size:clamp(40px,8vw,82px);letter-spacing:-.03em;line-height:.92;color:var(--text);}
+.sub{margin-top:12px;font-size:clamp(14px,2.4vw,16px);line-height:1.5;color:var(--text-dim);max-width:520px;}
+.sub b{color:var(--text);font-weight:600;}
+
+.core{margin-top:26px;position:relative;display:flex;flex-direction:column;align-items:center;gap:7px;}
+.core .lab{font-family:var(--mono);font-size:10.5px;letter-spacing:.22em;text-transform:uppercase;color:var(--text-faint);display:flex;align-items:center;gap:8px;}
+.core .lab .pip{width:6px;height:6px;border-radius:50%;background:var(--mint);box-shadow:0 0 8px var(--mint);animation:bp 1.8s ease-in-out infinite;}
+.core .count{font-family:var(--mono);font-weight:800;font-size:clamp(40px,9vw,76px);letter-spacing:.01em;color:var(--mint);font-variant-numeric:tabular-nums;text-shadow:0 0 26px rgba(35,247,221,.35);line-height:1;}
+.core .foot{font-size:12px;color:var(--text-faint);}
+.core .foot b{color:var(--text-dim);font-weight:600;}
+
+/* cabinets as console panels */
+.bank{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-top:8px;}
+.cab{position:relative;border:1px solid var(--border);border-radius:13px;overflow:hidden;background:linear-gradient(160deg,rgba(14,17,23,.66),rgba(8,10,14,.66));backdrop-filter:blur(6px);
+  transition:transform .2s,border-color .2s;cursor:pointer;}
+.cab:hover{transform:translateY(-3px);}
+.cab .scr{height:64px;position:relative;overflow:hidden;border-bottom:1px solid var(--border-soft);display:grid;place-items:center;}
+.cab .scr::after{content:"";position:absolute;inset:0;opacity:.5;background:repeating-linear-gradient(0deg,rgba(0,0,0,0) 0 2px,rgba(0,0,0,.18) 2px 3px);}
+.cab .glyph{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;position:relative;z-index:1;}
+.cab .glyph svg{width:14px;height:11px;}
+.cab .bd{display:flex;align-items:flex-end;justify-content:space-between;gap:8px;padding:9px 11px 11px;}
+.cab .bd-l{min-width:0;}
+.cab .nm{font-size:12.5px;font-weight:700;color:var(--text);}
+.cab .mt{margin-top:3px;font-family:var(--mono);font-size:9.5px;color:var(--text-faint);font-variant-numeric:tabular-nums;}
+.cab .mt b{font-weight:700;}
+.cab .shard{position:absolute;top:8px;left:8px;z-index:2;font-family:var(--mono);font-size:8px;letter-spacing:.08em;text-transform:uppercase;padding:2px 6px;border-radius:999px;}
+/* shard accents — the games ARE the network's shards */
+.cab.s-mint{border-color:rgba(35,247,221,.34);} .cab.s-mint .scr{background:radial-gradient(110% 120% at 50% 0%,rgba(35,247,221,.12),transparent 62%);} .cab.s-mint .glyph{box-shadow:0 0 16px rgba(35,247,221,.5),inset 0 0 12px rgba(35,247,221,.18);border:1px solid rgba(35,247,221,.5);} .cab.s-mint .glyph svg path{fill:var(--mint);} .cab.s-mint .shard{color:var(--mint);background:rgba(35,247,221,.1);}
+.cab.s-amber{border-color:rgba(245,181,68,.32);} .cab.s-amber .scr{background:radial-gradient(110% 120% at 50% 0%,rgba(245,181,68,.12),transparent 62%);} .cab.s-amber .glyph{box-shadow:0 0 16px rgba(245,181,68,.45),inset 0 0 12px rgba(245,181,68,.16);border:1px solid rgba(245,181,68,.5);} .cab.s-amber .glyph svg path{fill:var(--amber);} .cab.s-amber .shard{color:var(--amber);background:rgba(245,181,68,.1);}
+.cab.s-coral{border-color:rgba(255,107,157,.32);} .cab.s-coral .scr{background:radial-gradient(110% 120% at 50% 0%,rgba(255,107,157,.12),transparent 62%);} .cab.s-coral .glyph{box-shadow:0 0 16px rgba(255,107,157,.45),inset 0 0 12px rgba(255,107,157,.16);border:1px solid rgba(255,107,157,.5);} .cab.s-coral .glyph svg path{fill:var(--coral);} .cab.s-coral .shard{color:var(--coral);background:rgba(255,107,157,.1);}
+.cab.s-blue{border-color:rgba(91,141,239,.3);} .cab.s-blue .scr{background:radial-gradient(110% 120% at 50% 0%,rgba(91,141,239,.1),transparent 62%);} .cab.s-blue .glyph{box-shadow:0 0 14px rgba(91,141,239,.4);border:1px solid rgba(91,141,239,.45);} .cab.s-blue .glyph svg path{fill:var(--blue);} .cab.s-blue .shard{color:var(--blue);background:rgba(91,141,239,.1);}
+
+.foot{margin-top:22px;display:flex;align-items:center;justify-content:space-between;gap:14px;font-size:11px;color:var(--text-faint);flex-wrap:wrap;font-family:var(--mono);letter-spacing:.04em;text-transform:uppercase;}
+.foot .l{display:flex;align-items:center;gap:9px;}
+.foot .sd{width:6px;height:6px;border-radius:50%;border:1.5px solid var(--mint);}
+.foot .m{color:var(--mint);}
+
+/* ---- space-arcade layer: neon floor, marquee bulbs, cabinet play, coin gag ---- */
+.floor{position:fixed;left:-30%;right:-30%;bottom:0;height:46vh;z-index:1;pointer-events:none;opacity:.6;
+  background:
+    linear-gradient(to top,rgba(35,247,221,.05),transparent 60%),
+    repeating-linear-gradient(90deg,transparent 0 72px,rgba(35,247,221,.28) 72px 74px),
+    repeating-linear-gradient(0deg,transparent 0 56px,rgba(35,247,221,.2) 56px 58px);
+  -webkit-mask-image:linear-gradient(to top,#000 0%,transparent 78%);mask-image:linear-gradient(to top,#000 0%,transparent 78%);
+  transform:perspective(560px) rotateX(66deg);transform-origin:bottom center;
+  animation:floorscroll 5.5s linear infinite;}
+@keyframes floorscroll{from{background-position:0 0,0 0,0 0;}to{background-position:0 0,0 0,0 58px;}}
+
+.bulbs{display:flex;justify-content:center;gap:13px;margin-bottom:15px;}
+.bulbs i{width:7px;height:7px;border-radius:50%;background:var(--mint);box-shadow:0 0 9px var(--mint);animation:blink 1.5s ease-in-out infinite;}
+.bulbs i:nth-child(2){animation-delay:.12s;background:var(--amber);box-shadow:0 0 9px var(--amber);}
+.bulbs i:nth-child(3){animation-delay:.24s;}
+.bulbs i:nth-child(4){animation-delay:.36s;background:var(--coral);box-shadow:0 0 9px var(--coral);}
+.bulbs i:nth-child(5){animation-delay:.48s;}
+.bulbs i:nth-child(6){animation-delay:.6s;background:var(--amber);box-shadow:0 0 9px var(--amber);}
+.bulbs i:nth-child(7){animation-delay:.72s;}
+@keyframes blink{0%,100%{opacity:1;}50%{opacity:.28;}}
+.title{text-shadow:0 0 36px rgba(35,247,221,.22);} /* lit marquee sign */
+
+.cab .live{position:absolute;top:8px;right:9px;z-index:2;display:inline-flex;align-items:center;gap:5px;font-family:var(--mono);font-size:8px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-dim);}
+.cab .live i{width:5px;height:5px;border-radius:50%;background:var(--mint);box-shadow:0 0 6px var(--mint);animation:blink 1.4s ease-in-out infinite;}
+.cab .play{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:6px 10px;border-radius:8px;color:#04221F;background:var(--mint);box-shadow:0 0 12px rgba(35,247,221,.4);border-bottom:2px solid #0e9c8c;white-space:nowrap;flex:0 0 auto;}
+.cab.s-amber .play{background:var(--amber);color:#2a1c02;box-shadow:0 0 12px rgba(245,181,68,.4);border-bottom-color:#b9842a;}
+.cab.s-coral .play{background:var(--coral);color:#2a0a16;box-shadow:0 0 12px rgba(255,107,157,.4);border-bottom-color:#c83e72;}
+.cab.s-blue .play{background:var(--blue);color:#04121f;box-shadow:0 0 12px rgba(91,141,239,.4);border-bottom-color:#2f5fb0;}
+
+.coin{display:inline-flex;align-items:center;gap:10px;margin-top:20px;border:1px solid rgba(35,247,221,.22);border-radius:999px;padding:7px 15px 7px 8px;background:rgba(14,17,23,.5);backdrop-filter:blur(4px);}
+.coin .slot{position:relative;width:26px;height:26px;border-radius:8px;border:1px solid rgba(35,247,221,.3);background:rgba(35,247,221,.05);display:grid;place-items:center;}
+.coin .slot::before{content:"";width:13px;height:3px;border-radius:2px;background:rgba(244,246,250,.22);}
+.coin .slot::after{content:"";position:absolute;width:22px;height:2px;background:var(--coral);transform:rotate(-32deg);box-shadow:0 0 6px rgba(255,107,157,.6);border-radius:2px;}
+.coin .ct{font-size:12.5px;color:var(--text-dim);}
+.coin .ct b{color:var(--mint);font-weight:600;}
+
+@media (max-width:780px){ .bank{grid-template-columns:repeat(2,1fr);} .tele{display:none;} .floor{height:32vh;} }
+@media (prefers-reduced-motion:reduce){ *{animation:none!important;} }
+</style>
+</head>
+<body>
+<canvas id="galaxy" aria-hidden="true"></canvas>
+<div class="vignette"></div>
+<div class="scan"></div>
+<div class="grain"></div>
+<div class="frame"></div>
+<div class="brk tl"></div><div class="brk tr"></div><div class="brk bl"></div><div class="brk br"></div>
+
+<div class="wrap">
+  <header class="top">
+    <span class="lockup"><img src="/mvx-wordmark.svg" alt="MultiversX" /></span>
+    <div class="tele">
+      <span>BattleNet</span><span class="sep">/</span>
+      <span>600ms rounds</span><span class="sep">/</span>
+      <span>finality <span class="v" id="finVal">88</span>ms</span><span class="sep">/</span>
+      <span>shards <span class="v">3</span>+meta</span>
+    </div>
+    <span class="chip"><span class="dot"></span>Supernova · live on testnet</span>
+  </header>
+
+  <section class="hero">
+    <div class="bulbs" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+    <span class="kick">The Supernova Arcade</span>
+    <h1 class="title">Supernova<br/>Arcade</h1>
+    <p class="sub">Simple games, played inside the live network. Every move is a <b>real transaction</b> that lights up a shard. No wallet, no gas. Just play.</p>
+
+    <div class="core">
+      <div class="lab"><span class="pip"></span>Onchain actions · across the network</div>
+      <div class="count" id="count">···</div>
+      <div class="foot">Every tap, pull and press is a photon in the galaxy above. <b>You are playing on the network.</b></div>
+    </div>
+    <div class="coin"><span class="slot" aria-hidden="true"></span><span class="ct">Every arcade says insert coin. Here you <b>insert nothing</b>.</span></div>
+  </section>
+
+  <div class="bank" id="bank"></div>
+
+  <footer class="foot">
+    <span class="l"><span class="sd"></span><span class="m">Supernova · live on testnet</span></span>
+    <span>Galaxy of Nodes · real Battle of Nodes activity</span>
+  </footer>
+</div>
+
+<script>
+"use strict";
+/* ====================== the living Galaxy of Nodes ======================
+   Lightweight 2D port of Beautiful Blockchains' Galaxy Explorer: 3 shard
+   clusters (amber / mint / coral) on a slowly-rotating triangle around a
+   pulsing metachain core, a temperature-tinted starfield, and transaction
+   "photons" that arc between shards (cross-shard route through the core).
+   Concept stand-in: a steady activity stream + a Supernova burst every ~28s. */
+const cv = document.getElementById('galaxy'), ctx = cv.getContext('2d');
+const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
+let W, H, DPR, cx, cy, R;
+const SHARDS = [
+  { rgb: [245,181,68] },  // shard 0 — amber (Flare)
+  { rgb: [35,247,221] },  // shard 1 — mint/teal (Nova / Sprint / Canvas)
+  { rgb: [255,107,157] }, // shard 2 — coral (Clawback)
+];
+const CORE = [205,247,253];
+let stars = [], clusters = [], photons = [];
+
+function resize(){
+  DPR = Math.min(2, window.devicePixelRatio || 1);
+  W = cv.width = innerWidth * DPR; H = cv.height = innerHeight * DPR;
+  cv.style.width = innerWidth + 'px'; cv.style.height = innerHeight + 'px';
+  cx = W * 0.5; cy = H * 0.46; R = Math.min(W, H) * 0.30;
+  buildStars();
+}
+function rnd(a,b){ return a + Math.random()*(b-a); }
+function gauss(){ return (Math.random()+Math.random()+Math.random()-1.5)/1.5; }
+
+// temperature-tinted starfield (power-law sizes — many tiny, few bright)
+const TEMP = [[166,191,255],[242,242,255],[204,217,255],[255,242,217],[255,224,166],[255,184,115]];
+function buildStars(){
+  stars = []; const n = Math.round((innerWidth*innerHeight)/5200);
+  for (let i=0;i<n;i++){
+    const u = Math.random();
+    stars.push({ x:Math.random()*W, y:Math.random()*H, r:(0.4 + Math.pow(u,3)*2.6)*DPR,
+      c:TEMP[Math.floor(Math.random()*TEMP.length)], tw:rnd(0,6.28), ts:rnd(.4,1.4) });
+  }
+}
+function buildClusters(){
+  clusters = SHARDS.map((s,i)=>{
+    const pts = [];
+    for (let k=0;k<150;k++){ const a=Math.random()*6.28, rr=Math.abs(gauss())*R*0.34;
+      pts.push({ a, rr, sz:(0.5+Math.pow(Math.random(),2.5)*2.4)*DPR, b:rnd(.4,1) }); }
+    return { rgb:s.rgb, baseAngle:(i/3)*6.28 - Math.PI/2, breath:0.25+i*0.06, phase:i*1.6, pts };
+  });
+}
+function shardCenter(c, t){
+  const a = c.baseAngle + t*0.05; // whole triangle slowly rotates
+  return [cx + Math.cos(a)*R, cy + Math.sin(a)*R*0.62]; // squashed for a 3/4 view
+}
+function spawnPhoton(burst){
+  if (photons.length > 90) return;
+  const t = clock;
+  const si = Math.floor(Math.random()*3);
+  const [sx,sy] = shardCenter(clusters[si], t);
+  const cross = Math.random() < (burst?0.5:0.34);
+  let ex,ey,col;
+  if (cross){ const di=(si+1+Math.floor(Math.random()*2))%3; const e=shardCenter(clusters[di],t); ex=e[0];ey=e[1]; col=[255,243,200]; }
+  else { ex = sx + gauss()*R*0.5; ey = sy + gauss()*R*0.32; col = clusters[si].rgb; }
+  photons.push({ sx,sy,ex,ey, mx:cx+gauss()*R*0.18, my:cy+gauss()*R*0.12, cross,
+    age:0, life:rnd(1.1,2.0), col, sz:(cross?2.2:1.6)*DPR });
+}
+function qbez(a,b,c,t){ const u=1-t; return u*u*a + 2*u*t*b + t*t*c; }
+
+let clock=0, last=0, since=0, sinceBurst=0;
+function frame(now){
+  const dt = last? Math.min(0.05,(now-last)/1000):0.016; last=now; clock+=dt;
+  ctx.globalCompositeOperation='source-over';
+  ctx.fillStyle='#06070A'; ctx.fillRect(0,0,W,H);
+  ctx.globalCompositeOperation='lighter';
+
+  // starfield
+  for (const s of stars){ const tw=0.55+0.45*Math.sin(clock*s.ts+s.tw);
+    ctx.fillStyle=`rgba(${s.c[0]},${s.c[1]},${s.c[2]},${0.5*tw})`;
+    ctx.beginPath(); ctx.arc(s.x,s.y,s.r,0,6.28); ctx.fill(); }
+
+  // metachain core — pulsing
+  const cp = 0.85+0.15*Math.sin(clock*1.6);
+  let g = ctx.createRadialGradient(cx,cy,0,cx,cy,R*0.5*cp);
+  g.addColorStop(0,`rgba(${CORE[0]},${CORE[1]},${CORE[2]},.5)`); g.addColorStop(.4,'rgba(120,200,230,.12)'); g.addColorStop(1,'rgba(0,0,0,0)');
+  ctx.fillStyle=g; ctx.beginPath(); ctx.arc(cx,cy,R*0.5*cp,0,6.28); ctx.fill();
+  ctx.fillStyle=`rgba(${CORE[0]},${CORE[1]},${CORE[2]},.9)`; ctx.beginPath(); ctx.arc(cx,cy,2.4*DPR,0,6.28); ctx.fill();
+
+  // shard clusters — glow halo + stars, breathing
+  for (const c of clusters){
+    const [ux,uy]=shardCenter(c,clock); const br=0.95+0.12*Math.sin(clock*c.breath*6.28+c.phase);
+    const [r0,g0,b0]=c.rgb;
+    const hg=ctx.createRadialGradient(ux,uy,0,ux,uy,R*0.5*br);
+    hg.addColorStop(0,`rgba(${r0},${g0},${b0},.16)`); hg.addColorStop(.5,`rgba(${r0},${g0},${b0},.05)`); hg.addColorStop(1,'rgba(0,0,0,0)');
+    ctx.fillStyle=hg; ctx.beginPath(); ctx.arc(ux,uy,R*0.5*br,0,6.28); ctx.fill();
+    const rot=clock*0.12;
+    for (const p of c.pts){ const a=p.a+rot, px=ux+Math.cos(a)*p.rr*br, py=uy+Math.sin(a)*p.rr*br*0.62;
+      ctx.fillStyle=`rgba(${r0},${g0},${b0},${p.b*br})`; ctx.beginPath(); ctx.arc(px,py,p.sz,0,6.28); ctx.fill(); }
+  }
+
+  // photons — arc start→core→end, additive head + fading trail
+  for (let i=photons.length-1;i>=0;i--){ const p=photons[i]; p.age+=dt; const t=p.age/p.life;
+    if (t>=1){ photons.splice(i,1); continue; }
+    const fade = t<0.15 ? t/0.15 : (1-t)/0.85; const [r0,g0,b0]=p.col;
+    for (let k=0;k<5;k++){ const tt=Math.max(0,t-k*0.045);
+      const x=qbez(p.sx,p.mx,p.ex,tt), y=qbez(p.sy,p.my,p.ey,tt);
+      const al=fade*(1-k/5)*0.9; ctx.fillStyle=`rgba(${r0},${g0},${b0},${al})`;
+      ctx.beginPath(); ctx.arc(x,y,p.sz*(1-k*0.13),0,6.28); ctx.fill(); }
+  }
+
+  // activity stream + a Supernova burst every ~28s
+  if (!REDUCE){ since+=dt; const rate=0.05; while(since>rate){ since-=rate; if(Math.random()<0.6) spawnPhoton(false); }
+    sinceBurst+=dt; if (sinceBurst>28){ sinceBurst=0; for(let k=0;k<70;k++) setTimeout(()=>spawnPhoton(true), k*9); } }
+
+  requestAnimationFrame(frame);
+}
+
+buildClusters(); resize(); window.addEventListener('resize',()=>{ resize(); });
+if (REDUCE){ // one static frame
+  ctx.fillStyle='#06070A'; ctx.fillRect(0,0,W,H); ctx.globalCompositeOperation='lighter';
+  for (const s of stars){ ctx.fillStyle=`rgba(${s.c[0]},${s.c[1]},${s.c[2]},.5)`; ctx.beginPath(); ctx.arc(s.x,s.y,s.r,0,6.28); ctx.fill(); }
+  for (const c of clusters){ const [ux,uy]=shardCenter(c,0); const [r0,g0,b0]=c.rgb;
+    const hg=ctx.createRadialGradient(ux,uy,0,ux,uy,R*0.5); hg.addColorStop(0,`rgba(${r0},${g0},${b0},.16)`); hg.addColorStop(1,'rgba(0,0,0,0)'); ctx.fillStyle=hg; ctx.beginPath(); ctx.arc(ux,uy,R*0.5,0,6.28); ctx.fill();
+    for (const p of c.pts){ const px=ux+Math.cos(p.a)*p.rr, py=uy+Math.sin(p.a)*p.rr*0.62; ctx.fillStyle=`rgba(${r0},${g0},${b0},${p.b})`; ctx.beginPath(); ctx.arc(px,py,p.sz,0,6.28); ctx.fill(); } }
+} else { requestAnimationFrame(frame); }
+
+/* ---- the living counter (concept stand-in for the real getGlobalActions) ---- */
+const X = '<svg viewBox="0 0 192 148"><path d="M106.4,74L192,28L177.6,0.2L99.2,32.1c-2,0.8-4.3,0.8-6.3,0L14.5,0.2L0.1,28l85.6,46l-85.6,46l14.4,27.8l78.4-31.9c2-0.8,4.3-0.8,6.3,0l78.4,31.9l14.4-27.8L106.4,74z"/></svg>';
+const CABS = [
+  { nm:'Supernova Sprint', s:'s-mint',  shard:'shard 1', mt:'<b>289k</b> taps' },
+  { nm:'Tug of War',       s:'s-amber', shard:'shard 0', mt:'<b>557</b> pulls' },
+  { nm:'Supernova Canvas', s:'s-mint',  shard:'shard 1', mt:'<b>4.1k</b> pixels' },
+  { nm:'The Button',       s:'s-blue',  shard:'shard 2', mt:'<b>1.3k</b> presses' },
+  { nm:'Clawback',         s:'s-coral', shard:'shard 2', mt:'<b>880</b> claws' },
+];
+document.getElementById('bank').innerHTML = CABS.map(c=>
+  `<div class="cab ${c.s}"><div class="scr"><span class="shard">${c.shard}</span><span class="live"><i></i>live</span><div class="glyph xmark">${X}</div></div>`+
+  `<div class="bd"><div class="bd-l"><div class="nm">${c.nm}</div><div class="mt">${c.mt} onchain</div></div><span class="play">Play &#9656;</span></div></div>`).join('');
+
+let total = 848900, shown = 0, started=false;
+const el = document.getElementById('count');
+function render(v){ el.textContent = Math.round(v).toLocaleString('en-US'); }
+// spin up on first paint
+(function up(){ const t0=performance.now(); const start=Math.floor(total/100000)*100000;
+  (function f(n){ const p=Math.min(1,(n-t0)/1200); render(start+(total-start)*(1-Math.pow(1-p,3))); if(p<1) requestAnimationFrame(f); else started=true; })(performance.now()); })();
+// climb + each increment is a photon ("you are playing on the network")
+setInterval(()=>{ if(!started) return; const inc=Math.floor(rnd(2,9)); total+=inc; render(total);
+  if(!REDUCE) for(let k=0;k<Math.min(inc,4);k++) spawnPhoton(false); }, 1400);
+// subtle telemetry flicker
+setInterval(()=>{ const f=document.getElementById('finVal'); if(f) f.textContent = (84+Math.floor(Math.random()*9)); }, 1100);
+</script>
+</body>
+</html>
