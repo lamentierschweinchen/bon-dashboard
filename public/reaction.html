@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <title>Reaction Arcade · Supernova Arcade</title>
     <meta name="description" content="When the X flashes, tap. Every on-time reaction is a real onchain transaction. How many can you land?" />
     <link rel="stylesheet" href="/arcade.css" />
@@ -50,7 +50,7 @@
       .pad.pad-go {
         background: radial-gradient(120% 120% at 50% 40%, #5affe7, var(--mvx-cyan) 70%);
         border-color: var(--mvx-cyan);
-        box-shadow: 0 0 0 2px rgba(35, 240, 199, 0.4), 0 14px 50px rgba(35, 240, 199, 0.35);
+        box-shadow: 0 0 0 2px rgba(35, 247, 221, 0.45), 0 0 26px rgba(35, 247, 221, 0.28);
       }
       .pad.pad-go .pad-x { transform: scale(1.18); }
       .pad.pad-go .pad-x path { fill: #04221f; }
@@ -70,7 +70,7 @@
       .padline { display: flex; gap: 10px; margin-top: 12px; }
       .padline .pl { flex: 1; text-align: center; background: var(--panel-2); border: 1px solid var(--line); border-radius: 12px; padding: 10px; }
       .padline .pl .v { font-variant-numeric: tabular-nums; font-size: 20px; font-weight: 800; }
-      .padline .pl .k { font-size: 10.5px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted-2); margin-top: 2px; }
+      .padline .pl .k { font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted-2); margin-top: 2px; }
       .padline .pl .v.cyan { color: var(--mvx-cyan); }
     </style>
       <!-- Vercel Web Analytics -->
@@ -79,30 +79,33 @@
   <body>
     <div class="wrap">
       <div class="topbar">
-        <a class="back" href="/arcade">← Arcade</a>
-        <div class="brand"><b>Supernova</b> Arcade</div>
+        <a class="back" href="/arcade"><span aria-hidden="true">&larr;</span> Arcade</a>
+        <span class="lockup">
+          <img class="lk-wordmark" src="/mvx-wordmark.svg" alt="MultiversX" />
+        </span>
       </div>
 
       <h1>Reaction Arcade</h1>
-      <p class="subtitle">When the X flashes, tap. Every on-time reaction is a real onchain transaction. Your reaction time is just for you — the board ranks by how many reactions you land. Wait for the flash: tap too soon and the run resets.</p>
+      <p class="subtitle">When the X flashes, tap. Every on-time reaction is a real onchain transaction. Your reaction time is just for you. The board ranks by how many reactions you land. Wait for the flash: tap too soon and the run resets.</p>
+      <div class="onetap"><span class="ic"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M13 2 3 14h7l-1 8 10-12h-7z" stroke="#23F7DD" stroke-width="1.6" stroke-linejoin="round"/></svg></span><span class="ot-t"><b>No wallet, just play.</b> A key is created in your browser and we cover the gas.</span></div>
 
       <div class="card">
         <div class="pad pad-idle" id="pad">
           <div>
-            <svg class="pad-x" viewBox="0 0 192 148" aria-hidden="true"><path d="M106.4,74L192,28L177.6,0.2L99.2,32.1c-2,0.8-4.3,0.8-6.3,0L14.5,0.2L0.1,28l85.6,46l-85.6,46l14.4,27.8l78.4-31.9c2-0.8,4.3-0.8,6.3,0l78.4,31.9l14.4-27.8L106.4,74z" fill="#23f0c7"/></svg>
+            <svg class="pad-x" viewBox="0 0 192 148" aria-hidden="true"><path d="M106.4,74L192,28L177.6,0.2L99.2,32.1c-2,0.8-4.3,0.8-6.3,0L14.5,0.2L0.1,28l85.6,46l-85.6,46l14.4,27.8l78.4-31.9c2-0.8,4.3-0.8,6.3,0l78.4,31.9l14.4-27.8L106.4,74z" fill="#23F7DD"/></svg>
             <div class="pad-main" id="padMain">Tap to start</div>
             <div class="pad-sub" id="padSub">react when the X flashes</div>
           </div>
         </div>
         <div class="padline">
-          <div class="pl"><div class="v cyan" id="lastMs">—</div><div class="k">Last reaction</div></div>
+          <div class="pl"><div class="v cyan" id="lastMs">···</div><div class="k">Last reaction</div></div>
           <div class="pl"><div class="v" id="streak">0</div><div class="k">Streak</div></div>
         </div>
       </div>
 
       <div class="stats">
         <div class="stat"><div class="num" id="yourReactions">0</div><div class="lbl">Your reactions</div></div>
-        <div class="stat"><div class="num" id="bestMs">—</div><div class="lbl">Best reaction</div></div>
+        <div class="stat"><div class="num" id="bestMs">···</div><div class="lbl">Best reaction</div></div>
         <div class="stat"><div class="num" id="globalActions">0</div><div class="lbl">Total reactions</div></div>
       </div>
 
@@ -127,7 +130,7 @@
       </div>
 
       <p class="foot">
-        MultiversX testnet — the public network scheduled to run Supernova (600ms rounds). Gasless via a relayer that co-signs and pays the gas, so you play with no wallet. The board reads about a beat behind real time. Reaction time is measured in your browser and shown only to you; the onchain score is the count of reactions you land. Testnet can be reset, which clears the board.
+        <span class="sn">Supernova is live on testnet</span>, 600ms rounds on MultiversX. Gasless via a relayer that co-signs and pays the gas, so you play with no wallet. Reaction time is measured in your browser and shown only to you; the onchain score is the count of reactions you land. Testnet can be reset, which clears the board.
       </p>
     </div>
 
@@ -136,7 +139,7 @@
 
       const client = createArcadeClient("reaction");
       const $ = (id) => document.getElementById(id);
-      const fmt = (n) => (n == null ? "—" : Number(n).toLocaleString("en-US"));
+      const fmt = (n) => (n == null ? "···" : Number(n).toLocaleString("en-US"));
 
       const WAIT_MIN = 900; // ms before the flash (randomized)
       const WAIT_MAX = 2600;
@@ -160,7 +163,7 @@
         hasPlayed: false,
       };
 
-      const X_CYAN = "#23f0c7";
+      const X_CYAN = "#23F7DD";
       function padX(color) {
         const p = $("pad").querySelector(".pad-x path");
         if (p) p.setAttribute("fill", color);
@@ -261,18 +264,18 @@
       }
       function handleSendError(err) {
         const code = err && err.code;
-        if (code === "rate_limited") setStatus("warn", "Going fast — you hit the relayer's per-minute limit. Your reaction still counts here; onchain resumes in a moment.");
-        else if (code === "relayer_unavailable" || code === "not_deployed") setStatus("warn", "The onchain layer is <b>scheduled</b> — your reactions show here for now and go onchain once it activates.");
+        if (code === "rate_limited") setStatus("warn", "Going fast. You hit the relayer's per-minute limit. Your reaction still counts here; onchain resumes in a moment.");
+        else if (code === "relayer_unavailable" || code === "not_deployed") setStatus("warn", "The onchain layer is <b>warming up</b>. Your reactions show here for now and go onchain shortly.");
         else if (code === "network") setStatus("err", "Network hiccup reaching the relayer. Your reaction still shows here.");
         else setStatus("warn", "Onchain submission is unavailable this moment. Your reaction still shows here.");
       }
 
       // ---------- render ----------
       function render() {
-        $("lastMs").textContent = S.lastMs == null ? "—" : S.lastMs + " ms";
+        $("lastMs").textContent = S.lastMs == null ? "···" : S.lastMs + " ms";
         $("streak").textContent = fmt(S.streak);
         $("yourReactions").textContent = fmt(client.deployed ? S.onchainScore : S.session);
-        $("bestMs").textContent = S.bestMs == null ? "—" : S.bestMs + " ms";
+        $("bestMs").textContent = S.bestMs == null ? "···" : S.bestMs + " ms";
         $("globalActions").textContent = fmt(client.deployed ? S.global : S.localGlobal);
       }
 
@@ -326,7 +329,7 @@
         if (!name) return;
         if (!client.deployed) {
           S.named = true; $("nameRow").classList.add("hidden");
-          setStatus("ok", "Name saved here. It goes onchain with the board once it activates.");
+          setStatus("ok", "Name saved here. It goes onchain with the board once the cabinet is live.");
           return;
         }
         try {
@@ -342,7 +345,7 @@
 
       (async function () {
         if (!client.deployed) {
-          setStatus("warn", "Local preview — the onchain layer is <b>scheduled</b>. Play now; your reactions go onchain once it activates.");
+          setStatus("warn", "Local preview. Play now; your reactions go onchain once the cabinet is live.");
         } else {
           setStatus("ok", "One tap, no wallet. Every on-time reaction is a real transaction.");
           client.ensureKey().then((ok) => { if (!ok) setStatus("warn", "Onchain layer unavailable right now. Your reactions still show here."); });

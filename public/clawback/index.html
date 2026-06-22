@@ -128,7 +128,7 @@
   .stack { height: 7px; border-radius: 5px; background: #0c1119; margin: 11px 0 4px; overflow: hidden; border: 1px solid var(--border); }
   .stack > i { display: block; height: 100%; width: 100%; border-radius: 5px;
     background: linear-gradient(90deg, var(--coral) 0%, var(--amber) 45%, var(--mint) 100%);
-    transform-origin: left; transition: transform 0.12s linear; box-shadow: 0 0 12px rgba(35,247,221,0.2); }
+    transform-origin: left; transition: transform 0.12s linear; }
   .meta { display: flex; justify-content: space-between; font-size: 11.5px; color: var(--text-faint); font-variant-numeric: tabular-nums; margin-top: 9px; }
   .meta b { font-family: var(--mono); color: var(--text); }
   .meta .saved b { color: var(--green); }
@@ -186,7 +186,7 @@
   .arena .center .legend b { font-weight: 700; }
   .arena .center .legend .r { color: var(--coral); } .arena .center .legend .g { color: var(--green); }
   .arena .center .final { font-size: 13px; color: var(--text-dim); }
-  .arena .center .final b { font-family: var(--mono); font-size: 40px; color: var(--mint); display: block; font-variant-numeric: tabular-nums; font-weight: 800; text-shadow: 0 0 16px rgba(35,247,221,0.4); }
+  .arena .center .final b { font-family: var(--mono); font-size: 40px; color: var(--mint); display: block; font-variant-numeric: tabular-nums; font-weight: 800; text-shadow: 0 0 12px rgba(35,247,221,0.3); }
   /* end-of-round breakdown: what got through vs what you saved + kept */
   .tally { width: 100%; max-width: 290px; display: flex; flex-direction: column; gap: 8px; margin: 2px 0; }
   .tally .tr { display: grid; grid-template-columns: 16px 1fr auto; align-items: baseline; gap: 9px; font-size: 13.5px; color: var(--text-dim); text-align: left; }
@@ -219,7 +219,7 @@
   .panel h2 { margin: 0 0 9px; font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim); font-weight: 600; display: flex; align-items: center; }
   .global { text-align: center; }
   .global .num { font-family: var(--mono); font-size: 32px; font-weight: 800; font-variant-numeric: tabular-nums; }
-  .global .num .g { color: var(--mint); text-shadow: 0 0 16px rgba(35,247,221,0.4); }
+  .global .num .g { color: var(--mint); }
   .global .lbl { color: var(--text-faint); font-size: 12px; margin-top: 2px; }
   .lb-row { display: grid; grid-template-columns: 26px 1fr auto; align-items: center; gap: 10px; padding: 8px 4px; font-size: 14px; }
   .lb-row + .lb-row { border-top: 1px solid var(--border-soft); }
@@ -337,7 +337,7 @@
   </section>
 
   <div class="foot">
-    <span class="sn">Experience Supernova</span> before mainnet, on MultiversX testnet. Counter-transactions read straight from the chain.
+    <span class="sn">Supernova is live on testnet</span>. Counter-transactions read straight from the MultiversX chain.
     Finality on a single shard is as fast as ~100ms.<br />
     NOVA is a valueless in-game token. No real funds are ever at stake. A testnet experiment; the board can reset with testnet.
   </div>
