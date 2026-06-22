@@ -41,6 +41,10 @@
         z-index: 2;
       }
       .sel-cell.show { opacity: 1; }
+      /* a quick stamp-pop when a pixel is placed */
+      .sel-cell.pop { animation: cell-pop 0.3s ease-out; }
+      @keyframes cell-pop { 0% { transform: scale(1.7); border-color: #fff; box-shadow: 0 0 10px rgba(255, 255, 255, 0.6); } 100% { transform: scale(1); } }
+      @media (prefers-reduced-motion: reduce) { .sel-cell.pop { animation: none; } }
       .palette {
         display: grid;
         grid-template-columns: repeat(8, 1fr);
@@ -251,6 +255,8 @@
         const index = cellFromEvent(ev);
         if (index < 0) return;
         showAim(index);
+        sel.classList.remove("pop"); void sel.offsetWidth; sel.classList.add("pop");
+        setTimeout(() => sel.classList.remove("pop"), 320);
 
         // optimistic local paint
         S.board[index] = S.color;

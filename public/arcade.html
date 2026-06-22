@@ -633,6 +633,23 @@ function renderDigits(value, flip) {
   settledStr = str;
 }
 
+/* one-shot odometer spin-up on first load — fun, and on-theme (it IS an odometer).
+   Rolls the trailing digits up to the real value; same digit-length so no cell rebuild. */
+function countUp(target) {
+  if (matchMedia("(prefers-reduced-motion: reduce)").matches) { renderDigits(target, true); return; }
+  const len = String(Math.round(target)).length;
+  const floor = Math.pow(10, Math.max(0, len - 1));
+  const start = Math.floor(target / floor) * floor; // same digit count → smooth, no rebuild flicker
+  if (target - start < 2) { renderDigits(target, true); return; }
+  const dur = 1100, t0 = performance.now();
+  (function frame(now) {
+    const p = Math.min(1, (now - t0) / dur);
+    const v = Math.round(start + (target - start) * (1 - Math.pow(1 - p, 3))); // ease-out
+    if (p < 1) { renderDigits(v, false); requestAnimationFrame(frame); }
+    else renderDigits(target, true); // settle + flip
+  })(performance.now());
+}
+
 let lastMilestone = null;            // 100k buckets, for the milestone pulse
 const MILESTONE = 100000;
 let firstLoad = true;
@@ -649,8 +666,8 @@ async function refresh() {
     setTimeout(() => scoreboard.classList.remove("pulse"), 900);
   }
   lastMilestone = bucket;
-  renderDigits(total, true);          // set value + flip the changed digits each ~2s read
-  firstLoad = false;
+  if (firstLoad) { firstLoad = false; countUp(total); }   // spin up on first load
+  else renderDigits(total, true);     // set value + flip the changed digits each ~2s read
 }
 
 refresh();

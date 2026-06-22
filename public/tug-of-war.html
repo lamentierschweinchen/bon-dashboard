@@ -64,6 +64,12 @@
         place-items: center;
       }
       .knot svg { width: 18px; height: 14px; }
+      /* the knot jolts toward the side you pull for */
+      .knot.jolt-a { animation: knot-jolt-a 0.35s ease-out; }
+      .knot.jolt-b { animation: knot-jolt-b 0.35s ease-out; }
+      @keyframes knot-jolt-a { 30% { transform: translate(-50%, -50%) translateX(-7px) scale(1.12); } to { transform: translate(-50%, -50%); } }
+      @keyframes knot-jolt-b { 30% { transform: translate(-50%, -50%) translateX(7px) scale(1.12); } to { transform: translate(-50%, -50%); } }
+      @media (prefers-reduced-motion: reduce) { .knot.jolt-a, .knot.jolt-b { animation: none; } }
       .side-tally {
         position: absolute;
         top: 8px;
@@ -348,6 +354,16 @@
         if (S.side == null) return;
         const side = S.side;
         S.yourPulls++;
+
+        // knot jolts toward your side
+        const knot = $("knot");
+        if (knot) {
+          const jc = side === 0 ? "jolt-a" : "jolt-b";
+          knot.classList.remove("jolt-a", "jolt-b");
+          void knot.offsetWidth;
+          knot.classList.add(jc);
+          setTimeout(() => knot.classList.remove(jc), 360);
+        }
 
         if (client.deployed) {
           if (side === 0) S.opt.a++;
