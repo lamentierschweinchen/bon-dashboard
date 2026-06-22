@@ -65,6 +65,59 @@ function clamp01(v) { return v < 0 ? 0 : v > 1 ? 1 : v; }
 function smooth01(v) { v = clamp01(v); return v * v * (3 - 2 * v); } // smoothstep
 
 /* ============================================================================
+   THE CONDUCTOR — the macro layer that arcs the music over ~15 minutes and
+   wires the melody's DIRECTION to the literal onchain actions.
+
+   Two jobs:
+   1) MOVEMENTS: a generated suite of ~6 movements (each its own key, chord set,
+      bass character, feel), arranged as an arc; it regenerates fresh instead of
+      looping. Movements advance on CHAIN ACTIVITY (a quota of real actions) with
+      a time cap, so a busy arcade moves through the story via play, a quiet one
+      via time. The cumulative odometer total is the song's clock.
+   2) DATA -> MELODY: every poll, the per-cabinet deltas steer the line. Each
+      cabinet "pulls" a direction; the trend (rising/falling activity) bends the
+      phrase up or down; magnitude sets interval size; the dominant cabinet picks
+      the harmonic color. A live fingerprint of the actual actions seeds the bass.
+      How hard this bites is the `litStrength` knob (0 = musical autopilot,
+      1 = the chain is unmistakably driving). Default heavy.
+   ============================================================================ */
+// each cabinet bends the melodic line a direction (+up / -down)
+const CABINET_PULL  = { sprint: 1.0, degendash: 0.5, canvas: 0.35, tugofwar: 0.0, clawback: -0.35, button: -1.0 };
+// the dominant cabinet tints the harmony
+const CABINET_COLOR = { sprint: "bright", canvas: "bright", tugofwar: "bright", clawback: "bright", button: "spacey", degendash: "dorian" };
+// progression pool (semitone roots from the key) — movements draw varied changes
+const CHORD_SETS = [
+  [0, 7, 9, 5],   // I  V  vi IV   (anthemic)
+  [0, 5, 9, 7],   // I  IV vi V
+  [9, 5, 0, 7],   // vi IV I  V    (sensitive)
+  [0, 3, 5, 7],   // modal climb
+  [0, 10, 5, 7],  // bVII funk
+  [0, 7, 5, 3],   // descending turn
+];
+const MOVEMENT_ROOTS  = [0, 0, 5, 7, 3, -2, 2, 5];           // the key arc across the suite
+const MOVEMENT_LABELS = ["Drift", "Warm-up", "Ascension", "The Floor", "Breakdown", "Climb", "Afterglow", "Orbit", "Reprise"];
+const MOVEMENT_MIN_BARS = 24, MOVEMENT_MAX_BARS = 96, MOVEMENT_ACTION_QUOTA = 600; // ~2.5min avg -> ~15min suite
+
+// a small seeded PRNG so the bass phrase is reproducibly DERIVED from chain state
+function makeRng(seed) { let s = (seed >>> 0) || 1; return () => { s = (Math.imul(s, 1664525) + 1013904223) >>> 0; return s / 4294967296; }; }
+// build a fresh suite of movements from a chain-derived seed
+function buildSuite(seedBase) {
+  const rng = makeRng((seedBase ^ 0x9e3779b9) >>> 0);
+  const out = [];
+  for (let i = 0; i < 6; i++) {
+    out.push({
+      chordSet: CHORD_SETS[Math.floor(rng() * CHORD_SETS.length)],
+      root: MOVEMENT_ROOTS[i % MOVEMENT_ROOTS.length],
+      label: MOVEMENT_LABELS[i % MOVEMENT_LABELS.length],
+      swingAmt: 0.08 + rng() * 0.16,
+      bassDensity: 0.4 + rng() * 0.45,
+      seed: (Math.imul(seedBase + i, 2654435761)) >>> 0,
+    });
+  }
+  return out;
+}
+
+/* ============================================================================
    THE SIGNED DEFAULT MIX — "Arcade Mix v2" (Lukas-tunable in the studio).
    per voice: level (fader 0..1), reverb (send 0..1), delay (send 0..1).
    The bed layers (pad/bass/drums/arp/lead) are the ESCALATING arrangement; the
@@ -144,6 +197,18 @@ export function createArcadeScore(opts = {}) {
   let autoKeyCycle = false;
   let tempoOverride = null;              // bpm override (studio) or null=auto
   let swing = 0.12;                      // groove swing 0..0.5
+  let leadDeg = 0;                       // wandering lead position (steered by data)
+
+  /* ---- the Conductor (macro arc + data->melody steering) ---- */
+  const conductor = {
+    movements: [], idx: 0, auto: true,
+    barsInMovement: 0, actionsInMovement: 0,
+    litStrength: opts.litStrength != null ? opts.litStrength : 0.8, // heavy by default
+    contour: 0, trend: 0, leapiness: 0, steer: 0, // smoothed data signals
+    colorBias: "spacey", prevGlobalDelta: 0,
+    chainSeed: 0x5ca1ab1e, // rolling fingerprint of the literal onchain actions
+  };
+  let bassPhrase = null, bassPhraseLen = 0;
 
   /* ====================================================================== graph */
   function buildGraph() {
@@ -291,9 +356,16 @@ export function createArcadeScore(opts = {}) {
   }
 
   /* ====================================================================== harmony */
-  function chordRootSemis() { return PROGRESSION[chordIdx % PROGRESSION.length]; }
+  function currentMovement() { return conductor.movements[conductor.idx] || { chordSet: PROGRESSION, root: 0, label: "Drift", swingAmt: 0.12, bassDensity: 0.6, seed: 1 }; }
+  function chordSetArr() { return currentMovement().chordSet; }
+  function chordRootSemis() { const cs = chordSetArr(); return cs[chordIdx % cs.length]; }
   function modeArr() { return MODES[modeName] || MODES.bright; }
-  function thirdSemis() { return modeName === "spacey" ? 3 : 4; } // minor vs major third
+  function thirdSemis() { return modeName === "bright" ? 4 : 3; } // major vs minor third
+  // at high litStrength the dominant cabinet's color wins; at low, energy decides
+  function effectiveMode() {
+    const energyMode = energy > 0.45 ? "bright" : "spacey";
+    return conductor.litStrength >= 0.5 ? conductor.colorBias : energyMode;
+  }
   // a scale note of the current key (consonant over the whole progression)
   function scaleFreq(degree, octave) {
     const sc = modeArr(), len = sc.length;
@@ -301,11 +373,51 @@ export function createArcadeScore(opts = {}) {
     const oct = Math.floor(degree / len) + octave;
     return midiToFreq(keyRootMidi + sc[idx] + 12 * oct);
   }
-  // chord tones around the current chord root (for arp + bass)
+  // chord tones around the current chord root (for arp + bass anchors)
   function chordFreq(toneIdx, octave) {
     const tones = [0, thirdSemis(), 7, 12];
     const t = tones[((toneIdx % tones.length) + tones.length) % tones.length];
     return midiToFreq(keyRootMidi + chordRootSemis() + t + 12 * octave);
+  }
+  // a scale tone anchored to the CURRENT chord root (for the walking bass line)
+  function chordScaleFreq(degree, octave) {
+    const sc = modeArr(), len = sc.length;
+    const idx = ((degree % len) + len) % len;
+    const oct = Math.floor(degree / len) + octave;
+    return midiToFreq(keyRootMidi + chordRootSemis() + sc[idx] + 12 * oct);
+  }
+
+  /* the bass as NARRATOR: an evolving 4-bar walking phrase, seeded from the live
+     chain fingerprint + the movement, walked in the data's steer direction. */
+  function regenBassPhrase() {
+    const mv = currentMovement();
+    const rng = makeRng((conductor.chainSeed ^ mv.seed) >>> 0);
+    const bars = 4; bassPhraseLen = 16 * bars;
+    const mask = [1, 0, 0, 1, 0, 1, 1, 0, 1, 0, 0, 1, 0, 1, 0, 1]; // funk skeleton
+    const dir = conductor.steer * conductor.litStrength;            // -1..1 up/down bias
+    const phrase = new Array(bassPhraseLen).fill(null);
+    let deg = 0;
+    for (let b = 0; b < bars; b++) for (let s = 0; s < 16; s++) {
+      const i = b * 16 + s;
+      if (s % 8 === 0) { phrase[i] = { tone: 0, oct: -1, vel: 0.95 }; deg = 0; continue; } // anchor root on strong beats
+      const hit = mask[(s + b) % 16] && rng() < (0.45 + mv.bassDensity * 0.55);
+      if (!hit) continue;
+      const stepSize = 1 + Math.floor(rng() * (1 + conductor.leapiness * 2));
+      deg += (rng() < 0.5 + dir * 0.45 ? 1 : -1) * stepSize;
+      deg = clamp(deg, -3, 7);
+      phrase[i] = { deg, oct: (s % 8 === 4 && rng() < 0.5) ? 0 : -1, vel: 0.8 };
+    }
+    bassPhrase = phrase;
+  }
+
+  function advanceMovement() {
+    conductor.idx++;
+    if (conductor.idx >= conductor.movements.length) { conductor.movements = buildSuite((conductor.chainSeed ^ (bar << 8)) >>> 0); conductor.idx = 0; }
+    conductor.barsInMovement = 0; conductor.actionsInMovement = 0; chordIdx = 0;
+    const mv = currentMovement();
+    keyRootMidi = homeRootMidi + mv.root; modeName = effectiveMode(); swing = mv.swingAmt;
+    regenBassPhrase(); triggerRiser(); repad();
+    if (opts.debug) console.log("[arcade-score] movement", conductor.idx, mv.label, "root", mv.root);
   }
 
   function setKey(rootName, mode) {
@@ -344,19 +456,21 @@ export function createArcadeScore(opts = {}) {
       const sw = (s % 2 === 1) ? swing * (T.Time("16n").toSeconds()) : 0;
       const t = time + sw;
 
-      // --- chord / bar advance at the top of each bar ---
+      // --- bar top: chord move, data-tinted color, the 15-min movement arc ---
       if (s === 0) {
         bar++;
+        modeName = effectiveMode();                         // the dominant cabinet tints the harmony
+        const cs = chordSetArr();
         const barsPerChord = energy > 0.5 ? 1 : 2;
-        if (bar % barsPerChord === 0) {
-          chordIdx = (chordIdx + 1) % PROGRESSION.length;
-          repadAt(time);
-        }
-        // mode brightens with energy (cool when idle, bright when busy)
-        const wantMode = energy > 0.45 ? "bright" : "spacey";
-        if (wantMode !== modeName) { modeName = wantMode; }
-        // auto key-cycle: every 8 bars drift up a step, tour then home
-        if (autoKeyCycle && bar % 8 === 0) {
+        if (bar % barsPerChord === 0) { chordIdx = (chordIdx + 1) % cs.length; repadAt(time); }
+        if (bar % 8 === 0) regenBassPhrase();               // the narrator slowly re-derives from the chain
+        if (conductor.auto) {                               // the Conductor runs the suite
+          conductor.barsInMovement++;
+          if (conductor.barsInMovement >= MOVEMENT_MIN_BARS &&
+              (conductor.actionsInMovement >= MOVEMENT_ACTION_QUOTA || conductor.barsInMovement >= MOVEMENT_MAX_BARS)) {
+            advanceMovement();
+          }
+        } else if (autoKeyCycle && bar % 8 === 0) {         // manual key drift when the arc is off
           if (modCount >= 3) returnHome(); else modulate(2);
         }
       }
@@ -375,23 +489,21 @@ export function createArcadeScore(opts = {}) {
         const hatHit = energy > 0.55 ? (s % 2 === 0) : (s % 4 === 2);
         if (hatHit) { graph.synth.hat.triggerAttackRelease("32n", t, s % 4 === 2 ? 0.6 : 0.35); bumpMeter("hat", 0.5); }
       }
-      // --- BASS: funky pattern locked to the chord ---
-      if (energyGate.bass > 0.02) {
-        const pat = energy > 0.5
-          ? [1, 0, 0, 1, 0, 1, 1, 0, 1, 0, 0, 1, 0, 1, 0, 1]   // busy funk
-          : [1, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1, 0];  // sparse noodle
-        if (pat[s]) {
-          const toneIdx = (s === 6 || s === 14) ? 2 : (s % 8 === 0 ? 0 : 1); // root/fifth/oct skips
-          const oct = (s === 7 || s === 15) ? 0 : -1; // occasional octave pop
-          graph.synth.bass.triggerAttackRelease(chordFreq(toneIdx, oct), "8n", t, 0.9);
-          bumpMeter("bass", 0.8);
+      // --- BASS: the narrator — an evolving walking phrase seeded by the chain ---
+      if (energyGate.bass > 0.02 && bassPhrase) {
+        const note = bassPhrase[(bar * 16 + s) % bassPhraseLen];
+        if (note) {
+          const freq = note.tone != null ? chordFreq(note.tone, note.oct) : chordScaleFreq(note.deg, note.oct);
+          graph.synth.bass.triggerAttackRelease(freq, "8n", t, note.vel);
+          bumpMeter("bass", note.vel * 0.9);
         }
       }
-      // --- ARP: fast chiptune chord arpeggio ---
+      // --- ARP: chiptune chord arp; runs UP or DOWN with the data's steer ---
       if (energyGate.arp > 0.02) {
         const rate = energy > 0.7 ? 1 : 2; // 16ths when frenetic, 8ths otherwise
         if (s % rate === 0) {
-          const toneIdx = Math.floor(s / rate);
+          const k = Math.floor(s / rate);
+          const toneIdx = conductor.steer * conductor.litStrength >= 0 ? k : (5 - k);
           graph.synth.arp.triggerAttackRelease(chordFreq(toneIdx, 1), "16n", t, 0.5);
           bumpMeter("arp", 0.5);
         }
@@ -401,13 +513,15 @@ export function createArcadeScore(opts = {}) {
     // LEAD: a separate, breathier 8th-note generative melody for the busy tiers.
     const leadLoop = new T.Loop((time) => {
       if (energyGate.lead <= 0.03) return;
-      // phrase with rests; more notes + higher contour as energy climbs
       const density = 0.35 + energy * 0.45;
       if (Math.random() > density) return;
-      const onChord = Math.random() < 0.6;
-      let freq;
-      if (onChord) freq = chordFreq(Math.floor(Math.random() * 3), 1);
-      else freq = scaleFreq(Math.floor(Math.random() * 6), 1);
+      // walk the lead in the data's steer direction; magnitude sets the interval
+      const dir = conductor.steer * conductor.litStrength;
+      const stepSize = 1 + Math.floor(Math.random() * (1 + conductor.leapiness * 2 * conductor.litStrength));
+      leadDeg += (Math.random() < 0.5 + dir * 0.45 ? 1 : -1) * stepSize;
+      leadDeg = clamp(leadDeg, -2, 12);
+      // snap to a chord tone on strong placements, else a scale tone
+      const freq = Math.random() < 0.4 ? chordFreq(((leadDeg % 4) + 4) % 4, 1) : scaleFreq(leadDeg, 1);
       const vel = 0.4 + Math.random() * 0.3;
       graph.synth.lead.triggerAttackRelease(freq, Math.random() < 0.3 ? "8n" : "16n", time, vel);
       bumpMeter("lead", 0.7);
@@ -454,7 +568,7 @@ export function createArcadeScore(opts = {}) {
       return;
     }
     const t0 = T.now() + 0.05;
-    let globalDelta = 0;
+    let globalDelta = 0, pullSum = 0, weight = 0, dom = null, domD = 0;
     for (const id of GAME_VOICES) {
       if (!(id in per)) continue;
       const v = per[id], prev = lastVal[id];
@@ -463,6 +577,8 @@ export function createArcadeScore(opts = {}) {
       const d = Math.max(0, v - prev);
       if (d <= 0 || d > DELTA_SANITY_CAP) continue;
       globalDelta += d;
+      pullSum += (CABINET_PULL[id] || 0) * d; weight += d;       // who's pulling the melody where
+      if (d > domD) { domD = d; dom = id; }                       // the dominant cabinet
       const avg = voiceAvg[id];
       voiceAvg[id] = avg == null ? d : avg + (d - avg) * 0.3;
       const surge = avg != null && avg > 0 && d > avg * 2.4 && d >= 4;
@@ -471,12 +587,24 @@ export function createArcadeScore(opts = {}) {
     // intensity (drives energy); rises fast, falls slow
     const target = clamp01(Math.log10(1 + globalDelta) / 2.2);
     intensity += (target - intensity) * (target > intensity ? 0.5 : 0.1);
-    // milestone -> moment + key lift
+
+    // CONDUCTOR — turn the literal onchain actions into melodic steering (smoothed).
+    const contourRaw = weight > 0 ? clamp(pullSum / weight, -1, 1) : conductor.contour * 0.85;
+    const trendRaw = clamp((globalDelta - conductor.prevGlobalDelta) / (conductor.prevGlobalDelta + 10), -1, 1);
+    conductor.prevGlobalDelta = globalDelta;
+    conductor.contour += (contourRaw - conductor.contour) * 0.4;
+    conductor.trend += (trendRaw - conductor.trend) * 0.35;
+    conductor.leapiness += (clamp01(Math.log10(1 + globalDelta) / 2) - conductor.leapiness) * 0.4;
+    conductor.steer = clamp(conductor.contour * 0.6 + conductor.trend * 0.6, -1, 1);
+    if (dom && CABINET_COLOR[dom]) conductor.colorBias = CABINET_COLOR[dom];
+    conductor.actionsInMovement += globalDelta;
+    // a live fingerprint of the actual actions -> reseeds the bass narrator
+    conductor.chainSeed = (Math.imul(conductor.chainSeed, 31) + ((snapshot && snapshot.total) >>> 0) + Math.imul(domD, 40503)) >>> 0;
+
+    // milestone -> a moment + push the suite to its next movement
     if (snapshot && typeof snapshot.total === "number") {
       const bucket = Math.floor(snapshot.total / momentStep);
-      if (momentBucket != null && bucket > momentBucket) { triggerMoment(); if (modCount < 3) modulate(2); }
-      else if (momentBucket == null) momentBucket = bucket;
-      if (momentBucket != null && bucket > momentBucket) momentBucket = bucket;
+      if (momentBucket != null && bucket > momentBucket) { triggerMoment(); if (conductor.auto) advanceMovement(); }
       momentBucket = bucket;
       lastTotal = snapshot.total;
     }
@@ -569,6 +697,9 @@ export function createArcadeScore(opts = {}) {
       T = mod && mod.Synth ? mod : mod.default || mod;
       await T.start();
       buildGraph();
+      if (!conductor.movements.length) conductor.movements = buildSuite(conductor.chainSeed);
+      const mv0 = currentMovement(); keyRootMidi = homeRootMidi + mv0.root; swing = mv0.swingAmt;
+      regenBassPhrase();
       const tr = T.getTransport();
       tr.bpm.value = 100; tr.swing = 0; tr.start();
       // arranger clock: re-evaluate energy a few times a second
@@ -615,6 +746,10 @@ export function createArcadeScore(opts = {}) {
   function setTempoOverride(v) { tempoOverride = v; if (on) updateEnergy(); }
   function setSwing(v) { swing = clamp(v, 0, 0.5); if (graph) T.getTransport().swing = 0; } // we apply swing manually
   function setAutoKeyCycle(b) { autoKeyCycle = !!b; }
+  // CONDUCTOR controls
+  function setLitStrength(v) { conductor.litStrength = clamp01(v); }           // data -> melody amount (heavy by default)
+  function setConductorAuto(b) { conductor.auto = !!b; }                        // run the 15-min arc automatically
+  function nextMovement() { if (graph) advanceMovement(); }                     // skip to the next movement (studio)
 
   // feel presets — quick palettes the studio can drop in
   const PRESETS = {
@@ -635,10 +770,16 @@ export function createArcadeScore(opts = {}) {
         muted: !!muted[k], soloed: !!soloed[k], gate: energyGate[k] == null ? 1 : +energyGate[k].toFixed(2),
         meter: +(meter[k] || 0).toFixed(3) };
     }
+    const mv = currentMovement();
     return { on, started, intensity: +intensity.toFixed(3), energy: +energy.toFixed(3), tier: tierName(energy),
       energyOverride, bpm: graph ? Math.round(T.getTransport().bpm.value) : null, tempoOverride,
       key: { root: NOTE_NAMES[((keyRootMidi % 12) + 12) % 12], mode: modeName }, modCount, autoKeyCycle,
-      chordIdx, bar, total: lastTotal, master: mix.master.level, voices };
+      chordIdx, bar, total: lastTotal, master: mix.master.level,
+      conductor: { auto: conductor.auto, idx: conductor.idx, count: conductor.movements.length,
+        label: mv.label, litStrength: +conductor.litStrength.toFixed(2), barsInMovement: conductor.barsInMovement,
+        contour: +conductor.contour.toFixed(2), trend: +conductor.trend.toFixed(2), steer: +conductor.steer.toFixed(2),
+        leapiness: +conductor.leapiness.toFixed(2), colorBias: conductor.colorBias, seed: conductor.chainSeed },
+      voices };
   }
 
   function dispose() {
@@ -655,6 +796,8 @@ export function createArcadeScore(opts = {}) {
     setLevel, setSend, setMaster, setMute, setSolo, applyMix, getMix,
     // arranger + harmony (studio)
     setEnergyOverride, setTempoOverride, setSwing, setKey, modulate, returnHome, setAutoKeyCycle, applyPreset,
+    // conductor (15-min arc + data->melody)
+    setLitStrength, setConductorAuto, nextMovement,
     getState, presets: Object.keys(PRESETS),
     get intensity() { return intensity; }, get energy() { return energy; },
     dispose,

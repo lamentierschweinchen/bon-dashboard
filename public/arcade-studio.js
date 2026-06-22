@@ -104,6 +104,19 @@ export function mountStudio(score, opts = {}) {
     el("div", { class: "row wrap" }, [el("span", { class: "fl wide" }, "Poke a cabinet"), ...cabBtns]),
   ]);
 
+  /* ---------------- conductor (15-min arc + data->melody) ---------------- */
+  const litVal = el("span", { class: "mono dim" }, "0.80");
+  const litSl = slider(0, 1, 0.01, 0.8, (v) => { score.setLitStrength(v); litVal.textContent = v.toFixed(2); });
+  const arcBtn = el("button", { class: "tg sm on", onclick: () => { const on = arcBtn.classList.toggle("on"); score.setConductorAuto(on); } }, "Auto-arc");
+  const nextBtn = el("button", { class: "tg sm", onclick: () => score.nextMovement() }, "Next movement →");
+  const mvRead = el("span", { class: "mono", style: "color:var(--mint);font-size:12px" }, "--");
+  const steerRead = el("span", { class: "mono dim", style: "font-size:10.5px" }, "--");
+  const conductorPanel = panel("Conductor · 15-min arc + data → melody", [
+    el("div", { class: "row" }, [el("span", { class: "fl wide" }, "Data → melody"), litSl, litVal]),
+    el("div", { class: "row wrap" }, [el("span", { class: "fl wide" }, "Movement"), mvRead, nextBtn, arcBtn]),
+    el("div", { class: "row" }, [el("span", { class: "fl wide" }, "Steering"), steerRead]),
+  ]);
+
   /* ---------------- harmony ---------------- */
   const keyRow = el("div", { class: "row wrap" });
   const keyBtns = {};
@@ -174,7 +187,7 @@ export function mountStudio(score, opts = {}) {
   ]);
 
   root.append(transport, el("div", { class: "cols" }, [
-    el("div", { class: "col" }, [drive, harmony, moments]),
+    el("div", { class: "col" }, [drive, conductorPanel, harmony, moments]),
     el("div", { class: "col" }, [mixer]),
   ]));
 
@@ -188,6 +201,14 @@ export function mountStudio(score, opts = {}) {
     read.key.textContent = st.key.root + " " + st.key.mode + (st.modCount ? " +" + st.modCount : "");
     read.bar.textContent = st.bar + " · ch" + st.chordIdx;
     read.total.textContent = st.total == null ? "--" : st.total.toLocaleString("en-US");
+    // conductor readouts (movement + data steering)
+    const c = st.conductor;
+    if (c) {
+      const sgn = (x) => (x >= 0 ? "+" : "") + x.toFixed(2);
+      mvRead.textContent = (c.idx + 1) + "/" + c.count + " · " + c.label + "  [" + c.colorBias + "]";
+      steerRead.textContent = "steer " + sgn(c.steer) + " (contour " + sgn(c.contour) + " / trend " + sgn(c.trend) + ")  leap " + c.leapiness.toFixed(2);
+      arcBtn.classList.toggle("on", !!c.auto);
+    }
     // highlight current key/mode
     for (const nm in keyBtns) keyBtns[nm].classList.toggle("on", nm === st.key.root);
     for (const m in modeBtns) modeBtns[m].classList.toggle("on", m === st.key.mode);
