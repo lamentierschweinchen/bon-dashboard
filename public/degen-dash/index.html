@@ -6,7 +6,7 @@
 <title>Degen Dash · Supernova Arcade</title>
 <meta name="description" content="A crypto-event run game. Tap to collect the wins, dodge the rugs. Every collect is a real onchain transaction on MultiversX, gasless and no wallet. A fun game on a valueless token." />
 <link rel="icon" href="/favicon.svg" />
-<link rel="stylesheet" href="/arcade.css" />
+<link rel="stylesheet" href="/arcade-shell.css" />
 <!--
   DEGEN DASH — a Supernova Arcade game (model A: the contract is the referee).
 
@@ -30,7 +30,7 @@
 -->
 <style>
   /* Degen Dash inherits the canon (Roobert, #06070A cosmos, mint, surfaces, buttons,
-     leaderboard, reset) from /arcade.css. Per-game accents: GOOD/collect = --mint
+     leaderboard, reset) from /arcade-shell.css. Per-game accents: GOOD/collect = --mint
      with a playful --lavender highlight on big wins; BAD/hazard = --coral. Bright,
      energetic, distinct from Clawback's coral-led tension. */
   .wrap { max-width: 460px; display: flex; flex-direction: column; gap: 13px; }
@@ -138,16 +138,16 @@
   .spin { width: 26px; height: 26px; border-radius: 50%; border: 3px solid rgba(255,255,255,0.15); border-top-color: var(--mint); animation: spin 0.8s linear infinite; }
   @keyframes spin { to { transform: rotate(360deg); } }
 
-  /* canon mint pill (glow + 3px lip) comes from /arcade.css; keep auto width for the side-by-side rows */
+  /* shell mint pill (glow + 3px lip) comes from /arcade-shell.css; keep auto width for the side-by-side rows */
   .btn { width: auto; }
   .btn.gold { background: var(--amber); color: #2a1c02; box-shadow: 0 0 0 1px rgba(245,181,68,0.4), 0 8px 24px rgba(245,181,68,0.24); border-bottom: 3px solid #b9842a; }
 
   .claim { display: none; gap: 8px; margin-top: 4px; }
   .claim.show { display: flex; }
-  .claim input { flex: 1; background: var(--bg); border: 1px solid var(--border); border-radius: 10px; color: var(--text); padding: 11px 12px; font-size: 15px; outline: none; }
-  .claim input:focus { border-color: var(--mint-dim); }
+  .claim input { flex: 1; background: #06070A; border: 1px solid var(--border); border-radius: 10px; color: var(--text); padding: 11px 12px; font-size: 15px; outline: none; }
+  .claim input:focus { border-color: #79e6d8; }
   .row { display: flex; gap: 8px; justify-content: center; }
-  /* plain centered status line (override the canon status box) */
+  /* plain centered status line (override the shell status box) */
   .status { border: none; background: none; padding: 0; min-height: 17px; display: block; font-size: 12.5px; text-align: center; }
   .status.ok { color: var(--mint); } .status.err { color: var(--coral); }
   .status a { color: var(--mint); }
@@ -171,11 +171,10 @@
 
   .how { font-size: 12.5px; color: var(--text-dim); line-height: 1.55; }
   .how b { color: var(--text); } .how .g { color: var(--mint); font-weight: 700; } .how .r { color: var(--coral); font-weight: 700; }
-  .foot { color: var(--text-faint); font-size: 11px; text-align: center; line-height: 1.6; margin-top: 0; }
-  .foot b { color: var(--text-dim); font-weight: 600; }
-  .foot .sn { color: var(--mint); font-weight: 600; }
   .tick { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--mint); box-shadow: 0 0 7px var(--mint); margin-right: 6px; vertical-align: middle; animation: pulse 2s ease-in-out infinite; }
   @keyframes pulse { 0%,100% { opacity: 0.35; } 50% { opacity: 1; } }
+
+  .screen .play { width: 100%; display: flex; flex-direction: column; gap: 12px; align-items: stretch; }
 
   @media (prefers-reduced-motion: reduce) {
     .card.big.good { animation: none; }
@@ -186,45 +185,50 @@
     <!-- Vercel Web Analytics -->
     <script defer src="/_vercel/insights/script.js"></script>
 </head>
-<body>
+<body style="--c:#FFD23F" data-shard="shard 0">
+<div class="scan"></div><div class="vignette"></div><div class="floor"></div>
+<div class="brk tl"></div><div class="brk tr"></div><div class="brk bl"></div><div class="brk br"></div>
 <div class="wrap">
-  <div class="topbar">
+  <header class="abar">
     <a class="back" href="/arcade"><span aria-hidden="true">&larr;</span> Arcade</a>
-    <span class="lockup">
-      <img class="lk-wordmark" src="/mvx-wordmark.svg" alt="MultiversX" />
-    </span>
-  </div>
-
-  <header>
-    <h1>DEGEN <span class="x">DASH</span></h1>
-    <div class="sub">Tap to collect the wins. Dodge the rugs. Every collect is a real onchain transaction.</div>
-    <span class="mode" id="modeBadge">connecting…</span>
+    <span class="lockup"><img src="/mvx-wordmark.svg" alt="MultiversX" /><span class="shard">shard 0</span></span>
   </header>
 
-  <div class="onetap"><span class="ic"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M13 2 3 14h7l-1 8 10-12h-7z" stroke="#23F7DD" stroke-width="1.6" stroke-linejoin="round"/></svg></span><span class="ot-t"><b>No wallet, just play.</b> A key is created in your browser and we cover the gas.</span></div>
+  <h1>DEGEN <span class="x">DASH</span></h1>
+  <p class="sub">Tap to collect the wins. Dodge the rugs. Every collect is a <b>real onchain transaction</b>.</p>
+  <span class="mode" id="modeBadge">connecting…</span>
 
-  <section class="hero">
-    <div class="cap">Score</div>
-    <div class="bal" id="bal">0<span class="unit">NOVA</span></div>
-    <div class="stack"><i id="stackFill"></i></div>
-    <div class="meta">
-      <span class="got">collected <b id="gotStat">0</b></span>
-      <span>time <b id="timeStat">60.0s</b></span>
-      <span class="oops">oops <b id="oopsStat">0</b></span>
-    </div>
-    <div class="rtimer" style="margin-top:8px"><i id="rtimerFill"></i></div>
-  </section>
+  <div class="onetap"><span class="ic"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M13 2 3 14h7l-1 8 10-12h-7z" stroke="#FFD23F" stroke-width="1.6" stroke-linejoin="round"/></svg></span><span class="t"><b>No wallet, just play.</b> A key is created in your browser and we cover the gas.</span></div>
 
-  <section class="arena" id="arena">
-    <div class="miss-line"></div>
-    <div class="miss-label">miss line</div>
-    <div class="floorzone"></div>
-    <div class="center" id="center">
-      <p id="centerText">Crypto events will stream in. Grab the good, dodge the bad, stack the most in <b>60 seconds</b>.</p>
-      <div class="legend"><span><b class="g">mint</b> = tap to collect</span><span><b class="r">red</b> = rug, leave it</span></div>
-      <button class="btn" id="startBtn">Start the dash</button>
+  <div class="cabinet">
+    <div class="cab-marquee">Degen Dash · collect the wins, dodge the rugs</div>
+    <div class="screen">
+      <div class="play">
+        <section class="hero">
+          <div class="cap">Score</div>
+          <div class="bal" id="bal">0<span class="unit">NOVA</span></div>
+          <div class="stack"><i id="stackFill"></i></div>
+          <div class="meta">
+            <span class="got">collected <b id="gotStat">0</b></span>
+            <span>time <b id="timeStat">60.0s</b></span>
+            <span class="oops">oops <b id="oopsStat">0</b></span>
+          </div>
+          <div class="rtimer" style="margin-top:8px"><i id="rtimerFill"></i></div>
+        </section>
+
+        <section class="arena" id="arena">
+          <div class="miss-line"></div>
+          <div class="miss-label">miss line</div>
+          <div class="floorzone"></div>
+          <div class="center" id="center">
+            <p id="centerText">Crypto events will stream in. Grab the good, dodge the bad, stack the most in <b>60 seconds</b>.</p>
+            <div class="legend"><span><b class="g">mint</b> = tap to collect</span><span><b class="r">red</b> = rug, leave it</span></div>
+            <button class="btn" id="startBtn">Start the dash</button>
+          </div>
+        </section>
+      </div>
     </div>
-  </section>
+  </div>
 
   <div class="row">
     <div class="claim" id="claim">
@@ -253,19 +257,18 @@
     faked, and every run is unique. It speeds up as it goes.
   </section>
 
-  <div class="foot">
-    <span class="sn">Experience Supernova</span> before mainnet, on MultiversX testnet. Collect transactions read straight from the chain.<br />
-    NOVA is a valueless in-game token, just for fun. No real funds are ever at stake. A testnet experiment; the board can reset with testnet.
-  </div>
+  <footer class="afoot"><span class="sn">Supernova · live on testnet</span> · 600ms rounds on MultiversX · gasless, no wallet · every collect lands onchain</footer>
 </div>
 
 <script type="module">
 import { createArcade } from "/degen-dash/arcade.js";
 import { ARCADE_CONFIG } from "/degen-dash/arcade.config.js";
 import { buildSchedule } from "/degen-dash/schedule.js";
+import { mountGalaxy } from "/arcade-galaxy.js";
 
 const $ = (id) => document.getElementById(id);
 const arcade = createArcade(ARCADE_CONFIG);
+const galaxy = mountGalaxy({ intensity: 0.5, focusShard: 0 });
 
 // config defaults mirror the contract; onchain mode overrides from getScheduleParams.
 // rampPermil 500 = sparse/slow open, dense/fast finish; lateWindowShrinkPermil 0 = off.
@@ -468,6 +471,7 @@ function spawnCard(o, age) {
 
 function tapCard(c) {
   if (c.state !== "falling") return;
+  galaxy.pulse(0);
   c.state = "acted";
   // fire the REAL collect transaction either way; the contract decides the effect.
   if (onchain) arcade.collect(G.roundId, c.o.id).catch(() => {});
